@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* If you still see RED, the import failed. 
+   If it's DARK BLUE, we are finally in business. */
+body {
+  background-color: red;
+  margin: 0;
+}

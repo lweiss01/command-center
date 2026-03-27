@@ -1,0 +1,37 @@
+[
+  {
+    "name": "command-center",
+    "path": "C:\\Users\\lweis\\Documents\\command-center",
+    "type": "Web/Node"
+  },
+  {
+    "name": "filetrx",
+    "path": "C:\\Users\\lweis\\Documents\\filetrx",
+    "type": "Web/Node"
+  },
+  {
+    "name": "holistic",
+    "path": "C:\\Users\\lweis\\Documents\\holistic",
+    "type": "Web/Node"
+  },
+  {
+    "name": "newsthread",
+    "path": "C:\\Users\\lweis\\Documents\\newsthread",
+    "type": "General"
+  },
+  {
+    "name": "paydirt",
+    "path": "C:\\Users\\lweis\\Documents\\paydirt",
+    "type": "General"
+  },
+  {
+    "name": "paydirt-backend",
+    "path": "C:\\Users\\lweis\\Documents\\paydirt-backend",
+    "type": "Web/Node"
+  },
+  {
+    "name": "pdf2epub",
+    "path": "C:\\Users\\lweis\\Documents\\pdf2epub",
+    "type": "General"
+  }
+]
