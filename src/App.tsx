@@ -42,6 +42,37 @@ interface Milestone {
   updatedAt: string;
 }
 
+interface Requirement {
+  id: number;
+  projectId: number;
+  externalKey: string | null;
+  title: string;
+  description: string;
+  status: string;
+  validation: string | null;
+  notes: string | null;
+  primaryOwner: string | null;
+  supportingSlices: string | null;
+  sourceArtifactId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Decision {
+  id: number;
+  projectId: number;
+  externalKey: string | null;
+  scope: string | null;
+  decision: string;
+  choice: string | null;
+  rationale: string | null;
+  revisable: string | null;
+  whenContext: string | null;
+  sourceArtifactId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface ImportRun {
   id: number;
   projectId: number;
@@ -58,8 +89,8 @@ interface ProjectPlan {
   milestones: Milestone[];
   slices: unknown[];
   tasks: unknown[];
-  requirements: unknown[];
-  decisions: unknown[];
+  requirements: Requirement[];
+  decisions: Decision[];
   latestImportRun: ImportRun | null;
 }
 
@@ -78,6 +109,9 @@ function App() {
   const [projectsLoading, setProjectsLoading] = useState(true)
   const [projectsError, setProjectsError] = useState<string | null>(null)
   const [scanInFlight, setScanInFlight] = useState(false)
+  const [milestonesImportInFlight, setMilestonesImportInFlight] = useState(false)
+  const [requirementsImportInFlight, setRequirementsImportInFlight] = useState(false)
+  const [decisionsImportInFlight, setDecisionsImportInFlight] = useState(false)
 
   const loadProjects = async () => {
     setProjectsLoading(true)
@@ -102,6 +136,25 @@ function App() {
     }
   }
 
+  const loadProjectPlan = async (projectId: number) => {
+    setProjectPlanLoading(true)
+    setProjectPlanError(null)
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/plan`)
+      if (!res.ok) throw new Error('Failed to fetch project plan')
+      const data: ProjectPlan = await res.json()
+      setProjectPlan(data)
+      document.getElementById('roadmap-section')?.scrollIntoView({ behavior: 'smooth' })
+    } catch (err) {
+      console.error('Failed to load project plan', err)
+      setProjectPlan(null)
+      setProjectPlanError('Unable to load canonical project plan.')
+    } finally {
+      setProjectPlanLoading(false)
+    }
+  }
+
   useEffect(() => {
     loadProjects()
   }, [])
@@ -114,9 +167,6 @@ function App() {
       return
     }
 
-    setProjectPlanLoading(true)
-    setProjectPlanError(null)
-
     fetch(`${API_BASE_URL}/api/tasks/${selectedProject.name.toLowerCase()}`)
       .then(res => res.json())
       .then(data => {
@@ -127,24 +177,86 @@ function App() {
         setTasks([])
       })
 
-    fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/plan`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch project plan')
-        return res.json()
-      })
-      .then((data: ProjectPlan) => {
-        setProjectPlan(data)
-        document.getElementById('roadmap-section')?.scrollIntoView({ behavior: 'smooth' })
-      })
-      .catch(err => {
-        console.error('Failed to load project plan', err)
-        setProjectPlan(null)
-        setProjectPlanError('Unable to load canonical project plan.')
-      })
-      .finally(() => {
-        setProjectPlanLoading(false)
-      })
+    loadProjectPlan(selectedProject.id)
   }, [selectedProject])
+
+  const handleImportMilestones = async () => {
+    if (!selectedProject) return
+
+    setMilestonesImportInFlight(true)
+    setProjectPlanError(null)
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/import-gsd-project`, {
+        method: 'POST',
+      })
+
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? 'Failed to import milestones')
+      }
+
+      await loadProjectPlan(selectedProject.id)
+    } catch (error) {
+      console.error('Failed to import milestones', error)
+      setProjectPlanError(error instanceof Error ? error.message : 'Failed to import milestones.')
+    } finally {
+      setMilestonesImportInFlight(false)
+    }
+  }
+
+  const handleImportRequirements = async () => {
+    if (!selectedProject) return
+
+    setRequirementsImportInFlight(true)
+    setProjectPlanError(null)
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/import-gsd-requirements`, {
+        method: 'POST',
+      })
+
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? 'Failed to import requirements')
+      }
+
+      await loadProjectPlan(selectedProject.id)
+    } catch (error) {
+      console.error('Failed to import requirements', error)
+      setProjectPlanError(error instanceof Error ? error.message : 'Failed to import requirements.')
+    } finally {
+      setRequirementsImportInFlight(false)
+    }
+  }
+
+  const handleImportDecisions = async () => {
+    if (!selectedProject) return
+
+    setDecisionsImportInFlight(true)
+    setProjectPlanError(null)
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/import-gsd-decisions`, {
+        method: 'POST',
+      })
+
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? 'Failed to import decisions')
+      }
+
+      await loadProjectPlan(selectedProject.id)
+    } catch (error) {
+      console.error('Failed to import decisions', error)
+      setProjectPlanError(error instanceof Error ? error.message : 'Failed to import decisions.')
+    } finally {
+      setDecisionsImportInFlight(false)
+    }
+  }
 
   const handleScanWorkspace = async () => {
     setScanInFlight(true)
@@ -229,7 +341,25 @@ function App() {
     return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
   }
 
+  const getRequirementStatusClassName = (status: Requirement['status']) => {
+    if (status === 'validated') return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+    if (status === 'deferred' || status === 'out-of-scope') return 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+    return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+  }
+
   const importedMilestones = projectPlan?.milestones ?? []
+  const importedRequirements = projectPlan?.requirements ?? []
+  const importedDecisions = projectPlan?.decisions ?? []
+  const latestImportWarnings = useMemo(() => {
+    if (!projectPlan?.latestImportRun?.warningsJson) return [] as string[]
+
+    try {
+      const parsed = JSON.parse(projectPlan.latestImportRun.warningsJson)
+      return Array.isArray(parsed) ? parsed.filter((warning): warning is string => typeof warning === 'string') : []
+    } catch {
+      return [] as string[]
+    }
+  }, [projectPlan?.latestImportRun?.warningsJson])
 
   return (
     <div className="flex h-screen bg-[#0b0f1a] text-slate-200 font-sans overflow-hidden">
@@ -385,6 +515,80 @@ function App() {
                 </div>
               </div>
 
+              <section className="space-y-4 border-t border-slate-800/70 pt-8">
+                <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6 rounded-3xl border border-slate-800 bg-slate-950/40 p-6">
+                  <div className="space-y-2">
+                    <h4 className="text-xl font-black uppercase tracking-tight text-white">Import Controls</h4>
+                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
+                      Re-import canonical planning artifacts from repo docs
+                    </p>
+                    {projectPlan?.latestImportRun ? (
+                      <div className="space-y-3 pt-2">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className={`inline-flex text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${projectPlan.latestImportRun.status === 'success'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : projectPlan.latestImportRun.status === 'partial'
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
+                            }`}>
+                            Latest import {projectPlan.latestImportRun.status}
+                          </span>
+                          <span className={`inline-flex text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${latestImportWarnings.length > 0
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
+                            }`}>
+                            {latestImportWarnings.length} warning{latestImportWarnings.length === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                        {projectPlan.latestImportRun.summary ? (
+                          <p className="text-sm text-slate-400 max-w-2xl">{projectPlan.latestImportRun.summary}</p>
+                        ) : null}
+                        {latestImportWarnings.length > 0 ? (
+                          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-4 max-w-3xl">
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-amber-300 mb-3">Import warnings</p>
+                            <ul className="space-y-2 text-sm text-amber-100/90 list-disc pl-5">
+                              {latestImportWarnings.map((warning, index) => (
+                                <li key={`${index}-${warning}`}>{warning}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-500 max-w-2xl">
+                        No imports recorded yet for this project.
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-3 xl:justify-end">
+                    <button
+                      onClick={handleImportMilestones}
+                      disabled={milestonesImportInFlight || projectPlanLoading}
+                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw size={16} className={milestonesImportInFlight ? 'animate-spin' : ''} />
+                      {milestonesImportInFlight ? 'Importing...' : 'Import Milestones'}
+                    </button>
+                    <button
+                      onClick={handleImportRequirements}
+                      disabled={requirementsImportInFlight || projectPlanLoading}
+                      className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-emerald-500 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw size={16} className={requirementsImportInFlight ? 'animate-spin' : ''} />
+                      {requirementsImportInFlight ? 'Importing...' : 'Import Requirements'}
+                    </button>
+                    <button
+                      onClick={handleImportDecisions}
+                      disabled={decisionsImportInFlight || projectPlanLoading}
+                      className="flex items-center gap-2 bg-violet-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-violet-500 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw size={16} className={decisionsImportInFlight ? 'animate-spin' : ''} />
+                      {decisionsImportInFlight ? 'Importing...' : 'Import Decisions'}
+                    </button>
+                  </div>
+                </div>
+              </section>
+
               <section className="space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -395,16 +599,6 @@ function App() {
                       Canonical planning model from imported project docs
                     </p>
                   </div>
-                  {projectPlan?.latestImportRun ? (
-                    <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${projectPlan.latestImportRun.status === 'success'
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      : projectPlan.latestImportRun.status === 'partial'
-                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
-                      }`}>
-                      Import {projectPlan.latestImportRun.status}
-                    </span>
-                  ) : null}
                 </div>
 
                 {projectPlanLoading ? (
@@ -458,9 +652,160 @@ function App() {
                     <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
                       This project may not have been imported yet or may not have supported docs.
                     </p>
-                    {projectPlan?.latestImportRun?.summary ? (
-                      <p className="text-slate-400 font-mono text-xs">{projectPlan.latestImportRun.summary}</p>
-                    ) : null}
+                  </div>
+                )}
+              </section>
+
+              <section className="space-y-4 border-t border-slate-800/70 pt-8">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3">
+                      <FileText size={20} className="text-emerald-400" /> Imported Requirements
+                    </h4>
+                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
+                      Canonical requirements imported from repo planning docs
+                    </p>
+                  </div>
+                </div>
+
+                {projectPlanLoading ? (
+                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl">
+                    <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Loading imported requirements...</p>
+                  </div>
+                ) : importedRequirements.length > 0 ? (
+                  <div className="grid gap-4">
+                    {importedRequirements.map((requirement) => (
+                      <div
+                        key={requirement.id}
+                        className="p-6 bg-[#1e293b]/30 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all space-y-4"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {requirement.externalKey ? (
+                                <span className="text-[10px] font-black px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 uppercase tracking-[0.15em] border border-emerald-500/20">
+                                  {requirement.externalKey}
+                                </span>
+                              ) : null}
+                              <span className="text-xl font-bold tracking-tight text-slate-100">
+                                {requirement.title}
+                              </span>
+                            </div>
+                            {requirement.description ? (
+                              <p className="text-sm text-slate-400 leading-relaxed max-w-3xl">
+                                {requirement.description}
+                              </p>
+                            ) : null}
+                          </div>
+                          <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getRequirementStatusClassName(requirement.status)}`}>
+                            {requirement.status}
+                          </span>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap">
+                          {requirement.primaryOwner ? (
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-tighter">
+                              Owner {requirement.primaryOwner}
+                            </span>
+                          ) : null}
+                          {requirement.supportingSlices ? (
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-tighter">
+                              Support {requirement.supportingSlices}
+                            </span>
+                          ) : null}
+                          {requirement.validation ? (
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-tighter">
+                              Validation defined
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-3">
+                    <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No Imported Requirements Found Yet</p>
+                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
+                      Import `.gsd/REQUIREMENTS.md` to populate the canonical requirements model.
+                    </p>
+                  </div>
+                )}
+              </section>
+
+              <section className="space-y-4 border-t border-slate-800/70 pt-8">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3">
+                      <FileText size={20} className="text-violet-400" /> Imported Decisions
+                    </h4>
+                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
+                      Architectural and planning decisions imported from repo docs
+                    </p>
+                  </div>
+                </div>
+
+                {projectPlanLoading ? (
+                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl">
+                    <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Loading imported decisions...</p>
+                  </div>
+                ) : importedDecisions.length > 0 ? (
+                  <div className="grid gap-4">
+                    {importedDecisions.map((decision) => (
+                      <div
+                        key={decision.id}
+                        className="p-6 bg-[#1e293b]/30 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all space-y-4"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="space-y-3 flex-1">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {decision.externalKey ? (
+                                <span className="text-[10px] font-black px-2 py-1 rounded bg-violet-500/10 text-violet-400 uppercase tracking-[0.15em] border border-violet-500/20">
+                                  {decision.externalKey}
+                                </span>
+                              ) : null}
+                              {decision.scope ? (
+                                <span className="text-[10px] font-black px-2 py-1 rounded bg-slate-800 text-slate-400 uppercase tracking-[0.15em] border border-slate-700/50">
+                                  {decision.scope}
+                                </span>
+                              ) : null}
+                              <span className="text-xl font-bold tracking-tight text-slate-100">
+                                {decision.decision}
+                              </span>
+                            </div>
+                            {decision.choice ? (
+                              <p className="text-sm text-slate-300 leading-relaxed max-w-3xl">
+                                Choice: {decision.choice}
+                              </p>
+                            ) : null}
+                            {decision.rationale ? (
+                              <p className="text-sm text-slate-400 leading-relaxed max-w-3xl">
+                                {decision.rationale}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap">
+                          {decision.whenContext ? (
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-tighter">
+                              When {decision.whenContext}
+                            </span>
+                          ) : null}
+                          {decision.revisable ? (
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-tighter">
+                              Revisable {decision.revisable}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-3">
+                    <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No Imported Decisions Found Yet</p>
+                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
+                      Import `.gsd/DECISIONS.md` to populate the canonical decision register.
+                    </p>
                   </div>
                 )}
               </section>

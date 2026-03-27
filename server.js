@@ -427,6 +427,77 @@ const insertEvidenceLink = db.prepare(`
     @entity_type, @entity_id, @source_artifact_id, @excerpt, @line_start, @line_end, @confidence, @reason, @created_at
   )
 `);
+const getGsdRequirementsArtifactByProjectId = db.prepare(`
+  SELECT *
+  FROM source_artifacts
+  WHERE project_id = ? AND artifact_type = 'gsd_requirements'
+  ORDER BY id ASC
+  LIMIT 1
+`);
+const getRequirementByProjectArtifactAndKey = db.prepare(`
+  SELECT *
+  FROM requirements
+  WHERE project_id = @project_id
+    AND source_artifact_id = @source_artifact_id
+    AND external_key = @external_key
+  LIMIT 1
+`);
+const insertRequirement = db.prepare(`
+  INSERT INTO requirements (
+    project_id, external_key, title, description, status, validation, notes,
+    primary_owner, supporting_slices, source_artifact_id, created_at, updated_at
+  ) VALUES (
+    @project_id, @external_key, @title, @description, @status, @validation, @notes,
+    @primary_owner, @supporting_slices, @source_artifact_id, @created_at, @updated_at
+  )
+`);
+const updateRequirement = db.prepare(`
+  UPDATE requirements
+  SET title = @title,
+      description = @description,
+      status = @status,
+      validation = @validation,
+      notes = @notes,
+      primary_owner = @primary_owner,
+      supporting_slices = @supporting_slices,
+      updated_at = @updated_at
+  WHERE id = @id
+`);
+const getGsdDecisionsArtifactByProjectId = db.prepare(`
+  SELECT *
+  FROM source_artifacts
+  WHERE project_id = ? AND artifact_type = 'gsd_decisions'
+  ORDER BY id ASC
+  LIMIT 1
+`);
+const getDecisionByProjectArtifactAndKey = db.prepare(`
+  SELECT *
+  FROM decisions
+  WHERE project_id = @project_id
+    AND source_artifact_id = @source_artifact_id
+    AND external_key = @external_key
+  LIMIT 1
+`);
+const insertDecision = db.prepare(`
+  INSERT INTO decisions (
+    project_id, external_key, scope, decision, choice, rationale, revisable,
+    when_context, source_artifact_id, created_at, updated_at
+  ) VALUES (
+    @project_id, @external_key, @scope, @decision, @choice, @rationale, @revisable,
+    @when_context, @source_artifact_id, @created_at, @updated_at
+  )
+`);
+const updateDecision = db.prepare(`
+  UPDATE decisions
+  SET scope = @scope,
+      decision = @decision,
+      choice = @choice,
+      rationale = @rationale,
+      revisable = @revisable,
+      when_context = @when_context,
+      updated_at = @updated_at
+  WHERE id = @id
+`);
 
 function safeReadDir(dirPath) {
   try {
@@ -937,6 +1008,502 @@ function importGsdProjectMilestones(projectId) {
   }
 }
 
+function normalizeRequirementStatus(explicitStatus, sectionStatus) {
+  if (explicitStatus) return explicitStatus.trim().toLowerCase().replace(/\s+/g, '-');
+  if (sectionStatus) return sectionStatus;
+  return 'active';
+}
+
+function parseGsdRequirements(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  const warnings = [];
+  const requirements = [];
+
+  let currentSectionStatus = null;
+  let currentRequirement = null;
+
+  const finalizeRequirement = () => {
+    if (!currentRequirement) return;
+
+    const notesParts = [];
+    if (currentRequirement.notes) notesParts.push(currentRequirement.notes);
+    if (currentRequirement.whyItMatters) notesParts.push(`Why it matters: ${currentRequirement.whyItMatters}`);
+
+    if (!currentRequirement.description) {
+      warnings.push(`Requirement ${currentRequirement.externalKey} is missing a description`);
+    }
+
+    requirements.push({
+      externalKey: currentRequirement.externalKey,
+      title: currentRequirement.title,
+      description: currentRequirement.description ?? '',
+      status: normalizeRequirementStatus(currentRequirement.status, currentSectionStatus),
+      validation: currentRequirement.validation ?? null,
+      notes: notesParts.length > 0 ? notesParts.join('\n\n') : null,
+      primaryOwner: currentRequirement.primaryOwner ?? null,
+      supportingSlices: currentRequirement.supportingSlices ?? null,
+      excerpt: currentRequirement.lines.join('\n'),
+      lineStart: currentRequirement.lineStart,
+      lineEnd: currentRequirement.lineEnd,
+    });
+
+    currentRequirement = null;
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    const sectionMatch = trimmed.match(/^##\s+(Active|Validated|Deferred|Out of Scope)\s*$/i);
+    if (sectionMatch) {
+      finalizeRequirement();
+      currentSectionStatus = sectionMatch[1].trim().toLowerCase().replace(/\s+/g, '-');
+      continue;
+    }
+
+    const requirementHeadingMatch = trimmed.match(/^###\s+(R\d{3,})\s+[—-]\s+(.+)$/);
+    if (requirementHeadingMatch) {
+      finalizeRequirement();
+      currentRequirement = {
+        externalKey: requirementHeadingMatch[1].trim(),
+        title: requirementHeadingMatch[2].trim(),
+        description: null,
+        status: null,
+        validation: null,
+        notes: null,
+        whyItMatters: null,
+        primaryOwner: null,
+        supportingSlices: null,
+        lineStart: index + 1,
+        lineEnd: index + 1,
+        lines: [trimmed],
+      };
+      continue;
+    }
+
+    if (!currentRequirement) continue;
+
+    currentRequirement.lineEnd = index + 1;
+    if (trimmed.length > 0) {
+      currentRequirement.lines.push(trimmed);
+    }
+
+    const fieldMatch = trimmed.match(/^-\s*([^:]+):\s*(.+)$/);
+    if (!fieldMatch) continue;
+
+    const fieldName = fieldMatch[1].trim().toLowerCase();
+    const fieldValue = fieldMatch[2].trim();
+
+    if (fieldName === 'status') currentRequirement.status = fieldValue;
+    else if (fieldName === 'description') currentRequirement.description = fieldValue;
+    else if (fieldName === 'validation') currentRequirement.validation = fieldValue;
+    else if (fieldName === 'notes') currentRequirement.notes = fieldValue;
+    else if (fieldName === 'why it matters') currentRequirement.whyItMatters = fieldValue;
+    else if (fieldName === 'primary owning slice') currentRequirement.primaryOwner = fieldValue;
+    else if (fieldName === 'supporting slices') currentRequirement.supportingSlices = fieldValue;
+  }
+
+  finalizeRequirement();
+
+  if (requirements.length === 0) {
+    warnings.push('No requirement blocks found in .gsd/REQUIREMENTS.md');
+  }
+
+  return { requirements, warnings };
+}
+
+function importGsdRequirements(projectId) {
+  const project = getProjectById.get(projectId);
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  const artifact = getGsdRequirementsArtifactByProjectId.get(projectId);
+  if (!artifact) {
+    const error = new Error('No .gsd/REQUIREMENTS.md artifact found for this project');
+    error.code = 'ARTIFACT_NOT_FOUND';
+    throw error;
+  }
+
+  if (!exists(artifact.path)) {
+    const error = new Error(`Artifact file not found on disk: ${artifact.path}`);
+    error.code = 'ARTIFACT_MISSING_ON_DISK';
+    throw error;
+  }
+
+  const startedAt = new Date().toISOString();
+  const importRunResult = insertImportRun.run({
+    project_id: projectId,
+    status: 'running',
+    strategy: 'docs_only',
+    started_at: startedAt,
+    completed_at: null,
+    summary: null,
+    warnings_json: null,
+  });
+  const importRunId = Number(importRunResult.lastInsertRowid);
+
+  try {
+    const markdown = fs.readFileSync(artifact.path, 'utf8');
+    const parsed = parseGsdRequirements(markdown);
+
+    if (parsed.requirements.length === 0) {
+      updateImportRun.run({
+        id: importRunId,
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+        summary: 'No requirements were imported from .gsd/REQUIREMENTS.md.',
+        warnings_json: JSON.stringify(parsed.warnings),
+      });
+
+      return {
+        ok: false,
+        projectId,
+        artifactPath: artifact.path,
+        importRunId,
+        requirementsImported: 0,
+        warnings: parsed.warnings,
+      };
+    }
+
+    let importedCount = 0;
+    const now = new Date().toISOString();
+
+    for (const requirement of parsed.requirements) {
+      const existingRequirement = getRequirementByProjectArtifactAndKey.get({
+        project_id: projectId,
+        source_artifact_id: artifact.id,
+        external_key: requirement.externalKey,
+      });
+
+      if (existingRequirement) {
+        updateRequirement.run({
+          id: existingRequirement.id,
+          title: requirement.title,
+          description: requirement.description,
+          status: requirement.status,
+          validation: requirement.validation,
+          notes: requirement.notes,
+          primary_owner: requirement.primaryOwner,
+          supporting_slices: requirement.supportingSlices,
+          updated_at: now,
+        });
+      } else {
+        insertRequirement.run({
+          project_id: projectId,
+          external_key: requirement.externalKey,
+          title: requirement.title,
+          description: requirement.description,
+          status: requirement.status,
+          validation: requirement.validation,
+          notes: requirement.notes,
+          primary_owner: requirement.primaryOwner,
+          supporting_slices: requirement.supportingSlices,
+          source_artifact_id: artifact.id,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+
+      const persistedRequirement = getRequirementByProjectArtifactAndKey.get({
+        project_id: projectId,
+        source_artifact_id: artifact.id,
+        external_key: requirement.externalKey,
+      });
+
+      deleteEvidenceLinksForEntityAndSource.run({
+        entity_type: 'requirement',
+        entity_id: persistedRequirement.id,
+        source_artifact_id: artifact.id,
+      });
+
+      insertEvidenceLink.run({
+        entity_type: 'requirement',
+        entity_id: persistedRequirement.id,
+        source_artifact_id: artifact.id,
+        excerpt: requirement.excerpt,
+        line_start: requirement.lineStart,
+        line_end: requirement.lineEnd,
+        confidence: 1.0,
+        reason: 'Parsed from .gsd/REQUIREMENTS.md requirement block',
+        created_at: now,
+      });
+
+      importedCount += 1;
+    }
+
+    const finalStatus = parsed.warnings.length > 0 ? 'partial' : 'success';
+    updateImportRun.run({
+      id: importRunId,
+      status: finalStatus,
+      completed_at: new Date().toISOString(),
+      summary: `Imported ${importedCount} requirements from .gsd/REQUIREMENTS.md.`,
+      warnings_json: JSON.stringify(parsed.warnings),
+    });
+
+    return {
+      ok: true,
+      projectId,
+      artifactPath: artifact.path,
+      importRunId,
+      requirementsImported: importedCount,
+      warnings: parsed.warnings,
+    };
+  } catch (error) {
+    updateImportRun.run({
+      id: importRunId,
+      status: 'failed',
+      completed_at: new Date().toISOString(),
+      summary: error instanceof Error ? error.message : 'Unknown import failure',
+      warnings_json: JSON.stringify([]),
+    });
+    throw error;
+  }
+}
+
+function parsePipeRow(line) {
+  return line
+    .split('|')
+    .slice(1, -1)
+    .map((cell) => cell.trim());
+}
+
+function parseGsdDecisions(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  const warnings = [];
+  const decisions = [];
+
+  let inDecisionTable = false;
+  let sawDecisionTable = false;
+  let bulletDecisionCount = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      if (inDecisionTable) break;
+      continue;
+    }
+
+    if (/^\|\s*#\s*\|\s*When\s*\|\s*Scope\s*\|\s*Decision\s*\|\s*Choice\s*\|\s*Rationale\s*\|\s*Revisable\?\s*\|\s*Made By\s*\|\s*$/i.test(trimmed)) {
+      sawDecisionTable = true;
+      inDecisionTable = true;
+      continue;
+    }
+
+    if (inDecisionTable) {
+      if (/^\|(?:\s*[-:]+\s*\|)+\s*$/.test(trimmed)) {
+        continue;
+      }
+
+      if (!trimmed.startsWith('|')) {
+        break;
+      }
+
+      const cells = parsePipeRow(trimmed);
+      if (cells.length < 8) {
+        warnings.push(`Skipped malformed decision row ${index + 1}`);
+        continue;
+      }
+
+      const [externalKey, whenContext, scope, decision, choice, rationale, revisable] = cells;
+      if (!decision) {
+        warnings.push(`Skipped decision row ${index + 1} with empty decision text`);
+        continue;
+      }
+
+      decisions.push({
+        externalKey: externalKey || `row-${index + 1}`,
+        scope: scope || null,
+        decision,
+        choice: choice || null,
+        rationale: rationale || null,
+        revisable: revisable || null,
+        whenContext: whenContext || null,
+        excerpt: trimmed,
+        lineStart: index + 1,
+        lineEnd: index + 1,
+      });
+      continue;
+    }
+
+    const bulletMatch = trimmed.match(/^[-*]\s+"?(.+?)"?$/);
+    if (bulletMatch) {
+      bulletDecisionCount += 1;
+      decisions.push({
+        externalKey: `line-${bulletDecisionCount}`,
+        scope: null,
+        decision: bulletMatch[1].trim(),
+        choice: null,
+        rationale: null,
+        revisable: null,
+        whenContext: null,
+        excerpt: trimmed,
+        lineStart: index + 1,
+        lineEnd: index + 1,
+      });
+    }
+  }
+
+  if (decisions.length === 0) {
+    warnings.push(
+      sawDecisionTable
+        ? 'Decision table found, but no valid rows were parsed from .gsd/DECISIONS.md'
+        : 'No supported decision entries found in .gsd/DECISIONS.md',
+    );
+  }
+
+  return { decisions, warnings };
+}
+
+function importGsdDecisions(projectId) {
+  const project = getProjectById.get(projectId);
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  const artifact = getGsdDecisionsArtifactByProjectId.get(projectId);
+  if (!artifact) {
+    const error = new Error('No .gsd/DECISIONS.md artifact found for this project');
+    error.code = 'ARTIFACT_NOT_FOUND';
+    throw error;
+  }
+
+  if (!exists(artifact.path)) {
+    const error = new Error(`Artifact file not found on disk: ${artifact.path}`);
+    error.code = 'ARTIFACT_MISSING_ON_DISK';
+    throw error;
+  }
+
+  const startedAt = new Date().toISOString();
+  const importRunResult = insertImportRun.run({
+    project_id: projectId,
+    status: 'running',
+    strategy: 'docs_only',
+    started_at: startedAt,
+    completed_at: null,
+    summary: null,
+    warnings_json: null,
+  });
+  const importRunId = Number(importRunResult.lastInsertRowid);
+
+  try {
+    const markdown = fs.readFileSync(artifact.path, 'utf8');
+    const parsed = parseGsdDecisions(markdown);
+
+    if (parsed.decisions.length === 0) {
+      updateImportRun.run({
+        id: importRunId,
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+        summary: 'No decisions were imported from .gsd/DECISIONS.md.',
+        warnings_json: JSON.stringify(parsed.warnings),
+      });
+
+      return {
+        ok: false,
+        projectId,
+        artifactPath: artifact.path,
+        importRunId,
+        decisionsImported: 0,
+        warnings: parsed.warnings,
+      };
+    }
+
+    let importedCount = 0;
+    const now = new Date().toISOString();
+
+    for (const decision of parsed.decisions) {
+      const existingDecision = getDecisionByProjectArtifactAndKey.get({
+        project_id: projectId,
+        source_artifact_id: artifact.id,
+        external_key: decision.externalKey,
+      });
+
+      if (existingDecision) {
+        updateDecision.run({
+          id: existingDecision.id,
+          scope: decision.scope,
+          decision: decision.decision,
+          choice: decision.choice,
+          rationale: decision.rationale,
+          revisable: decision.revisable,
+          when_context: decision.whenContext,
+          updated_at: now,
+        });
+      } else {
+        insertDecision.run({
+          project_id: projectId,
+          external_key: decision.externalKey,
+          scope: decision.scope,
+          decision: decision.decision,
+          choice: decision.choice,
+          rationale: decision.rationale,
+          revisable: decision.revisable,
+          when_context: decision.whenContext,
+          source_artifact_id: artifact.id,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+
+      const persistedDecision = getDecisionByProjectArtifactAndKey.get({
+        project_id: projectId,
+        source_artifact_id: artifact.id,
+        external_key: decision.externalKey,
+      });
+
+      deleteEvidenceLinksForEntityAndSource.run({
+        entity_type: 'decision',
+        entity_id: persistedDecision.id,
+        source_artifact_id: artifact.id,
+      });
+
+      insertEvidenceLink.run({
+        entity_type: 'decision',
+        entity_id: persistedDecision.id,
+        source_artifact_id: artifact.id,
+        excerpt: decision.excerpt,
+        line_start: decision.lineStart,
+        line_end: decision.lineEnd,
+        confidence: 1.0,
+        reason: 'Parsed from .gsd/DECISIONS.md decision entry',
+        created_at: now,
+      });
+
+      importedCount += 1;
+    }
+
+    const finalStatus = parsed.warnings.length > 0 ? 'partial' : 'success';
+    updateImportRun.run({
+      id: importRunId,
+      status: finalStatus,
+      completed_at: new Date().toISOString(),
+      summary: `Imported ${importedCount} decisions from .gsd/DECISIONS.md.`,
+      warnings_json: JSON.stringify(parsed.warnings),
+    });
+
+    return {
+      ok: true,
+      projectId,
+      artifactPath: artifact.path,
+      importRunId,
+      decisionsImported: importedCount,
+      warnings: parsed.warnings,
+    };
+  } catch (error) {
+    updateImportRun.run({
+      id: importRunId,
+      status: 'failed',
+      completed_at: new Date().toISOString(),
+      summary: error instanceof Error ? error.message : 'Unknown import failure',
+      warnings_json: JSON.stringify([]),
+    });
+    throw error;
+  }
+}
+
 function upsertProjectWithArtifacts(projectRoot) {
   const now = new Date().toISOString();
   const name = path.basename(projectRoot);
@@ -1161,6 +1728,44 @@ app.post('/api/projects/:id/import-gsd-project', (req, res) => {
     }
 
     console.error('Failed to import .gsd/PROJECT.md milestones:', error);
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal Server Error',
+    });
+  }
+});
+
+app.post('/api/projects/:id/import-gsd-requirements', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const result = importGsdRequirements(validation.projectId);
+    return res.json(result);
+  } catch (error) {
+    if (error?.code === 'ARTIFACT_NOT_FOUND' || error?.code === 'ARTIFACT_MISSING_ON_DISK') {
+      return res.status(404).json({ error: error.message });
+    }
+
+    console.error('Failed to import .gsd/REQUIREMENTS.md requirements:', error);
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal Server Error',
+    });
+  }
+});
+
+app.post('/api/projects/:id/import-gsd-decisions', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const result = importGsdDecisions(validation.projectId);
+    return res.json(result);
+  } catch (error) {
+    if (error?.code === 'ARTIFACT_NOT_FOUND' || error?.code === 'ARTIFACT_MISSING_ON_DISK') {
+      return res.status(404).json({ error: error.message });
+    }
+
+    console.error('Failed to import .gsd/DECISIONS.md decisions:', error);
     return res.status(500).json({
       error: error instanceof Error ? error.message : 'Internal Server Error',
     });
