@@ -363,6 +363,70 @@ const listImportRunsByProjectId = db.prepare(`
   WHERE project_id = ?
   ORDER BY started_at DESC, id DESC
 `);
+const getGsdProjectArtifactByProjectId = db.prepare(`
+  SELECT *
+  FROM source_artifacts
+  WHERE project_id = ? AND artifact_type = 'gsd_project'
+  ORDER BY id ASC
+  LIMIT 1
+`);
+const insertImportRun = db.prepare(`
+  INSERT INTO import_runs (
+    project_id, status, strategy, started_at, completed_at, summary, warnings_json
+  ) VALUES (
+    @project_id, @status, @strategy, @started_at, @completed_at, @summary, @warnings_json
+  )
+`);
+const updateImportRun = db.prepare(`
+  UPDATE import_runs
+  SET status = @status,
+      completed_at = @completed_at,
+      summary = @summary,
+      warnings_json = @warnings_json
+  WHERE id = @id
+`);
+const getMilestoneByProjectArtifactAndKey = db.prepare(`
+  SELECT *
+  FROM milestones
+  WHERE project_id = @project_id
+    AND source_artifact_id = @source_artifact_id
+    AND external_key = @external_key
+  LIMIT 1
+`);
+const insertMilestone = db.prepare(`
+  INSERT INTO milestones (
+    project_id, external_key, title, description, status, origin, confidence,
+    needs_review, sort_order, source_artifact_id, created_at, updated_at
+  ) VALUES (
+    @project_id, @external_key, @title, @description, @status, @origin, @confidence,
+    @needs_review, @sort_order, @source_artifact_id, @created_at, @updated_at
+  )
+`);
+const updateMilestone = db.prepare(`
+  UPDATE milestones
+  SET title = @title,
+      description = @description,
+      status = @status,
+      origin = @origin,
+      confidence = @confidence,
+      needs_review = @needs_review,
+      sort_order = @sort_order,
+      updated_at = @updated_at
+  WHERE id = @id
+`);
+const deleteEvidenceLinksForEntityAndSource = db.prepare(`
+  DELETE FROM evidence_links
+  WHERE entity_type = @entity_type
+    AND entity_id = @entity_id
+    AND source_artifact_id = @source_artifact_id
+`);
+const insertEvidenceLink = db.prepare(`
+  INSERT INTO evidence_links (
+    entity_type, entity_id, source_artifact_id, excerpt, line_start, line_end, confidence, reason, created_at
+  ) VALUES (
+    @entity_type, @entity_id, @source_artifact_id, @excerpt, @line_start, @line_end, @confidence, @reason, @created_at
+  )
+`);
 
 function safeReadDir(dirPath) {
   try {
@@ -644,6 +708,235 @@ function getValidatedProjectOrSend(projectIdParam, res) {
   return { projectId, project };
 }
 
+function parseGsdProjectMilestones(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  const warnings = [];
+  const milestones = [];
+
+  let inMilestoneSection = false;
+  let milestoneHeadingLevel = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+    if (headingMatch) {
+      const headingLevel = headingMatch[1].length;
+      const headingText = headingMatch[2].trim().toLowerCase();
+      const isMilestoneHeading = headingText.includes('milestone sequence') || headingText === 'milestones' || headingText.endsWith(' milestones');
+
+      if (isMilestoneHeading) {
+        inMilestoneSection = true;
+        milestoneHeadingLevel = headingLevel;
+        continue;
+      }
+
+      if (inMilestoneSection && milestoneHeadingLevel !== null && headingLevel <= milestoneHeadingLevel) {
+        break;
+      }
+    }
+
+    if (!inMilestoneSection || trimmed.length === 0) continue;
+
+    const milestoneMatch = trimmed.match(/^[-*]\s*(?:\[( |x|X)\]\s*)?(M\d{3,})\s*(?::|—|-)?\s*(.+)$/);
+    if (!milestoneMatch) {
+      if (/^[-*]\s*/.test(trimmed) && /M\d{3,}/.test(trimmed)) {
+        warnings.push(`Skipped unparseable milestone line ${index + 1}: ${trimmed}`);
+      }
+      continue;
+    }
+
+    const checkboxState = milestoneMatch[1] ?? ' ';
+    const externalKey = milestoneMatch[2].trim();
+    const title = milestoneMatch[3].trim();
+
+    if (!title) {
+      warnings.push(`Skipped milestone with empty title on line ${index + 1}`);
+      continue;
+    }
+
+    milestones.push({
+      externalKey,
+      title,
+      status: checkboxState.toLowerCase() === 'x' ? 'done' : 'planned',
+      sortOrder: milestones.length,
+      excerpt: trimmed,
+      lineStart: index + 1,
+      lineEnd: index + 1,
+    });
+  }
+
+  if (!inMilestoneSection) {
+    return {
+      milestones: [],
+      warnings: ['No milestone section found in .gsd/PROJECT.md'],
+      sectionFound: false,
+    };
+  }
+
+  if (milestones.length === 0) {
+    warnings.push('Milestone section found, but no valid milestone lines were parsed');
+  }
+
+  return {
+    milestones,
+    warnings,
+    sectionFound: true,
+  };
+}
+
+function importGsdProjectMilestones(projectId) {
+  const project = getProjectById.get(projectId);
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  const artifact = getGsdProjectArtifactByProjectId.get(projectId);
+  if (!artifact) {
+    const error = new Error('No .gsd/PROJECT.md artifact found for this project');
+    error.code = 'ARTIFACT_NOT_FOUND';
+    throw error;
+  }
+
+  if (!exists(artifact.path)) {
+    const error = new Error(`Artifact file not found on disk: ${artifact.path}`);
+    error.code = 'ARTIFACT_MISSING_ON_DISK';
+    throw error;
+  }
+
+  const startedAt = new Date().toISOString();
+  const importRunResult = insertImportRun.run({
+    project_id: projectId,
+    status: 'running',
+    strategy: 'docs_only',
+    started_at: startedAt,
+    completed_at: null,
+    summary: null,
+    warnings_json: null,
+  });
+  const importRunId = Number(importRunResult.lastInsertRowid);
+
+  try {
+    const markdown = fs.readFileSync(artifact.path, 'utf8');
+    const parsed = parseGsdProjectMilestones(markdown);
+
+    if (!parsed.sectionFound || parsed.milestones.length === 0) {
+      updateImportRun.run({
+        id: importRunId,
+        status: parsed.sectionFound ? 'partial' : 'failed',
+        completed_at: new Date().toISOString(),
+        summary: parsed.sectionFound
+          ? 'Milestone section found, but no milestones were imported.'
+          : 'No milestone section found in .gsd/PROJECT.md.',
+        warnings_json: JSON.stringify(parsed.warnings),
+      });
+
+      return {
+        ok: parsed.sectionFound,
+        projectId,
+        artifactPath: artifact.path,
+        importRunId,
+        milestonesImported: 0,
+        warnings: parsed.warnings,
+      };
+    }
+
+    let importedCount = 0;
+    const now = new Date().toISOString();
+
+    for (const milestone of parsed.milestones) {
+      const existingMilestone = getMilestoneByProjectArtifactAndKey.get({
+        project_id: projectId,
+        source_artifact_id: artifact.id,
+        external_key: milestone.externalKey,
+      });
+
+      if (existingMilestone) {
+        updateMilestone.run({
+          id: existingMilestone.id,
+          title: milestone.title,
+          description: null,
+          status: milestone.status,
+          origin: 'imported',
+          confidence: 1.0,
+          needs_review: 0,
+          sort_order: milestone.sortOrder,
+          updated_at: now,
+        });
+      } else {
+        insertMilestone.run({
+          project_id: projectId,
+          external_key: milestone.externalKey,
+          title: milestone.title,
+          description: null,
+          status: milestone.status,
+          origin: 'imported',
+          confidence: 1.0,
+          needs_review: 0,
+          sort_order: milestone.sortOrder,
+          source_artifact_id: artifact.id,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+
+      const persistedMilestone = getMilestoneByProjectArtifactAndKey.get({
+        project_id: projectId,
+        source_artifact_id: artifact.id,
+        external_key: milestone.externalKey,
+      });
+
+      deleteEvidenceLinksForEntityAndSource.run({
+        entity_type: 'milestone',
+        entity_id: persistedMilestone.id,
+        source_artifact_id: artifact.id,
+      });
+
+      insertEvidenceLink.run({
+        entity_type: 'milestone',
+        entity_id: persistedMilestone.id,
+        source_artifact_id: artifact.id,
+        excerpt: milestone.excerpt,
+        line_start: milestone.lineStart,
+        line_end: milestone.lineEnd,
+        confidence: 1.0,
+        reason: 'Parsed from .gsd/PROJECT.md milestone sequence',
+        created_at: now,
+      });
+
+      importedCount += 1;
+    }
+
+    const finalStatus = parsed.warnings.length > 0 ? 'partial' : 'success';
+    updateImportRun.run({
+      id: importRunId,
+      status: finalStatus,
+      completed_at: new Date().toISOString(),
+      summary: `Imported ${importedCount} milestones from .gsd/PROJECT.md.`,
+      warnings_json: JSON.stringify(parsed.warnings),
+    });
+
+    return {
+      ok: true,
+      projectId,
+      artifactPath: artifact.path,
+      importRunId,
+      milestonesImported: importedCount,
+      warnings: parsed.warnings,
+    };
+  } catch (error) {
+    updateImportRun.run({
+      id: importRunId,
+      status: 'failed',
+      completed_at: new Date().toISOString(),
+      summary: error instanceof Error ? error.message : 'Unknown import failure',
+      warnings_json: JSON.stringify([]),
+    });
+    throw error;
+  }
+}
+
 function upsertProjectWithArtifacts(projectRoot) {
   const now = new Date().toISOString();
   const name = path.basename(projectRoot);
@@ -852,6 +1145,25 @@ app.get('/api/projects/:id/import-runs', (req, res) => {
   } catch (error) {
     console.error('Failed to list import runs:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/api/projects/:id/import-gsd-project', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const result = importGsdProjectMilestones(validation.projectId);
+    return res.json(result);
+  } catch (error) {
+    if (error?.code === 'ARTIFACT_NOT_FOUND' || error?.code === 'ARTIFACT_MISSING_ON_DISK') {
+      return res.status(404).json({ error: error.message });
+    }
+
+    console.error('Failed to import .gsd/PROJECT.md milestones:', error);
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal Server Error',
+    });
   }
 });
 
