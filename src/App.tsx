@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Layout, Terminal, Globe, Plus, Search, CheckCircle2, Circle, Send, RefreshCw, FolderSearch, FileText } from 'lucide-react'
+import { Layout, Terminal, Globe, Plus, Search, CheckCircle2, Circle, Send, RefreshCw, FolderSearch, FileText, Flag, AlertCircle } from 'lucide-react'
 
 interface Task {
   id: number;
@@ -26,6 +26,43 @@ interface Project {
   updatedAt: string;
 }
 
+interface Milestone {
+  id: number;
+  projectId: number;
+  externalKey: string | null;
+  title: string;
+  description: string | null;
+  status: 'planned' | 'active' | 'blocked' | 'done' | 'draft';
+  origin: string;
+  confidence: number;
+  needsReview: boolean;
+  sortOrder: number;
+  sourceArtifactId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ImportRun {
+  id: number;
+  projectId: number;
+  status: 'running' | 'success' | 'partial' | 'failed';
+  strategy: string;
+  startedAt: string;
+  completedAt: string | null;
+  summary: string | null;
+  warningsJson: string | null;
+}
+
+interface ProjectPlan {
+  project: Project;
+  milestones: Milestone[];
+  slices: unknown[];
+  tasks: unknown[];
+  requirements: unknown[];
+  decisions: unknown[];
+  latestImportRun: ImportRun | null;
+}
+
 const API_BASE_URL = 'http://localhost:3001'
 const DEFAULT_SCAN_ROOT = 'C:/Users/lweis/Documents'
 
@@ -33,6 +70,9 @@ function App() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
+  const [projectPlan, setProjectPlan] = useState<ProjectPlan | null>(null)
+  const [projectPlanLoading, setProjectPlanLoading] = useState(false)
+  const [projectPlanError, setProjectPlanError] = useState<string | null>(null)
   const [newTask, setNewTask] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [projectsLoading, setProjectsLoading] = useState(true)
@@ -67,17 +107,42 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!selectedProject) return
+    if (!selectedProject) {
+      setTasks([])
+      setProjectPlan(null)
+      setProjectPlanError(null)
+      return
+    }
+
+    setProjectPlanLoading(true)
+    setProjectPlanError(null)
 
     fetch(`${API_BASE_URL}/api/tasks/${selectedProject.name.toLowerCase()}`)
       .then(res => res.json())
       .then(data => {
         setTasks(data)
-        document.getElementById('roadmap-section')?.scrollIntoView({ behavior: 'smooth' })
       })
       .catch(err => {
         console.error("Bridge is down! Run 'node server.js'", err)
         setTasks([])
+      })
+
+    fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/plan`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch project plan')
+        return res.json()
+      })
+      .then((data: ProjectPlan) => {
+        setProjectPlan(data)
+        document.getElementById('roadmap-section')?.scrollIntoView({ behavior: 'smooth' })
+      })
+      .catch(err => {
+        console.error('Failed to load project plan', err)
+        setProjectPlan(null)
+        setProjectPlanError('Unable to load canonical project plan.')
+      })
+      .finally(() => {
+        setProjectPlanLoading(false)
       })
   }, [selectedProject])
 
@@ -155,6 +220,16 @@ function App() {
     if (status === 'partial') return 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
     return 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
   }
+
+  const getMilestoneStatusClassName = (status: Milestone['status']) => {
+    if (status === 'done') return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+    if (status === 'active') return 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+    if (status === 'blocked') return 'bg-red-500/10 text-red-400 border border-red-500/20'
+    if (status === 'draft') return 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
+    return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+  }
+
+  const importedMilestones = projectPlan?.milestones ?? []
 
   return (
     <div className="flex h-screen bg-[#0b0f1a] text-slate-200 font-sans overflow-hidden">
@@ -290,8 +365,8 @@ function App() {
 
         <div id="roadmap-section" className="mt-16 pb-20">
           {selectedProject ? (
-            <div className="p-10 bg-[#111827]/80 backdrop-blur-md rounded-[2.5rem] border-2 border-slate-800 shadow-2xl">
-              <div className="flex justify-between items-start mb-10 gap-6">
+            <div className="p-10 bg-[#111827]/80 backdrop-blur-md rounded-[2.5rem] border-2 border-slate-800 shadow-2xl space-y-10">
+              <div className="flex justify-between items-start gap-6">
                 <div>
                   <h3 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">
                     {selectedProject.name} Roadmap
@@ -310,59 +385,152 @@ function App() {
                 </div>
               </div>
 
-              <form onSubmit={handleAddTask} className="mb-8 flex gap-3">
-                <input
-                  type="text"
-                  value={newTask}
-                  onChange={(e) => setNewTask(e.target.value)}
-                  placeholder="LOG NEW TASK OR MILESTONE..."
-                  className="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl px-6 py-4 focus:outline-none focus:border-blue-500 transition-all font-bold text-sm uppercase tracking-wider"
-                />
-                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl transition-all shadow-lg active:scale-95">
-                  <Send size={20} />
-                </button>
-              </form>
-
-              <div className="grid gap-4">
-                {tasks.length > 0 ? tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-6 bg-[#1e293b]/30 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all group/task"
-                  >
-                    <div className="flex items-center gap-5">
-                      {task.status === 'Done' ? (
-                        <CheckCircle2 className="text-emerald-500" size={24} />
-                      ) : (
-                        <Circle className="text-slate-600 group-hover/task:text-blue-500 transition-colors" size={24} />
-                      )}
-                      <div>
-                        <span className={`text-xl font-bold tracking-tight ${task.status === 'Done' ? 'text-slate-600 line-through' : 'text-slate-100'}`}>
-                          {task.title}
-                        </span>
-                        <div className="flex gap-2 mt-1">
-                          <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-500 uppercase tracking-tighter">
-                            {task.category}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${
-                      task.status === 'Done' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                        : task.status === 'In-Progress' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                          : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                    }`}>
-                      {task.status}
-                    </span>
-                  </div>
-                )) : (
-                  <div className="py-20 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-3">
-                    <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No Legacy Roadmap Tasks Found in SQLite</p>
-                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
-                      Discovery is now live. Milestone and slice import comes next.
+              <section className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3">
+                      <Flag size={20} className="text-blue-400" /> Imported Milestones
+                    </h4>
+                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
+                      Canonical planning model from imported project docs
                     </p>
                   </div>
+                  {projectPlan?.latestImportRun ? (
+                    <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${projectPlan.latestImportRun.status === 'success'
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : projectPlan.latestImportRun.status === 'partial'
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
+                      }`}>
+                      Import {projectPlan.latestImportRun.status}
+                    </span>
+                  ) : null}
+                </div>
+
+                {projectPlanLoading ? (
+                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl">
+                    <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Loading canonical plan...</p>
+                  </div>
+                ) : projectPlanError ? (
+                  <div className="rounded-3xl border border-red-500/20 bg-red-500/10 px-6 py-5 text-sm font-bold uppercase tracking-wide text-red-300 flex items-center gap-3">
+                    <AlertCircle size={18} />
+                    {projectPlanError}
+                  </div>
+                ) : importedMilestones.length > 0 ? (
+                  <div className="grid gap-4">
+                    {importedMilestones.map((milestone) => (
+                      <div
+                        key={milestone.id}
+                        className="flex items-center justify-between p-6 bg-[#1e293b]/30 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all"
+                      >
+                        <div className="flex items-start gap-5">
+                          <Flag className="text-blue-400 mt-1" size={22} />
+                          <div>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {milestone.externalKey ? (
+                                <span className="text-[10px] font-black px-2 py-1 rounded bg-blue-500/10 text-blue-400 uppercase tracking-[0.15em] border border-blue-500/20">
+                                  {milestone.externalKey}
+                                </span>
+                              ) : null}
+                              <span className="text-xl font-bold tracking-tight text-slate-100">
+                                {milestone.title}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 mt-3 flex-wrap">
+                              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-500 uppercase tracking-tighter">
+                                {milestone.origin}
+                              </span>
+                              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-500 uppercase tracking-tighter">
+                                Confidence {Math.round(milestone.confidence * 100)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getMilestoneStatusClassName(milestone.status)}`}>
+                          {milestone.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-3">
+                    <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No Imported Milestones Found Yet</p>
+                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
+                      This project may not have been imported yet or may not have supported docs.
+                    </p>
+                    {projectPlan?.latestImportRun?.summary ? (
+                      <p className="text-slate-400 font-mono text-xs">{projectPlan.latestImportRun.summary}</p>
+                    ) : null}
+                  </div>
                 )}
-              </div>
+              </section>
+
+              <section className="space-y-4 border-t border-slate-800/70 pt-8">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3">
+                      <Send size={18} className="text-slate-400" /> Legacy SQLite Tasks
+                    </h4>
+                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
+                      Existing task rows preserved during migration to canonical planning
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleAddTask} className="mb-8 flex gap-3">
+                  <input
+                    type="text"
+                    value={newTask}
+                    onChange={(e) => setNewTask(e.target.value)}
+                    placeholder="LOG NEW TASK OR MILESTONE..."
+                    className="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl px-6 py-4 focus:outline-none focus:border-blue-500 transition-all font-bold text-sm uppercase tracking-wider"
+                  />
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl transition-all shadow-lg active:scale-95">
+                    <Send size={20} />
+                  </button>
+                </form>
+
+                <div className="grid gap-4">
+                  {tasks.length > 0 ? tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between p-6 bg-[#1e293b]/30 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all group/task"
+                    >
+                      <div className="flex items-center gap-5">
+                        {task.status === 'Done' ? (
+                          <CheckCircle2 className="text-emerald-500" size={24} />
+                        ) : (
+                          <Circle className="text-slate-600 group-hover/task:text-blue-500 transition-colors" size={24} />
+                        )}
+                        <div>
+                          <span className={`text-xl font-bold tracking-tight ${task.status === 'Done' ? 'text-slate-600 line-through' : 'text-slate-100'}`}>
+                            {task.title}
+                          </span>
+                          <div className="flex gap-2 mt-1">
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-500 uppercase tracking-tighter">
+                              {task.category}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${
+                        task.status === 'Done' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                          : task.status === 'In-Progress' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                      }`}>
+                        {task.status}
+                      </span>
+                    </div>
+                  )) : (
+                    <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-3">
+                      <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No Legacy Roadmap Tasks Found in SQLite</p>
+                      <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
+                        Canonical milestones are now the primary planning surface.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </section>
             </div>
           ) : (
             <div className="py-20 text-center border-t border-slate-800/30">
