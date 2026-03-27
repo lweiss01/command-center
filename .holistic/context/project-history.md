@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-27T22:47:02.645Z
+- When: 2026-03-27T22:50:24.457Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: feat: complete M001 import cockpit foundation
+- Summary: Committed: docs: refresh README and roadmap state contract
 - Work done:
 - No completed work recorded.
 - Why it mattered:
