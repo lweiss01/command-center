@@ -95,6 +95,128 @@ db.exec(`
     completed_at TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS import_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    strategy TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    summary TEXT,
+    warnings_json TEXT,
+    FOREIGN KEY(project_id) REFERENCES projects(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS milestones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    external_key TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    origin TEXT NOT NULL DEFAULT 'imported',
+    confidence REAL NOT NULL DEFAULT 1.0,
+    needs_review INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    source_artifact_id INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES projects(id),
+    FOREIGN KEY(source_artifact_id) REFERENCES source_artifacts(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS slices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    milestone_id INTEGER NOT NULL,
+    external_key TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    origin TEXT NOT NULL DEFAULT 'imported',
+    confidence REAL NOT NULL DEFAULT 1.0,
+    needs_review INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    source_artifact_id INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES projects(id),
+    FOREIGN KEY(milestone_id) REFERENCES milestones(id),
+    FOREIGN KEY(source_artifact_id) REFERENCES source_artifacts(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS planning_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    milestone_id INTEGER,
+    slice_id INTEGER,
+    external_key TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    category TEXT,
+    priority TEXT,
+    origin TEXT NOT NULL DEFAULT 'imported',
+    confidence REAL NOT NULL DEFAULT 1.0,
+    needs_review INTEGER NOT NULL DEFAULT 0,
+    source_artifact_id INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES projects(id),
+    FOREIGN KEY(milestone_id) REFERENCES milestones(id),
+    FOREIGN KEY(slice_id) REFERENCES slices(id),
+    FOREIGN KEY(source_artifact_id) REFERENCES source_artifacts(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS requirements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    external_key TEXT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    validation TEXT,
+    notes TEXT,
+    primary_owner TEXT,
+    supporting_slices TEXT,
+    source_artifact_id INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES projects(id),
+    FOREIGN KEY(source_artifact_id) REFERENCES source_artifacts(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS decisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    external_key TEXT,
+    scope TEXT,
+    decision TEXT NOT NULL,
+    choice TEXT,
+    rationale TEXT,
+    revisable TEXT,
+    when_context TEXT,
+    source_artifact_id INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES projects(id),
+    FOREIGN KEY(source_artifact_id) REFERENCES source_artifacts(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS evidence_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type TEXT NOT NULL,
+    entity_id INTEGER NOT NULL,
+    source_artifact_id INTEGER NOT NULL,
+    excerpt TEXT,
+    line_start INTEGER,
+    line_end INTEGER,
+    confidence REAL NOT NULL DEFAULT 1.0,
+    reason TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(source_artifact_id) REFERENCES source_artifacts(id)
+  );
+
   CREATE TABLE IF NOT EXISTS projects_legacy (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE,
@@ -114,6 +236,15 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_projects_root_path ON projects(root_path);
   CREATE INDEX IF NOT EXISTS idx_artifacts_project_id ON source_artifacts(project_id);
   CREATE INDEX IF NOT EXISTS idx_scan_runs_started_at ON scan_runs(started_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_import_runs_project_id ON import_runs(project_id);
+  CREATE INDEX IF NOT EXISTS idx_milestones_project_id ON milestones(project_id);
+  CREATE INDEX IF NOT EXISTS idx_slices_project_id ON slices(project_id);
+  CREATE INDEX IF NOT EXISTS idx_slices_milestone_id ON slices(milestone_id);
+  CREATE INDEX IF NOT EXISTS idx_planning_tasks_project_id ON planning_tasks(project_id);
+  CREATE INDEX IF NOT EXISTS idx_planning_tasks_slice_id ON planning_tasks(slice_id);
+  CREATE INDEX IF NOT EXISTS idx_requirements_project_id ON requirements(project_id);
+  CREATE INDEX IF NOT EXISTS idx_decisions_project_id ON decisions(project_id);
+  CREATE INDEX IF NOT EXISTS idx_evidence_links_entity ON evidence_links(entity_type, entity_id);
 `);
 
 const getLegacyProjectByName = db.prepare('SELECT id FROM projects_legacy WHERE name = ?');
@@ -188,6 +319,49 @@ const listRecentScanRuns = db.prepare(`
   FROM scan_runs
   ORDER BY started_at DESC, id DESC
   LIMIT ?
+`);
+const getProjectById = db.prepare(`
+  SELECT p.*, COUNT(sa.id) AS artifact_count
+  FROM projects p
+  LEFT JOIN source_artifacts sa ON sa.project_id = p.id
+  WHERE p.id = ?
+  GROUP BY p.id
+`);
+const listMilestonesByProjectId = db.prepare(`
+  SELECT *
+  FROM milestones
+  WHERE project_id = ?
+  ORDER BY sort_order ASC, id ASC
+`);
+const listSlicesByProjectId = db.prepare(`
+  SELECT *
+  FROM slices
+  WHERE project_id = ?
+  ORDER BY sort_order ASC, id ASC
+`);
+const listPlanningTasksByProjectId = db.prepare(`
+  SELECT *
+  FROM planning_tasks
+  WHERE project_id = ?
+  ORDER BY id ASC
+`);
+const listRequirementsByProjectId = db.prepare(`
+  SELECT *
+  FROM requirements
+  WHERE project_id = ?
+  ORDER BY external_key ASC, id ASC
+`);
+const listDecisionsByProjectId = db.prepare(`
+  SELECT *
+  FROM decisions
+  WHERE project_id = ?
+  ORDER BY id ASC
+`);
+const listImportRunsByProjectId = db.prepare(`
+  SELECT *
+  FROM import_runs
+  WHERE project_id = ?
+  ORDER BY started_at DESC, id DESC
 `);
 
 function safeReadDir(dirPath) {
@@ -320,6 +494,156 @@ function isProjectCandidate(projectRoot) {
   return PROJECT_MARKERS.some((marker) => exists(path.join(projectRoot, marker)));
 }
 
+function parseProjectId(rawProjectId) {
+  const projectId = Number(rawProjectId);
+  if (Number.isNaN(projectId)) {
+    return null;
+  }
+  return projectId;
+}
+
+function serializeProjectRow(project) {
+  return {
+    id: project.id,
+    name: project.name,
+    slug: project.slug,
+    rootPath: project.root_path,
+    repoType: project.repo_type,
+    projectType: project.project_type,
+    primaryLanguage: project.primary_language,
+    framework: project.framework,
+    packageManager: project.package_manager,
+    hasGit: Boolean(project.has_git),
+    planningStatus: project.planning_status,
+    artifactCount: project.artifact_count,
+    lastScannedAt: project.last_scanned_at,
+    createdAt: project.created_at,
+    updatedAt: project.updated_at,
+  };
+}
+
+function serializeMilestoneRow(milestone) {
+  return {
+    id: milestone.id,
+    projectId: milestone.project_id,
+    externalKey: milestone.external_key,
+    title: milestone.title,
+    description: milestone.description,
+    status: milestone.status,
+    origin: milestone.origin,
+    confidence: milestone.confidence,
+    needsReview: Boolean(milestone.needs_review),
+    sortOrder: milestone.sort_order,
+    sourceArtifactId: milestone.source_artifact_id,
+    createdAt: milestone.created_at,
+    updatedAt: milestone.updated_at,
+  };
+}
+
+function serializeSliceRow(slice) {
+  return {
+    id: slice.id,
+    projectId: slice.project_id,
+    milestoneId: slice.milestone_id,
+    externalKey: slice.external_key,
+    title: slice.title,
+    description: slice.description,
+    status: slice.status,
+    origin: slice.origin,
+    confidence: slice.confidence,
+    needsReview: Boolean(slice.needs_review),
+    sortOrder: slice.sort_order,
+    sourceArtifactId: slice.source_artifact_id,
+    createdAt: slice.created_at,
+    updatedAt: slice.updated_at,
+  };
+}
+
+function serializePlanningTaskRow(task) {
+  return {
+    id: task.id,
+    projectId: task.project_id,
+    milestoneId: task.milestone_id,
+    sliceId: task.slice_id,
+    externalKey: task.external_key,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    category: task.category,
+    priority: task.priority,
+    origin: task.origin,
+    confidence: task.confidence,
+    needsReview: Boolean(task.needs_review),
+    sourceArtifactId: task.source_artifact_id,
+    createdAt: task.created_at,
+    updatedAt: task.updated_at,
+  };
+}
+
+function serializeRequirementRow(requirement) {
+  return {
+    id: requirement.id,
+    projectId: requirement.project_id,
+    externalKey: requirement.external_key,
+    title: requirement.title,
+    description: requirement.description,
+    status: requirement.status,
+    validation: requirement.validation,
+    notes: requirement.notes,
+    primaryOwner: requirement.primary_owner,
+    supportingSlices: requirement.supporting_slices,
+    sourceArtifactId: requirement.source_artifact_id,
+    createdAt: requirement.created_at,
+    updatedAt: requirement.updated_at,
+  };
+}
+
+function serializeDecisionRow(decision) {
+  return {
+    id: decision.id,
+    projectId: decision.project_id,
+    externalKey: decision.external_key,
+    scope: decision.scope,
+    decision: decision.decision,
+    choice: decision.choice,
+    rationale: decision.rationale,
+    revisable: decision.revisable,
+    whenContext: decision.when_context,
+    sourceArtifactId: decision.source_artifact_id,
+    createdAt: decision.created_at,
+    updatedAt: decision.updated_at,
+  };
+}
+
+function serializeImportRunRow(importRun) {
+  return {
+    id: importRun.id,
+    projectId: importRun.project_id,
+    status: importRun.status,
+    strategy: importRun.strategy,
+    startedAt: importRun.started_at,
+    completedAt: importRun.completed_at,
+    summary: importRun.summary,
+    warningsJson: importRun.warnings_json,
+  };
+}
+
+function getValidatedProjectOrSend(projectIdParam, res) {
+  const projectId = parseProjectId(projectIdParam);
+  if (projectId === null) {
+    res.status(400).json({ error: 'Project id must be numeric' });
+    return null;
+  }
+
+  const project = getProjectById.get(projectId);
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' });
+    return null;
+  }
+
+  return { projectId, project };
+}
+
 function upsertProjectWithArtifacts(projectRoot) {
   const now = new Date().toISOString();
   const name = path.basename(projectRoot);
@@ -445,23 +769,7 @@ app.get('/api/tasks/:projectName', (req, res) => {
 
 app.get('/api/projects', (_req, res) => {
   try {
-    const projects = listProjects.all().map((project) => ({
-      id: project.id,
-      name: project.name,
-      slug: project.slug,
-      rootPath: project.root_path,
-      repoType: project.repo_type,
-      projectType: project.project_type,
-      primaryLanguage: project.primary_language,
-      framework: project.framework,
-      packageManager: project.package_manager,
-      hasGit: Boolean(project.has_git),
-      planningStatus: project.planning_status,
-      artifactCount: project.artifact_count,
-      lastScannedAt: project.last_scanned_at,
-      createdAt: project.created_at,
-      updatedAt: project.updated_at,
-    }));
+    const projects = listProjects.all().map(serializeProjectRow);
 
     return res.json(projects);
   } catch (error) {
@@ -472,12 +780,10 @@ app.get('/api/projects', (_req, res) => {
 
 app.get('/api/projects/:id/artifacts', (req, res) => {
   try {
-    const projectId = Number(req.params.id);
-    if (Number.isNaN(projectId)) {
-      return res.status(400).json({ error: 'Project id must be numeric' });
-    }
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
 
-    const artifacts = listArtifactsByProjectId.all(projectId).map((artifact) => ({
+    const artifacts = listArtifactsByProjectId.all(validation.projectId).map((artifact) => ({
       id: artifact.id,
       projectId: artifact.project_id,
       artifactType: artifact.artifact_type,
@@ -493,6 +799,85 @@ app.get('/api/projects/:id/artifacts', (req, res) => {
     return res.json(artifacts);
   } catch (error) {
     console.error('Failed to list artifacts:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/api/projects/:id/milestones', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const milestones = listMilestonesByProjectId.all(validation.projectId).map(serializeMilestoneRow);
+    return res.json(milestones);
+  } catch (error) {
+    console.error('Failed to list milestones:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/api/projects/:id/requirements', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const requirements = listRequirementsByProjectId.all(validation.projectId).map(serializeRequirementRow);
+    return res.json(requirements);
+  } catch (error) {
+    console.error('Failed to list requirements:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/api/projects/:id/decisions', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const decisions = listDecisionsByProjectId.all(validation.projectId).map(serializeDecisionRow);
+    return res.json(decisions);
+  } catch (error) {
+    console.error('Failed to list decisions:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/api/projects/:id/import-runs', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const importRuns = listImportRunsByProjectId.all(validation.projectId).map(serializeImportRunRow);
+    return res.json(importRuns);
+  } catch (error) {
+    console.error('Failed to list import runs:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/api/projects/:id/plan', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const milestones = listMilestonesByProjectId.all(validation.projectId).map(serializeMilestoneRow);
+    const slices = listSlicesByProjectId.all(validation.projectId).map(serializeSliceRow);
+    const tasks = listPlanningTasksByProjectId.all(validation.projectId).map(serializePlanningTaskRow);
+    const requirements = listRequirementsByProjectId.all(validation.projectId).map(serializeRequirementRow);
+    const decisions = listDecisionsByProjectId.all(validation.projectId).map(serializeDecisionRow);
+    const importRuns = listImportRunsByProjectId.all(validation.projectId).map(serializeImportRunRow);
+
+    return res.json({
+      project: serializeProjectRow(validation.project),
+      milestones,
+      slices,
+      tasks,
+      requirements,
+      decisions,
+      latestImportRun: importRuns[0] ?? null,
+    });
+  } catch (error) {
+    console.error('Failed to build project plan snapshot:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
