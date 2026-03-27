@@ -1,41 +1,130 @@
 # Command Center
 
-Command Center is a lightweight, local-first task and planning hub for agentic AI coding work across all of my projects.
+Command Center is a local-first planning cockpit for code repos.
 
-The goal is to make it easy to:
+It is built for an existing working style:
 
-- discover projects in my local workspace
-- import existing planning state from repo docs
-- normalize milestones, slices, tasks, and decisions into one view
-- bootstrap planning for repos that do not have roadmap docs yet
-- stay fast and personal instead of growing into a bloated agent operating system
+- discuss
+- research
+- plan
+- implement
+- validate
 
-## Current status
+The purpose is not to become a general-purpose agent operating system.
+The purpose is to make repo planning state easier to discover, import, compare, resume, and advance across real projects.
 
-This project is in the early dashboard/prototype stage.
+## What Command Center Does
 
-The current app includes:
+Command Center is designed to:
 
-- a Vite + React frontend
-- a small Express bridge
-- a local SQLite database
-- seed scripts for project discovery and sample roadmap data
+- discover projects across a local workspace
+- detect planning artifacts already living in those repos
+- import repo planning state into a canonical local model
+- normalize milestones, requirements, decisions, and related planning entities into one cockpit
+- preserve continuity with Holistic repo memory
+- move toward apples-to-apples progress comparison across repos
+- eventually understand Beads issue graphs as part of the same planning picture
 
-## Direction
+## Current Product Direction
 
-The planned first major milestone is:
+Command Center follows a docs-first approach.
 
-- **M001 — Core planning model + import-first foundation**
+That means the source of truth should remain in repo-local planning artifacts whenever possible, especially:
 
-That milestone will focus on:
+- GSD / GSD2 planning docs
+- Holistic continuity docs
+- Beads issue/task graphs
+- lightweight repo-local roadmap artifacts
 
-- runtime project discovery
-- canonical planning entities
+Command Center imports and interprets that state instead of trying to replace it with a bloated central system.
+
+## Current Status
+
+Command Center is now beyond the initial seed/demo stage and has a real M001 foundation in place.
+
+### Working today
+
+- workspace project discovery
 - source artifact detection
-- import runs and provenance
-- a project overview UI based on imported repo state instead of static seed data
+- canonical SQLite planning schema
+- canonical project plan snapshot API
+- milestone import from `.gsd/PROJECT.md`
+- requirements import from `.gsd/REQUIREMENTS.md`
+- decisions import from `.gsd/DECISIONS.md`
+- provenance / import run tracking
+- unified import controls in the project cockpit
+- project dashboard with imported planning surfaces
+- Holistic repo memory and roadmap docs committed into the repo
 
-## Tech stack
+### Still in progress
+
+- richer import warning/review UI
+- slice/task import into the canonical model
+- workflow-state normalization across repos
+- cross-repo apples-to-apples progress semantics
+- deeper Holistic + Beads integration in the cockpit
+
+## Why This Exists
+
+I work across multiple repos and want one place that can tell me:
+
+- what this repo is trying to do
+- what milestone is active
+- what decisions and requirements matter
+- what happened last session
+- what I should do next
+- how this repo compares to other repos without mental translation
+
+Mission Control-style orchestration ideas are useful, but Command Center is intentionally narrower and more personal:
+
+- local-first
+- repo-first
+- docs-first
+- continuity-aware
+- consistency-focused
+
+## Workflow Model
+
+Command Center is being shaped around a repeatable workflow loop:
+
+1. **Discuss** — shape the problem and intent
+2. **Research** — retire unknowns and compare options
+3. **Plan** — define milestones, slices, tasks, requirements, and decisions
+4. **Implement** — execute against the plan
+5. **Validate** — prove the work is done and correct
+
+This loop is intended to repeat within a repo over time.
+A project does not go through it only once. Each milestone or major body of work may restart the cycle.
+
+## Milestone Roadmap
+
+### M001 — Core planning model + import-first foundation
+
+M001 is focused on building a trustworthy import and cockpit foundation:
+
+- discover repos
+- detect source artifacts
+- import canonical planning entities
+- show imported planning state in the UI
+- track provenance and import runs
+
+M001 now includes working milestone, requirement, and decision imports plus unified import controls.
+
+### M002 — Consistent project cockpit + continuity intelligence
+
+M002 is focused on turning imported planning state into a normalized, resumable, comparable project view across repos.
+
+Key themes:
+
+- workflow-state contract
+- Holistic continuity integration
+- Beads translation layer
+- progress normalization
+- richer cockpit and cross-repo dashboard surfaces
+
+For the full evolving plan, see [ROADMAP.md](./ROADMAP.md).
+
+## Tech Stack
 
 - React 19
 - TypeScript
@@ -44,7 +133,7 @@ That milestone will focus on:
 - SQLite via better-sqlite3
 - Tailwind CSS
 
-## Local development
+## Local Development
 
 Install dependencies:
 
@@ -52,10 +141,16 @@ Install dependencies:
 npm install
 ```
 
-Run the frontend:
+Run the frontend dev server:
 
 ```bash
 npm run dev
+```
+
+Run the backend bridge:
+
+```bash
+node server.js
 ```
 
 Build the app:
@@ -64,12 +159,19 @@ Build the app:
 npm run build
 ```
 
-The current Express bridge can be started with:
+## Repo Memory and Planning Context
 
-```bash
-node server.js
-```
+This repo now carries its own planning and continuity context, including:
+
+- [ROADMAP.md](./ROADMAP.md)
+- [HOLISTIC.md](./HOLISTIC.md)
+- [AGENTS.md](./AGENTS.md)
+- `.holistic/` repo memory and continuity artifacts
+
+That is intentional. Command Center is being built to reduce context loss and make interruptions less costly.
 
 ## Notes
 
-This repo is intentionally starting small. The goal is to build a fast planning center for real repos and real workflows, not a full clone of larger task orchestration systems.
+Command Center should stay small, sharp, and honest.
+
+It should help me understand and advance real repo plans, not drown that work in generic PM ceremony or overbuilt agent orchestration.

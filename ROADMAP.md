@@ -301,6 +301,7 @@ M002 should be built in two layers:
    - render normalized state, continuity context, blockers, and next actions in the UI
 
 The normalization layer comes first conceptually, but early cockpit slices can render intermediate state while normalization rules are being formalized.
+The key assumption is that workflow state is **iterative and repeating** within a repo: the app should identify the current active loop for the current milestone/slice/body of work, not assume a repo only passes through the workflow phases once.
 
 ### Detailed Slice Plan
 
@@ -308,8 +309,13 @@ The normalization layer comes first conceptually, but early cockpit slices can r
 
 **Goal:** Define the canonical state model that all repos will map into.
 
+This state model should be treated as a **repeatable workflow loop**, not a one-time repo lifecycle.
+A single repo may move through Discuss → Research → Plan → Implement → Validate many times over its life as milestones, slices, discoveries, and validation outcomes reopen the loop.
+Command Center should therefore represent the repo's **current dominant phase** for the active body of work, while allowing the cycle to restart any number of times.
+
 **Deliverables**
 - a documented Discuss / Research / Plan / Implement / Validate contract
+- explicit wording that the workflow loop is iterative within a repo, not linear and one-way
 - precedence rules when multiple signals conflict
 - explicit mapping from imported artifacts to workflow phase candidates
 - project-level phase output plus confidence level
