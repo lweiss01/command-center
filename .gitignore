@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 mission_control.db
+mission_control.db-shm
+mission_control.db-wal
 .bg-shell/
 
 # Editor directories and files
