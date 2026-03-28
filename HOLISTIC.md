@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: add workflow continuity and cockpit guidance
+Committed: docs: reconcile planning state and process guardrails
 
 ## What Was Tried
 
@@ -99,6 +99,6 @@ Committed: feat: add workflow continuity and cockpit guidance
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T00:34:16.655Z
+- Last updated: 2026-03-28T00:46:05.471Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

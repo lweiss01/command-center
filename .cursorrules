@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: add workflow continuity and cockpit guidance
+Committed: docs: reconcile planning state and process guardrails
 
 ## Before ending this session
 
