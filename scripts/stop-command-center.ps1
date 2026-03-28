@@ -35,28 +35,20 @@ function Get-ListeningProcessIdsForPort {
   $processIds = New-Object System.Collections.Generic.HashSet[int]
 
   foreach ($line in & $netstatPath -ano -p tcp) {
-    if ($line -notmatch 'LISTENING') {
+    $match = [Regex]::Match($line, '^\s*TCP\s+(\S+)\s+\S+\s+LISTENING\s+(\d+)\s*$')
+    if (-not $match.Success) {
       continue
     }
 
-    if ($line -notmatch [Regex]::Escape($pattern)) {
-      continue
-    }
-
-    $parts = $line -split '\s+'
-    if ($parts.Count -lt 5) {
-      continue
-    }
-
-    $localAddress = $parts[1]
+    $localAddress = $match.Groups[1].Value
     if ($localAddress -notmatch [Regex]::Escape($pattern) + '$') {
       continue
     }
 
-    $pidRaw = $parts[-1]
-    $pid = 0
-    if ([int]::TryParse($pidRaw, [ref]$pid)) {
-      [void]$processIds.Add($pid)
+    $pidRaw = $match.Groups[2].Value
+    $parsedPid = 0
+    if ([int]::TryParse($pidRaw, [ref]$parsedPid)) {
+      [void]$processIds.Add($parsedPid)
     }
   }
 

@@ -13,26 +13,59 @@ function Write-Status {
   Write-Host "[command-center] $Message"
 }
 
-function Test-PortOpen {
-  param([int]$Port)
+function Get-ListeningProcessIdsForPort {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int]$Port
+  )
 
-  try {
-    $client = [System.Net.Sockets.TcpClient]::new()
-    $connect = $client.BeginConnect('127.0.0.1', $Port, $null, $null)
-    $connectedInTime = $connect.AsyncWaitHandle.WaitOne(300)
+  $netstatCommand = Get-Command netstat.exe -ErrorAction SilentlyContinue
+  if ($netstatCommand) {
+    $netstatPath = $netstatCommand.Source
+  }
+  elseif ($env:SystemRoot) {
+    $fallbackPath = Join-Path $env:SystemRoot 'System32\netstat.exe'
+    if (Test-Path -LiteralPath $fallbackPath) {
+      $netstatPath = $fallbackPath
+    }
+  }
 
-    if (-not $connectedInTime) {
-      $client.Close()
-      return $false
+  if (-not $netstatPath) {
+    throw 'Could not resolve netstat.exe.'
+  }
+
+  $pattern = ":$Port"
+  $processIds = New-Object System.Collections.Generic.HashSet[int]
+
+  foreach ($line in & $netstatPath -ano -p tcp) {
+    $match = [Regex]::Match($line, '^\s*TCP\s+(\S+)\s+\S+\s+LISTENING\s+(\d+)\s*$')
+    if (-not $match.Success) {
+      continue
     }
 
-    $client.EndConnect($connect)
-    $client.Close()
-    return $true
+    $localAddress = $match.Groups[1].Value
+    if ($localAddress -notmatch [Regex]::Escape($pattern) + '$') {
+      continue
+    }
+
+    $pidRaw = $match.Groups[2].Value
+    $parsedPid = 0
+    if ([int]::TryParse($pidRaw, [ref]$parsedPid)) {
+      [void]$processIds.Add($parsedPid)
+    }
   }
-  catch {
-    return $false
-  }
+
+  return @($processIds)
+}
+
+function Test-PortListening {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int]$Port
+  )
+
+  $processIds = Get-ListeningProcessIdsForPort -Port $Port
+  return $processIds.Count -gt 0
 }
 
 function Wait-ForPort {
@@ -44,7 +77,7 @@ function Wait-ForPort {
 
   $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
   while ((Get-Date) -lt $deadline) {
-    if (Test-PortOpen -Port $Port) {
+    if (Test-PortListening -Port $Port) {
       Write-Status "$ServiceName is ready on port $Port."
       return $true
     }
@@ -65,7 +98,7 @@ function Start-ServiceWindow {
     [string]$LogPath
   )
 
-  if (Test-PortOpen -Port $Port) {
+  if (Test-PortListening -Port $Port) {
     Write-Status "$ServiceName already running on port $Port."
     return $null
   }
@@ -83,11 +116,11 @@ if (Test-Path -LiteralPath `$chcpPath) {
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 `$OutputEncoding = [System.Text.Encoding]::UTF8
 Write-Host '[command-center] Logging to $escapedLogPath'
-$Command 2>&1 | Tee-Object -FilePath '$escapedLogPath'
+$Command 2>&1 | Tee-Object -FilePath '$escapedLogPath' -Append
 "@
 
-  Write-Status "Starting $ServiceName ($Command)..."
-  $process = Start-Process -FilePath $PowerShellHost -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-Command', $windowCommand) -WorkingDirectory $RepoRoot -PassThru
+  Write-Status "Starting $ServiceName ($Command) in hidden background process..."
+  $process = Start-Process -FilePath $PowerShellHost -ArgumentList @('-ExecutionPolicy', 'Bypass', '-Command', $windowCommand) -WorkingDirectory $RepoRoot -WindowStyle Hidden -PassThru
 
   Start-Sleep -Milliseconds 500
   if ($process.HasExited) {
@@ -95,6 +128,33 @@ $Command 2>&1 | Tee-Object -FilePath '$escapedLogPath'
   }
 
   return $process
+}
+
+function Resolve-AppBrowserPath {
+  $edgeCommand = Get-Command msedge.exe -ErrorAction SilentlyContinue
+  if ($edgeCommand) {
+    return $edgeCommand.Source
+  }
+
+  $chromeCommand = Get-Command chrome.exe -ErrorAction SilentlyContinue
+  if ($chromeCommand) {
+    return $chromeCommand.Source
+  }
+
+  $fallbackCandidates = @(
+    'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+    'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
+    'C:\Program Files\Google\Chrome\Application\chrome.exe',
+    'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
+  )
+
+  foreach ($candidate in $fallbackCandidates) {
+    if (Test-Path -LiteralPath $candidate) {
+      return $candidate
+    }
+  }
+
+  return $null
 }
 
 try {
@@ -136,8 +196,27 @@ try {
 
   $url = "http://localhost:$FrontendPort"
   if (-not $NoBrowser) {
-    Write-Status "Opening browser at $url"
-    Start-Process $url | Out-Null
+    $browserPath = Resolve-AppBrowserPath
+    if ($browserPath) {
+      Write-Status "Opening dedicated app window at $url"
+      $browserProcess = Start-Process -FilePath $browserPath -ArgumentList @('--new-window', "--app=$url") -PassThru
+
+      $stopScriptPath = Join-Path $PSScriptRoot 'stop-command-center.ps1'
+      $escapedStopScriptPath = $stopScriptPath -replace "'", "''"
+      $watcherCommand = @"
+`$ErrorActionPreference = 'SilentlyContinue'
+try { Wait-Process -Id $($browserProcess.Id) } catch {}
+& '$escapedStopScriptPath' -Ports @($BackendPort, $FrontendPort) | Out-Null
+"@
+
+      Start-Process -FilePath $powerShellHost -ArgumentList @('-ExecutionPolicy', 'Bypass', '-Command', $watcherCommand) -WorkingDirectory $repoRoot -WindowStyle Hidden | Out-Null
+      Write-Status "Auto-stop watcher armed (browser PID $($browserProcess.Id)). Services will stop when the app window closes."
+    }
+    else {
+      Write-Status "No supported browser executable (msedge/chrome) found for auto-stop mode; opening default browser at $url"
+      Write-Status 'Auto-stop is unavailable in this shell. Use npm run cc:stop or the Stop shortcut when done.'
+      Start-Process $url | Out-Null
+    }
   }
   else {
     Write-Status "NoBrowser switch set; skipping browser open for $url"
