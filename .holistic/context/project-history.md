@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T22:43:41.498Z
+- When: 2026-03-28T22:56:55.660Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: feat: full visual redesign — Syne/IBM Plex Mono, lime accent, precision instrument design system
+- Summary: Committed: feat: full redesign — two-pane list/detail, Inter, pure black, no sidebar
 - Work done:
 - No completed work recorded.
 - Why it mattered:

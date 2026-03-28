@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: full visual redesign — Syne/IBM Plex Mono, lime accent, precision instrument design system
+Committed: feat: full redesign — two-pane list/detail, Inter, pure black, no sidebar
 
 ## What Was Tried
 
@@ -67,6 +67,7 @@ Committed: feat: full visual redesign — Syne/IBM Plex Mono, lime accent, preci
 
 ## Changed Files In Current Session
 
+- .bg-shell/manifest.json
 - .logs/command-center-frontend.log
 
 ## Pending Work Queue
@@ -99,6 +100,6 @@ Committed: feat: full visual redesign — Syne/IBM Plex Mono, lime accent, preci
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T22:43:40.056Z
+- Last updated: 2026-03-28T22:56:54.524Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

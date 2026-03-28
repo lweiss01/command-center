@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: full visual redesign — Syne/IBM Plex Mono, lime accent, precision instrument design system
+Committed: feat: full redesign — two-pane list/detail, Inter, pure black, no sidebar
 
 ## Planned Next Steps
 
