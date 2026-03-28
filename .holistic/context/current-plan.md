@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: fix: loading bug; warm off-black palette, indigo accent, desaturated status colors
+Committed: fix: center empty state in right pane
 
 ## Planned Next Steps
 
