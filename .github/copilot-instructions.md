@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: add one-click windows launcher and desktop shortcut scripts
+Committed: feat: add launcher doctor/stop flow and wire footer to package version
 
 ## Before ending this session
 

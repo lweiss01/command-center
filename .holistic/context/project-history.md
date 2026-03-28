@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T18:01:17.741Z
+- When: 2026-03-28T18:48:08.741Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: feat: add one-click windows launcher and desktop shortcut scripts
+- Summary: Committed: feat: add launcher doctor/stop flow and wire footer to package version
 - Work done:
 - No completed work recorded.
 - Why it mattered:

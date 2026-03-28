@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: add one-click windows launcher and desktop shortcut scripts
+Committed: feat: add launcher doctor/stop flow and wire footer to package version
 
 ## What Was Tried
 
@@ -99,6 +99,6 @@ Committed: feat: add one-click windows launcher and desktop shortcut scripts
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T18:01:09.067Z
+- Last updated: 2026-03-28T18:47:49.049Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
