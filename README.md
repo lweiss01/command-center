@@ -18,7 +18,7 @@ Milestone status (current):
 - ✅ **M001 complete** — import-first foundation
 - ✅ **M002 complete** — resume-first cockpit intelligence + trust surfaces
 - ✅ **M007 complete** — launcher hardening + cockpit actionability iteration
-- ⏳ No active milestone in execution
+- ▶ **M008 active (planned)** — premium UX redesign + onboarding clarity
 
 For planning detail, see [ROADMAP.md](./ROADMAP.md).
 
@@ -66,7 +66,7 @@ Launcher diagnostics and stop now use resilient port probing to avoid earlier Po
 
 ### Version visibility
 
-- Footer version is package-driven from `package.json` (`L.W. Hub vX.Y.Z`)
+- Footer version is package-driven from `package.json` (`Command Center vX.Y.Z`)
 
 ---
 
@@ -83,10 +83,12 @@ Launcher diagnostics and stop now use resilient port probing to avoid earlier Po
 ### 1) Clone and install
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/lweiss01/command-center.git
 cd command-center
 npm install
 ```
+
+If you are using your own fork, replace the clone URL with your fork URL.
 
 ### 2) Create desktop shortcuts (Windows)
 
@@ -119,7 +121,7 @@ npm run cc:launch
 
 ### 5) Verify app is running
 
-- Frontend: `http://localhost:5173` (or the next port Vite reports)
+- Frontend: `http://localhost:5173` (launcher uses strict port 5173)
 - Backend API: `http://localhost:3001/api/projects`
 
 ### 6) Stop services

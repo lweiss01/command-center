@@ -595,7 +595,7 @@ function App() {
           </button>
         </nav>
         <div className="mt-6 lg:mt-auto pt-6 border-t border-slate-800/50">
-          <p className="text-[10px] text-slate-600 font-mono tracking-widest uppercase text-center">L.W. Hub v{APP_VERSION}</p>
+          <p className="text-[10px] text-slate-600 font-mono tracking-widest uppercase text-center">Command Center v{APP_VERSION}</p>
         </div>
       </aside>
 

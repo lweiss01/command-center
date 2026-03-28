@@ -11,6 +11,8 @@ It is intentionally procedural:
 
 If you only need install/start/stop commands, see [README.md](../README.md).
 
+Tip: the app header includes a **User Guide** button that opens this guide in a new tab for side-by-side use.
+
 ---
 
 ## 1) Your goal in Command Center
