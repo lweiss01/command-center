@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Browser-verified all S02 continuity panel assertions pass: hygien…
+Committed: feat: Added computeReadiness(project) to server.js — 10-component workf…
 
 ## Before ending this session
 

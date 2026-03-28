@@ -110,6 +110,21 @@ interface NextAction {
   blockers: string[];
 }
 
+interface StackComponent {
+  id: string;
+  label: string;
+  kind: 'repo-doc' | 'machine-tool' | 'repo-dir';
+  status: 'present' | 'missing';
+  note: string | null;
+  required: boolean;
+}
+
+interface ReadinessReport {
+  overallReadiness: 'ready' | 'partial' | 'missing';
+  components: StackComponent[];
+  gaps: string[];
+}
+
 interface ProjectPlan {
   project: Project;
   milestones: Milestone[];
@@ -127,6 +142,7 @@ interface ProjectPlan {
   workflowState: WorkflowState;
   continuity: ContinuityState;
   nextAction: NextAction;
+  readiness: ReadinessReport;
 }
 
 const API_BASE_URL = 'http://localhost:3001'
@@ -402,6 +418,12 @@ function App() {
     return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
   }
 
+  const getReadinessClassName = (status: 'ready' | 'partial' | 'missing'): string => {
+    if (status === 'ready') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+    if (status === 'partial') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+    return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
+  }
+
   const getNextActionBlockersPresent = (blockers: string[] | undefined) => !!blockers && blockers.length > 0;
 
   const importedMilestones = projectPlan?.milestones ?? []
@@ -657,6 +679,57 @@ function App() {
                   ) : null}
                 </div>
               </section>
+
+              {projectPlan?.readiness && (
+                <section className="space-y-3 border-t border-slate-800/70 pt-6">
+                  <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div>
+                        <h4 className="text-xl font-black uppercase tracking-tight text-white">Workflow Readiness</h4>
+                        <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
+                          Standard stack audit — GSD, Holistic, Beads, repo docs
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getReadinessClassName(projectPlan.readiness.overallReadiness)}`}>
+                          Readiness: {projectPlan.readiness.overallReadiness}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Components</p>
+                      <ul className="space-y-2 text-sm text-slate-300">
+                        {projectPlan.readiness.components.map((component) => (
+                          <li key={component.id} className="flex gap-2 items-start">
+                            <span className={`shrink-0 mt-0.5 ${component.status === 'present' ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {component.status === 'present' ? '✓' : '✗'}
+                            </span>
+                            <span className="min-w-[160px] shrink-0 text-slate-300">
+                              {component.label}
+                              {component.required && <span className="text-slate-500 text-xs ml-1">(required)</span>}
+                            </span>
+                            {component.note && (
+                              <span className="text-slate-500 text-xs italic">{component.note}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {projectPlan.readiness.gaps.length > 0 && (
+                      <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-red-300 mb-3">Gaps</p>
+                        <ul className="space-y-1 text-sm text-red-200/80 list-disc pl-5">
+                          {projectPlan.readiness.gaps.map((gap) => (
+                            <li key={gap}>{gap}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
 
               <section className="space-y-3 border-t border-slate-800/70 pt-6">
                 <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
