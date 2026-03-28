@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Layout, Terminal, Globe, Plus, Search, CheckCircle2, Circle, Send, RefreshCw, FolderSearch, FileText, Flag, AlertCircle } from 'lucide-react'
+import { Layout, Terminal, Globe, Plus, Search, CheckCircle2, Circle, Send, RefreshCw, FolderSearch, FileText, Flag, AlertCircle, BookOpen } from 'lucide-react'
 
 interface Task {
   id: number;
@@ -188,6 +188,7 @@ interface PortfolioEntry {
 const API_BASE_URL = 'http://localhost:3001'
 const DEFAULT_SCAN_ROOT = 'C:/Users/lweis/Documents'
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0'
+const USER_GUIDE_URL = 'https://github.com/lweiss01/command-center/blob/main/docs/USER-GUIDE.md'
 
 function App() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
@@ -607,6 +608,14 @@ function App() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 w-full lg:w-auto lg:justify-end">
+            <a
+              href={USER_GUIDE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 bg-violet-600 text-white px-6 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-violet-500 transition-all shadow-xl active:scale-95 w-full sm:w-auto"
+            >
+              <BookOpen size={20} /> User Guide
+            </a>
             <button
               onClick={handleScanWorkspace}
               disabled={scanInFlight}
