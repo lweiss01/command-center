@@ -934,6 +934,9 @@ function computeContinuity(project) {
 
   // No Holistic state file present — continuity is entirely unknown.
   if (!fs.existsSync(holisticStatePath)) {
+    const handoffCommand = process.platform === 'win32'
+      ? '.holistic\\system\\holistic.cmd handoff'
+      : './.holistic/system/holistic handoff';
     return {
       status: 'missing',
       freshAt: null,
@@ -941,6 +944,9 @@ function computeContinuity(project) {
       latestWork: null,
       checkpointHygiene: 'missing',
       hygieneNote: 'No repo-local Holistic state detected.',
+      checkpointCount: null,
+      lastCheckpointReason: null,
+      handoffCommand,
     };
   }
 
@@ -1015,6 +1021,11 @@ function computeContinuity(project) {
     const checkpointCount = activeSession?.checkpointCount ?? null;
     const lastCheckpointReason = activeSession?.lastCheckpointReason ?? null;
 
+    // Platform-appropriate handoff command for the hygiene callout.
+    const handoffCommand = process.platform === 'win32'
+      ? '.holistic\\system\\holistic.cmd handoff'
+      : './.holistic/system/holistic handoff';
+
     return {
       status,
       freshAt,
@@ -1024,9 +1035,13 @@ function computeContinuity(project) {
       hygieneNote,
       checkpointCount,
       lastCheckpointReason,
+      handoffCommand,
     };
   } catch (error) {
     console.warn(`Failed to read Holistic state for ${project.root_path}:`, error);
+    const handoffCommand = process.platform === 'win32'
+      ? '.holistic\\system\\holistic.cmd handoff'
+      : './.holistic/system/holistic handoff';
     return {
       status: 'stale',
       freshAt: null,
@@ -1034,6 +1049,9 @@ function computeContinuity(project) {
       latestWork: null,
       checkpointHygiene: 'missing',
       hygieneNote: 'Holistic state file exists but could not be parsed.',
+      checkpointCount: null,
+      lastCheckpointReason: null,
+      handoffCommand,
     };
   }
 }

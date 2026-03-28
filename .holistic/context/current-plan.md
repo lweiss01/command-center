@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Confirmed cockpit renders structured workflow phase, confidence,…
+Committed: fix: Fixed checkpoint key-path bug (passiveCapture.lastCheckpointAt / l…
 
 ## Planned Next Steps
 

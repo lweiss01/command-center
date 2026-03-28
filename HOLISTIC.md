@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: Confirmed cockpit renders structured workflow phase, confidence,…
+Committed: fix: Fixed checkpoint key-path bug (passiveCapture.lastCheckpointAt / l…
 
 ## What Was Tried
 
@@ -68,6 +68,8 @@ Committed: feat: Confirmed cockpit renders structured workflow phase, confidence
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
+- mission_control.db-shm
+- server.js
 
 ## Pending Work Queue
 
@@ -99,6 +101,6 @@ Committed: feat: Confirmed cockpit renders structured workflow phase, confidence
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T03:53:56.129Z
+- Last updated: 2026-03-28T03:56:32.254Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

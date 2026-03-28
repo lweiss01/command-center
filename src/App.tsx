@@ -99,6 +99,9 @@ interface ContinuityState {
   latestWork: string | null;
   checkpointHygiene: 'ok' | 'stale' | 'missing';
   hygieneNote: string | null;
+  checkpointCount?: number | null;
+  lastCheckpointReason?: string | null;
+  handoffCommand?: string | null;
 }
 
 interface NextAction {
@@ -688,13 +691,54 @@ function App() {
                         <p className="text-sm text-slate-300">{projectPlan.continuity.latestWork}</p>
                       </>
                     ) : null}
-                    {projectPlan?.continuity.hygieneNote ? (
-                      <p className="text-xs text-slate-500 mt-1">{projectPlan.continuity.hygieneNote}</p>
-                    ) : null}
-                    {!projectPlan?.continuity.latestWork && !projectPlan?.continuity.hygieneNote ? (
+                    {!projectPlan?.continuity.latestWork ? (
                       <p className="text-sm text-slate-500 italic">No continuity detail available.</p>
                     ) : null}
                   </div>
+
+                  {/* Hygiene callout — visible when stale or missing, compact confirmation when ok */}
+                  {projectPlan?.continuity.checkpointHygiene === 'ok' ? (
+                    <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+                      <CheckCircle2 size={16} className="text-emerald-400 mt-0.5 shrink-0" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-emerald-300">
+                          {projectPlan.continuity.hygieneNote ?? 'Checkpoint hygiene is good.'}
+                        </p>
+                        {projectPlan.continuity.checkpointCount != null && projectPlan.continuity.checkpointCount > 0 ? (
+                          <p className="text-[11px] text-emerald-200/70">
+                            {projectPlan.continuity.checkpointCount} passive capture{projectPlan.continuity.checkpointCount === 1 ? '' : 's'}
+                            {projectPlan.continuity.lastCheckpointReason ? `, last reason: ${projectPlan.continuity.lastCheckpointReason}` : ''}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : (projectPlan?.continuity.checkpointHygiene === 'stale' || projectPlan?.continuity.checkpointHygiene === 'missing') ? (
+                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/8 px-4 py-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle size={16} className={`mt-0.5 shrink-0 ${projectPlan.continuity.checkpointHygiene === 'missing' ? 'text-red-400' : 'text-amber-400'}`} />
+                        <div className="space-y-1">
+                          <p className={`text-xs font-bold uppercase tracking-[0.1em] ${projectPlan.continuity.checkpointHygiene === 'missing' ? 'text-red-300' : 'text-amber-300'}`}>
+                            Checkpoint hygiene: {projectPlan.continuity.checkpointHygiene}
+                          </p>
+                          <p className="text-sm text-slate-300">
+                            {projectPlan.continuity.hygieneNote ?? 'No checkpoint record found. Run a handoff to preserve continuity.'}
+                          </p>
+                          {projectPlan.continuity.checkpointCount != null && projectPlan.continuity.checkpointCount > 0 ? (
+                            <p className="text-[11px] text-slate-400">
+                              {projectPlan.continuity.checkpointCount} passive capture{projectPlan.continuity.checkpointCount === 1 ? '' : 's'}
+                              {projectPlan.continuity.lastCheckpointReason ? `, last reason: ${projectPlan.continuity.lastCheckpointReason}` : ''}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                      {projectPlan.continuity.handoffCommand ? (
+                        <div className="flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-900/50 px-3 py-2">
+                          <Send size={13} className="text-slate-400 shrink-0" />
+                          <code className="text-xs text-slate-300 font-mono break-all">{projectPlan.continuity.handoffCommand}</code>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </section>
 
