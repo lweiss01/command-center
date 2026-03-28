@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "gsd:reconcile-runtime": "node scripts/reconcile-gsd-runtime.mjs"
+    "gsd:reconcile-runtime": "node scripts/reconcile-gsd-runtime.mjs",
+    "cc:launch": "powershell -ExecutionPolicy Bypass -File scripts/start-command-center.ps1",
+    "cc:shortcut": "powershell -ExecutionPolicy Bypass -File scripts/create-command-center-shortcut.ps1 -Force"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.2",
