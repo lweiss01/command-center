@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: fix: run launcher services hidden with reliable netstat lifecycle checks
+Committed: feat(m008/s02): replace card signal shorthand with labeled semantic chips
 
 ## What Was Tried
 
@@ -67,7 +67,7 @@ Committed: fix: run launcher services hidden with reliable netstat lifecycle che
 
 ## Changed Files In Current Session
 
-- .bg-shell/manifest.json
+- No repo changes detected for the active session.
 
 ## Pending Work Queue
 
@@ -99,6 +99,6 @@ Committed: fix: run launcher services hidden with reliable netstat lifecycle che
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T21:59:47.966Z
+- Last updated: 2026-03-28T22:14:27.398Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

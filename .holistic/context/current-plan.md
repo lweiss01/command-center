@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: fix: run launcher services hidden with reliable netstat lifecycle checks
+Committed: feat(m008/s02): replace card signal shorthand with labeled semantic chips
 
 ## Planned Next Steps
 

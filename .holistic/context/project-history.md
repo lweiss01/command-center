@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T21:59:49.549Z
+- When: 2026-03-28T22:14:28.620Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: fix: run launcher services hidden with reliable netstat lifecycle checks
+- Summary: Committed: feat(m008/s02): replace card signal shorthand with labeled semantic chips
 - Work done:
 - No completed work recorded.
 - Why it mattered:
