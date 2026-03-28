@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: complete M001 import cockpit foundation
+Committed: docs: refresh README and roadmap state contract
 
 ## Planned Next Steps
 

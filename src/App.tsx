@@ -78,10 +78,30 @@ interface ImportRun {
   projectId: number;
   status: 'running' | 'success' | 'partial' | 'failed';
   strategy: string;
+  artifactType: string;
   startedAt: string;
   completedAt: string | null;
   summary: string | null;
   warningsJson: string | null;
+}
+
+interface WorkflowState {
+  phase: 'discuss' | 'research' | 'plan' | 'implement' | 'validate';
+  confidence: 'high' | 'medium' | 'low';
+  evidence: string[];
+}
+
+interface ContinuityState {
+  freshness: 'fresh' | 'aging' | 'stale';
+  activeSession: boolean;
+  lastUpdatedAt: string | null;
+  summary: string[];
+}
+
+interface NextAction {
+  label: string;
+  reason: string;
+  priority: 'high' | 'medium' | 'low';
 }
 
 interface ProjectPlan {
@@ -91,7 +111,16 @@ interface ProjectPlan {
   tasks: unknown[];
   requirements: Requirement[];
   decisions: Decision[];
+  importRuns: ImportRun[];
   latestImportRun: ImportRun | null;
+  latestImportRunsByArtifact: {
+    milestones: ImportRun | null;
+    requirements: ImportRun | null;
+    decisions: ImportRun | null;
+  };
+  workflowState: WorkflowState;
+  continuity: ContinuityState;
+  nextAction: NextAction;
 }
 
 const API_BASE_URL = 'http://localhost:3001'
@@ -347,6 +376,32 @@ function App() {
     return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
   }
 
+  const getWorkflowPhaseClassName = (phase: WorkflowState['phase']) => {
+    if (phase === 'plan') return 'bg-blue-500/10 text-blue-300 border border-blue-500/20'
+    if (phase === 'implement') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+    if (phase === 'validate') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+    if (phase === 'research') return 'bg-violet-500/10 text-violet-300 border border-violet-500/20'
+    return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
+  }
+
+  const getWorkflowConfidenceClassName = (confidence: WorkflowState['confidence']) => {
+    if (confidence === 'high') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+    if (confidence === 'medium') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+    return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
+  }
+
+  const getContinuityFreshnessClassName = (freshness: ContinuityState['freshness']) => {
+    if (freshness === 'fresh') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+    if (freshness === 'aging') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+    return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
+  }
+
+  const getNextActionPriorityClassName = (priority: NextAction['priority']) => {
+    if (priority === 'high') return 'bg-red-500/10 text-red-300 border border-red-500/20'
+    if (priority === 'medium') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+    return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
+  }
+
   const importedMilestones = projectPlan?.milestones ?? []
   const importedRequirements = projectPlan?.requirements ?? []
   const importedDecisions = projectPlan?.decisions ?? []
@@ -360,43 +415,63 @@ function App() {
       return [] as string[]
     }
   }, [projectPlan?.latestImportRun?.warningsJson])
+  const parseWarnings = (warningsJson: string | null) => {
+    if (!warningsJson) return [] as string[]
+
+    try {
+      const parsed = JSON.parse(warningsJson)
+      return Array.isArray(parsed) ? parsed.filter((warning): warning is string => typeof warning === 'string') : []
+    } catch {
+      return [] as string[]
+    }
+  }
+  const milestoneImportRun = projectPlan?.latestImportRunsByArtifact.milestones ?? null
+  const requirementsImportRun = projectPlan?.latestImportRunsByArtifact.requirements ?? null
+  const decisionsImportRun = projectPlan?.latestImportRunsByArtifact.decisions ?? null
+  const milestoneWarnings = parseWarnings(milestoneImportRun?.warningsJson ?? null)
+  const requirementWarnings = parseWarnings(requirementsImportRun?.warningsJson ?? null)
+  const decisionWarnings = parseWarnings(decisionsImportRun?.warningsJson ?? null)
+  const workflowConfidenceDowngraded = (projectPlan?.workflowState.evidence ?? []).includes(
+    'Continuity is stale, so workflow confidence was reduced one step'
+  )
+  const workflowConfidenceSupported = !workflowConfidenceDowngraded && projectPlan?.continuity.freshness === 'fresh'
 
   return (
-    <div className="flex h-screen bg-[#0b0f1a] text-slate-200 font-sans overflow-hidden">
-      <aside className="w-72 bg-[#111827] border-r border-slate-800 p-8 flex flex-col shrink-0">
+    <div className="flex flex-col lg:flex-row min-h-screen min-w-screen w-full bg-[#0b0f1a] text-slate-200 font-sans overflow-x-hidden">
+      <aside className="w-full lg:w-64 xl:w-72 shrink-0 bg-[#111827] border-b lg:border-b-0 lg:border-r border-slate-800 p-5 md:p-8 flex flex-col">
         <div className="flex items-center gap-4 mb-12">
           <div className="bg-blue-600 px-3 py-1 rounded-lg font-black text-white text-xl uppercase tracking-tighter text-center min-w-[45px]">LW</div>
           <h1 className="text-2xl font-black tracking-tighter text-white uppercase">Command</h1>
         </div>
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-none lg:flex-1 space-y-2">
           <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold mb-4 px-2">Main Menu</p>
           <button className="flex items-center gap-3 w-full p-3 bg-blue-600/10 text-blue-400 rounded-xl border border-blue-500/20 font-bold">
             <Layout size={20} /> Dashboard
           </button>
         </nav>
-        <div className="mt-auto pt-6 border-t border-slate-800/50">
+        <div className="mt-6 lg:mt-auto pt-6 border-t border-slate-800/50">
           <p className="text-[10px] text-slate-600 font-mono tracking-widest uppercase text-center">L.W. Hub v1.0.0</p>
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-12 bg-gradient-to-br from-[#0b0f1a] to-[#0f172a]">
-        <header className="flex justify-between items-end mb-12 gap-6">
+      <main className="flex-1 min-w-0 p-5 md:p-8 xl:p-12 bg-gradient-to-br from-[#0b0f1a] to-[#0f172a]">
+        <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end mb-12 gap-6">
           <div>
-            <h2 className="text-6xl font-black text-white tracking-tighter uppercase leading-none">Project Hub</h2>
+            <h2 className="text-5xl md:text-6xl font-black text-white tracking-tighter uppercase leading-none">Project Hub</h2>
             <p className="text-slate-400 mt-3 font-mono text-sm tracking-widest uppercase opacity-70">
               {projectsLoading ? 'Loading workspace...' : `${projects.length} Environments Discovered`}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 w-full lg:w-auto lg:justify-end">
             <button
               onClick={handleScanWorkspace}
               disabled={scanInFlight}
-              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               <RefreshCw size={20} className={scanInFlight ? 'animate-spin' : ''} />
               {scanInFlight ? 'Scanning...' : 'Scan Workspace'}
             </button>
-            <button className="flex items-center gap-2 bg-white text-black px-8 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 hover:text-white transition-all shadow-xl active:scale-95">
+            <button className="flex items-center justify-center gap-2 bg-white text-black px-8 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 hover:text-white transition-all shadow-xl active:scale-95 w-full sm:w-auto">
               <Plus size={20} /> New Project
             </button>
           </div>
@@ -495,24 +570,138 @@ function App() {
 
         <div id="roadmap-section" className="mt-16 pb-20">
           {selectedProject ? (
-            <div className="p-10 bg-[#111827]/80 backdrop-blur-md rounded-[2.5rem] border-2 border-slate-800 shadow-2xl space-y-10">
-              <div className="flex justify-between items-start gap-6">
-                <div>
+            <div className="p-5 md:p-8 xl:p-10 bg-[#111827]/80 backdrop-blur-md rounded-[2.5rem] border-2 border-slate-800 shadow-2xl space-y-10">
+              <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
+                <div className="space-y-3">
                   <h3 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">
                     {selectedProject.name} Roadmap
                   </h3>
-                  <p className="text-blue-500 font-mono text-xs uppercase tracking-[0.2em] mt-2 font-bold">
+                  <p className="text-blue-500 font-mono text-xs uppercase tracking-[0.2em] font-bold">
                     Planning Status: {getPlanningStatusLabel(selectedProject.planningStatus)}
                   </p>
                 </div>
-                <div className="text-right space-y-2">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold">
-                    {selectedProject.artifactCount} Sources Detected
-                  </p>
-                  <p className="text-xs text-slate-400 font-mono">
-                    {selectedProject.framework ?? selectedProject.projectType}
-                  </p>
+                <div className="flex flex-wrap gap-3 xl:justify-end">
+                  <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-slate-800/70 text-slate-300 border border-slate-700/60">
+                    Sources: {selectedProject.artifactCount}
+                  </span>
+                  <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-slate-800/70 text-slate-300 border border-slate-700/60">
+                    Repo: {selectedProject.hasGit ? 'git' : 'local'}
+                  </span>
+                  <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-slate-800/70 text-slate-300 border border-slate-700/60">
+                    Stack: {selectedProject.framework ?? selectedProject.projectType}
+                  </span>
                 </div>
+              </div>
+
+              <div className="grid gap-6">
+                <section className="space-y-3 border-t border-slate-800/70 pt-6">
+                  <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                      <h4 className="text-xl font-black uppercase tracking-tight text-white">Workflow State</h4>
+                      <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
+                        First-pass dominant phase for the active repo loop
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getWorkflowPhaseClassName(projectPlan?.workflowState.phase ?? 'discuss')}`}>
+                        Phase: {projectPlan?.workflowState.phase ?? 'discuss'}
+                      </span>
+                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getWorkflowConfidenceClassName(projectPlan?.workflowState.confidence ?? 'low')}`}>
+                        Confidence: {projectPlan?.workflowState.confidence ?? 'low'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Evidence</p>
+                    <ul className="space-y-2 text-sm text-slate-300 list-disc pl-5">
+                      {(projectPlan?.workflowState.evidence ?? []).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {workflowConfidenceDowngraded ? (
+                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-4 max-w-3xl">
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-amber-300 mb-2">Confidence note</p>
+                      <p className="text-sm text-amber-100/90">
+                        Workflow confidence was reduced because repo-local Holistic continuity is stale.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {workflowConfidenceSupported ? (
+                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-4 max-w-3xl">
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-300 mb-2">Confidence note</p>
+                      <p className="text-sm text-emerald-100/90">
+                        Confidence is supported by fresh repo-local Holistic continuity.
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="space-y-3 border-t border-slate-800/70 pt-6">
+                <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                      <h4 className="text-xl font-black uppercase tracking-tight text-white">Continuity</h4>
+                      <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
+                        Repo-local Holistic freshness and active session hints
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getContinuityFreshnessClassName(projectPlan?.continuity.freshness ?? 'stale')}`}>
+                        Freshness: {projectPlan?.continuity.freshness ?? 'stale'}
+                      </span>
+                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${projectPlan?.continuity.activeSession ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'bg-slate-700/40 text-slate-300 border border-slate-600/20'}`}>
+                        Session: {projectPlan?.continuity.activeSession ? 'active' : 'inactive'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {projectPlan?.continuity.lastUpdatedAt ? (
+                    <p className="text-sm text-slate-400">
+                      Last updated {new Date(projectPlan.continuity.lastUpdatedAt).toLocaleString()}
+                    </p>
+                  ) : null}
+
+                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Summary</p>
+                    <ul className="space-y-2 text-sm text-slate-300 list-disc pl-5">
+                      {(projectPlan?.continuity.summary ?? []).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-3 border-t border-slate-800/70 pt-6">
+                <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                      <h4 className="text-xl font-black uppercase tracking-tight text-white">Next Action</h4>
+                      <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
+                        First-pass recommendation for what to do next in this repo
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getNextActionPriorityClassName(projectPlan?.nextAction.priority ?? 'low')}`}>
+                      Priority: {projectPlan?.nextAction.priority ?? 'low'}
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-3">
+                    <p className="text-lg font-bold tracking-tight text-slate-100">
+                      {projectPlan?.nextAction.label ?? 'No recommendation available'}
+                    </p>
+                    <p className="text-sm text-slate-300 leading-relaxed max-w-3xl">
+                      {projectPlan?.nextAction.reason ?? 'The cockpit does not have enough evidence to recommend a next step yet.'}
+                    </p>
+                  </div>
+                </div>
+              </section>
               </div>
 
               <section className="space-y-4 border-t border-slate-800/70 pt-8">
@@ -585,6 +774,62 @@ function App() {
                       <RefreshCw size={16} className={decisionsImportInFlight ? 'animate-spin' : ''} />
                       {decisionsImportInFlight ? 'Importing...' : 'Import Decisions'}
                     </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-300">Milestones</p>
+                      <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] ${milestoneImportRun?.status === 'success'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : milestoneImportRun?.status === 'partial'
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : milestoneImportRun?.status === 'failed'
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
+                        }`}>
+                        {milestoneImportRun?.status ?? 'none'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400">{milestoneWarnings.length} warning{milestoneWarnings.length === 1 ? '' : 's'}</p>
+                    <p className="text-xs text-slate-500">{milestoneImportRun?.summary ?? 'No milestone import recorded yet.'}</p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-300">Requirements</p>
+                      <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] ${requirementsImportRun?.status === 'success'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : requirementsImportRun?.status === 'partial'
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : requirementsImportRun?.status === 'failed'
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
+                        }`}>
+                        {requirementsImportRun?.status ?? 'none'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400">{requirementWarnings.length} warning{requirementWarnings.length === 1 ? '' : 's'}</p>
+                    <p className="text-xs text-slate-500">{requirementsImportRun?.summary ?? 'No requirements import recorded yet.'}</p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-violet-300">Decisions</p>
+                      <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] ${decisionsImportRun?.status === 'success'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : decisionsImportRun?.status === 'partial'
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : decisionsImportRun?.status === 'failed'
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
+                        }`}>
+                        {decisionsImportRun?.status ?? 'none'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400">{decisionWarnings.length} warning{decisionWarnings.length === 1 ? '' : 's'}</p>
+                    <p className="text-xs text-slate-500">{decisionsImportRun?.summary ?? 'No decisions import recorded yet.'}</p>
                   </div>
                 </div>
               </section>

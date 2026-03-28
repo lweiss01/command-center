@@ -420,6 +420,16 @@ const deleteEvidenceLinksForEntityAndSource = db.prepare(`
     AND entity_id = @entity_id
     AND source_artifact_id = @source_artifact_id
 `);
+const listMilestonesBySourceArtifactId = db.prepare(`
+  SELECT *
+  FROM milestones
+  WHERE project_id = @project_id
+    AND source_artifact_id = @source_artifact_id
+`);
+const deleteMilestoneById = db.prepare(`
+  DELETE FROM milestones
+  WHERE id = @id
+`);
 const insertEvidenceLink = db.prepare(`
   INSERT INTO evidence_links (
     entity_type, entity_id, source_artifact_id, excerpt, line_start, line_end, confidence, reason, created_at
@@ -463,6 +473,16 @@ const updateRequirement = db.prepare(`
       updated_at = @updated_at
   WHERE id = @id
 `);
+const listRequirementsBySourceArtifactId = db.prepare(`
+  SELECT *
+  FROM requirements
+  WHERE project_id = @project_id
+    AND source_artifact_id = @source_artifact_id
+`);
+const deleteRequirementById = db.prepare(`
+  DELETE FROM requirements
+  WHERE id = @id
+`);
 const getGsdDecisionsArtifactByProjectId = db.prepare(`
   SELECT *
   FROM source_artifacts
@@ -496,6 +516,16 @@ const updateDecision = db.prepare(`
       revisable = @revisable,
       when_context = @when_context,
       updated_at = @updated_at
+  WHERE id = @id
+`);
+const listDecisionsBySourceArtifactId = db.prepare(`
+  SELECT *
+  FROM decisions
+  WHERE project_id = @project_id
+    AND source_artifact_id = @source_artifact_id
+`);
+const deleteDecisionById = db.prepare(`
+  DELETE FROM decisions
   WHERE id = @id
 `);
 
@@ -756,10 +786,171 @@ function serializeImportRunRow(importRun) {
     projectId: importRun.project_id,
     status: importRun.status,
     strategy: importRun.strategy,
+    artifactType: importRun.strategy,
     startedAt: importRun.started_at,
     completedAt: importRun.completed_at,
     summary: importRun.summary,
     warningsJson: importRun.warnings_json,
+  };
+}
+
+function computeWorkflowState({ milestones, requirements, decisions, continuity }) {
+  const evidence = [];
+  let structuredGroups = 0;
+
+  if (milestones.length > 0) {
+    structuredGroups += 1;
+    evidence.push(`Imported ${milestones.length} milestone${milestones.length === 1 ? '' : 's'} from .gsd/PROJECT.md`);
+  }
+
+  if (requirements.length > 0) {
+    structuredGroups += 1;
+    evidence.push(`Imported ${requirements.length} requirement${requirements.length === 1 ? '' : 's'} from .gsd/REQUIREMENTS.md`);
+  }
+
+  if (decisions.length > 0) {
+    structuredGroups += 1;
+    evidence.push(`Imported ${decisions.length} decision${decisions.length === 1 ? '' : 's'} from .gsd/DECISIONS.md`);
+  }
+
+  if (structuredGroups === 0) {
+    return {
+      phase: 'discuss',
+      confidence: 'low',
+      evidence: ['No structured planning artifacts imported yet'],
+    };
+  }
+
+  let confidence = structuredGroups >= 2 ? 'high' : 'medium';
+
+  if (continuity?.freshness === 'stale') {
+    confidence = confidence === 'high' ? 'medium' : 'low';
+    evidence.push('Continuity is stale, so workflow confidence was reduced one step');
+  }
+
+  return {
+    phase: 'plan',
+    confidence,
+    evidence,
+  };
+}
+
+function computeContinuity(project) {
+  const holisticStatePath = path.join(project.root_path, '.holistic', 'state.json');
+  const currentPlanPath = path.join(project.root_path, '.holistic', 'context', 'current-plan.md');
+
+  if (!fs.existsSync(holisticStatePath)) {
+    return {
+      freshness: 'stale',
+      activeSession: false,
+      lastUpdatedAt: null,
+      summary: ['No repo-local Holistic state detected'],
+    };
+  }
+
+  try {
+    const holisticState = JSON.parse(fs.readFileSync(holisticStatePath, 'utf8'));
+    const activeSession = holisticState?.activeSession ?? null;
+    const updatedAt = activeSession?.updatedAt ?? holisticState?.updatedAt ?? null;
+    const updatedAtMs = updatedAt ? Date.parse(updatedAt) : Number.NaN;
+    const ageMs = Number.isNaN(updatedAtMs) ? Number.POSITIVE_INFINITY : Date.now() - updatedAtMs;
+
+    let freshness = 'stale';
+    if (ageMs <= 6 * 60 * 60 * 1000) {
+      freshness = 'fresh';
+    } else if (ageMs <= 3 * 24 * 60 * 60 * 1000) {
+      freshness = 'aging';
+    }
+
+    const summary = [];
+
+    if (activeSession?.currentGoal) {
+      summary.push(`Goal: ${activeSession.currentGoal}`);
+    }
+
+    if (activeSession?.latestStatus) {
+      summary.push(`Status: ${activeSession.latestStatus}`);
+    }
+
+    if (Array.isArray(activeSession?.currentPlan)) {
+      for (const item of activeSession.currentPlan.slice(0, 2)) {
+        if (typeof item === 'string' && item.trim().length > 0) {
+          summary.push(`Plan: ${item.trim()}`);
+        }
+      }
+    }
+
+    if (summary.length === 0 && fs.existsSync(currentPlanPath)) {
+      const currentPlanMarkdown = fs.readFileSync(currentPlanPath, 'utf8');
+      const fallbackLines = currentPlanMarkdown
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith('- '))
+        .slice(0, 2)
+        .map((line) => `Plan: ${line.slice(2).trim()}`);
+      summary.push(...fallbackLines);
+    }
+
+    if (summary.length === 0) {
+      summary.push('Holistic state detected, but no active summary items were available');
+    }
+
+    return {
+      freshness,
+      activeSession: Boolean(activeSession && activeSession.status === 'active'),
+      lastUpdatedAt: updatedAt,
+      summary,
+    };
+  } catch (error) {
+    console.warn(`Failed to read Holistic state for ${project.root_path}:`, error);
+    return {
+      freshness: 'stale',
+      activeSession: false,
+      lastUpdatedAt: null,
+      summary: ['Holistic state exists but could not be read'],
+    };
+  }
+}
+
+function computeNextAction({ milestones, requirements, decisions, workflowState, continuity }) {
+  const hasStructuredArtifacts = milestones.length > 0 || requirements.length > 0 || decisions.length > 0;
+
+  if (continuity?.freshness === 'stale') {
+    return {
+      label: 'Refresh continuity before continuing',
+      reason: 'Repo-local Holistic continuity is stale, so the next safest step is to review the latest handoff or checkpoint context first.',
+      priority: 'high',
+    };
+  }
+
+  if (!hasStructuredArtifacts) {
+    return {
+      label: 'Import planning artifacts',
+      reason: 'No structured planning artifacts have been imported yet, so the cockpit needs repo docs before it can provide stronger guidance.',
+      priority: 'high',
+    };
+  }
+
+  if (milestones.length > 0 && requirements.length === 0) {
+    return {
+      label: 'Import requirements for fuller planning coverage',
+      reason: 'Milestones are present, but requirements are still missing, so the canonical plan is incomplete.',
+      priority: 'medium',
+    };
+  }
+
+  if (workflowState?.phase === 'discuss' && continuity?.freshness === 'fresh') {
+    return {
+      label: 'Clarify the current plan before implementation',
+      reason: 'Continuity is fresh, but the repo still looks discussion-heavy rather than structured enough for execution.',
+      priority: 'medium',
+    };
+  }
+
+  return {
+    label: 'Review the current plan and continue execution prep',
+    reason: 'The repo has structured planning context and usable continuity, so the next step is to advance the active work deliberately.',
+    priority: 'medium',
   };
 }
 
@@ -880,7 +1071,7 @@ function importGsdProjectMilestones(projectId) {
   const importRunResult = insertImportRun.run({
     project_id: projectId,
     status: 'running',
-    strategy: 'docs_only',
+    strategy: 'gsd_project',
     started_at: startedAt,
     completed_at: null,
     summary: null,
@@ -977,6 +1168,23 @@ function importGsdProjectMilestones(projectId) {
       });
 
       importedCount += 1;
+    }
+
+    const parsedKeys = new Set(parsed.milestones.map((milestone) => milestone.externalKey));
+    const existingMilestones = listMilestonesBySourceArtifactId.all({
+      project_id: projectId,
+      source_artifact_id: artifact.id,
+    });
+
+    for (const existingMilestone of existingMilestones) {
+      if (existingMilestone.external_key && !parsedKeys.has(existingMilestone.external_key)) {
+        deleteEvidenceLinksForEntityAndSource.run({
+          entity_type: 'milestone',
+          entity_id: existingMilestone.id,
+          source_artifact_id: artifact.id,
+        });
+        deleteMilestoneById.run({ id: existingMilestone.id });
+      }
     }
 
     const finalStatus = parsed.warnings.length > 0 ? 'partial' : 'success';
@@ -1135,7 +1343,7 @@ function importGsdRequirements(projectId) {
   const importRunResult = insertImportRun.run({
     project_id: projectId,
     status: 'running',
-    strategy: 'docs_only',
+    strategy: 'gsd_requirements',
     started_at: startedAt,
     completed_at: null,
     summary: null,
@@ -1230,6 +1438,23 @@ function importGsdRequirements(projectId) {
       });
 
       importedCount += 1;
+    }
+
+    const parsedKeys = new Set(parsed.requirements.map((requirement) => requirement.externalKey));
+    const existingRequirements = listRequirementsBySourceArtifactId.all({
+      project_id: projectId,
+      source_artifact_id: artifact.id,
+    });
+
+    for (const existingRequirement of existingRequirements) {
+      if (existingRequirement.external_key && !parsedKeys.has(existingRequirement.external_key)) {
+        deleteEvidenceLinksForEntityAndSource.run({
+          entity_type: 'requirement',
+          entity_id: existingRequirement.id,
+          source_artifact_id: artifact.id,
+        });
+        deleteRequirementById.run({ id: existingRequirement.id });
+      }
     }
 
     const finalStatus = parsed.warnings.length > 0 ? 'partial' : 'success';
@@ -1380,7 +1605,7 @@ function importGsdDecisions(projectId) {
   const importRunResult = insertImportRun.run({
     project_id: projectId,
     status: 'running',
-    strategy: 'docs_only',
+    strategy: 'gsd_decisions',
     started_at: startedAt,
     completed_at: null,
     summary: null,
@@ -1473,6 +1698,23 @@ function importGsdDecisions(projectId) {
       });
 
       importedCount += 1;
+    }
+
+    const parsedKeys = new Set(parsed.decisions.map((decision) => decision.externalKey));
+    const existingDecisions = listDecisionsBySourceArtifactId.all({
+      project_id: projectId,
+      source_artifact_id: artifact.id,
+    });
+
+    for (const existingDecision of existingDecisions) {
+      if (existingDecision.external_key && !parsedKeys.has(existingDecision.external_key)) {
+        deleteEvidenceLinksForEntityAndSource.run({
+          entity_type: 'decision',
+          entity_id: existingDecision.id,
+          source_artifact_id: artifact.id,
+        });
+        deleteDecisionById.run({ id: existingDecision.id });
+      }
     }
 
     const finalStatus = parsed.warnings.length > 0 ? 'partial' : 'success';
@@ -1783,6 +2025,14 @@ app.get('/api/projects/:id/plan', (req, res) => {
     const requirements = listRequirementsByProjectId.all(validation.projectId).map(serializeRequirementRow);
     const decisions = listDecisionsByProjectId.all(validation.projectId).map(serializeDecisionRow);
     const importRuns = listImportRunsByProjectId.all(validation.projectId).map(serializeImportRunRow);
+    const latestImportRunsByArtifact = {
+      milestones: importRuns.find((run) => run.artifactType === 'gsd_project') ?? null,
+      requirements: importRuns.find((run) => run.artifactType === 'gsd_requirements') ?? null,
+      decisions: importRuns.find((run) => run.artifactType === 'gsd_decisions') ?? null,
+    };
+    const continuity = computeContinuity(validation.project);
+    const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity });
+    const nextAction = computeNextAction({ milestones, requirements, decisions, workflowState, continuity });
 
     return res.json({
       project: serializeProjectRow(validation.project),
@@ -1791,7 +2041,12 @@ app.get('/api/projects/:id/plan', (req, res) => {
       tasks,
       requirements,
       decisions,
+      importRuns,
       latestImportRun: importRuns[0] ?? null,
+      latestImportRunsByArtifact,
+      workflowState,
+      continuity,
+      nextAction,
     });
   } catch (error) {
     console.error('Failed to build project plan snapshot:', error);

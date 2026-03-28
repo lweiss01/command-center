@@ -186,15 +186,14 @@ Create a trustworthy local foundation that can discover repos, detect planning a
 #### In Progress
 
 - import UX polish
-  - latest import state is visible, but still shared as one most-recent import rather than a richer per-artifact review surface
+  - artifact-specific review state now exists, but richer review labels and history surfaces are still pending
 - broader cockpit coverage beyond milestones / requirements / decisions
   - slices, tasks, workflow phase, blockers, and recommended next actions are not yet surfaced
 
 #### Not Yet Done
 
 - slice/task import into canonical model
-- import warnings / review UI
-- stale-row cleanup when imported source entries are deleted from docs
+- richer import review UI beyond warnings/status
 - apples-to-apples progress normalization
 - cross-repo comparable workflow-state calculation
 
@@ -250,17 +249,18 @@ Create a trustworthy local foundation that can discover repos, detect planning a
 - add explicit import / re-import controls
 - show import warnings and status
 - validate imports against real repos
+- add per-artifact import review state
+- clean up stale imported rows when source entries are removed from docs
 
-**Status:** In Progress
+**Status:** Mostly Done
 
 ### Current Best Next Step
 
-Close out the remaining **M001 / S07 — Import UX and validation** gaps:
+Begin **M002 / S01 — Workflow-state contract** on top of the now-cleaner import foundation:
 
-- improve visibility of import warnings and review state
-- decide whether latest import state should remain global or become per-artifact
-- document / implement stale-row cleanup behavior for removed source entries
-- then move into M002 planning and implementation
+1. define the first backend workflow-state payload
+2. compute an initial dominant phase with explicit confidence
+3. keep the first implementation narrow and honest before expanding to richer cross-repo semantics
 
 ---
 
@@ -303,6 +303,26 @@ M002 should be built in two layers:
 The normalization layer comes first conceptually, but early cockpit slices can render intermediate state while normalization rules are being formalized.
 The key assumption is that workflow state is **iterative and repeating** within a repo: the app should identify the current active loop for the current milestone/slice/body of work, not assume a repo only passes through the workflow phases once.
 
+### Current Progress
+
+M002 is no longer purely planned work.
+A first pass of **S01 — Workflow-state contract** is now implemented in the product.
+
+Current delivered behavior:
+- backend project plan payload includes `workflowState`
+- backend project plan payload includes `continuity`
+- backend project plan payload includes `nextAction`
+- the cockpit renders workflow phase, confidence, evidence, and continuity context
+- the cockpit renders a first-pass next-action recommendation with priority and rationale
+- confidence is now partially explained through continuity freshness
+- inline confidence notes are visible for both stale downgrade and fresh support cases
+
+What remains is the broader normalization and expansion work:
+- richer phase inference beyond `discuss` / `plan`
+- blockers / next-action semantics beyond the current first-pass rules
+- cross-repo comparable progress rules
+- stronger Beads and Holistic signal integration
+
 ### Detailed Slice Plan
 
 #### S01 — Workflow-state contract
@@ -329,6 +349,73 @@ Command Center should therefore represent the repo's **current dominant phase** 
 - roadmap/state contract documented in repo
 - backend can compute a preliminary workflow phase per project
 
+**First implementation contract**
+
+The first code implementation should stay intentionally narrow.
+It should add a backend-computed field to the project plan payload with this shape:
+
+```ts
+workflowState: {
+  phase: 'discuss' | 'research' | 'plan' | 'implement' | 'validate'
+  confidence: 'high' | 'medium' | 'low'
+  evidence: string[]
+}
+```
+
+For the first pass, Command Center should prioritize correctness over completeness.
+It is acceptable for the initial implementation to confidently distinguish only the phases that existing imported signals support well.
+
+**Recommended first-pass rules**
+
+- `plan`
+  - returned when structured planning entities are present (milestones, requirements, or decisions)
+- `discuss`
+  - returned when no meaningful imported planning entities are present
+- `research`, `implement`, `validate`
+  - reserved for later expansion once Holistic and Beads signals are integrated more directly
+
+**First-pass confidence rules**
+
+- `high`
+  - multiple structured planning entities are present
+- `medium`
+  - exactly one meaningful planning entity group is present
+- `low`
+  - weak or missing evidence; fallback classification
+
+**Current implementation status**
+
+The current code now goes slightly beyond the original minimum without changing the conservative phase model.
+
+- `/api/projects/:id/plan` returns both:
+  - `workflowState`
+  - `continuity`
+- `continuity` currently provides:
+  - freshness: `fresh` / `aging` / `stale`
+  - active session presence
+  - last updated time
+  - Holistic summary hints
+- `workflowState.phase` remains intentionally conservative:
+  - `discuss` when no structured planning artifacts are imported
+  - `plan` when structured planning artifacts are present
+- `workflowState.confidence` is now continuity-aware:
+  - stale continuity reduces confidence by one step
+  - fresh continuity does not change the score, but is surfaced as supporting context
+- the cockpit now renders inline confidence notes so the user can see at a glance whether confidence was:
+  - reduced because continuity is stale
+  - supported by fresh repo-local Holistic continuity
+
+This keeps the first implementation honest while making confidence more explainable.
+
+**First-pass evidence examples**
+
+- `Imported 4 milestones from .gsd/PROJECT.md`
+- `Imported 16 requirements from .gsd/REQUIREMENTS.md`
+- `Imported 7 decisions from .gsd/DECISIONS.md`
+- `No structured planning artifacts imported yet`
+
+This first implementation is intentionally conservative. It should not pretend to infer `implement` or `validate` until the app has stronger continuity and execution signals.
+
 #### S02 — Project cockpit v2
 
 **Goal:** Make the project view answer "what's going on here right now?"
@@ -340,6 +427,11 @@ Command Center should therefore represent the repo's **current dominant phase** 
 - blockers panel
 - next recommended action panel
 - visible distinction between imported data and interpreted state
+
+**Current status:** In Progress
+
+A first-pass next recommended action panel now exists in the cockpit and is backed by a simple explainable rule set.
+What remains in this slice is the richer current milestone / active work / blocker layer that turns the cockpit into a fuller “what should I do next and why?” surface.
 
 **Proof of completion**
 - selected project shows a coherent status summary without reading raw docs

@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: complete M001 import cockpit foundation
+Committed: docs: refresh README and roadmap state contract
 
 ## What Was Tried
 
@@ -68,8 +68,11 @@ Committed: feat: complete M001 import cockpit foundation
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- README.md
 - ROADMAP.md
+- mission_control.db-shm
+- server.js
+- src/App.tsx
+- src/index.css
 
 ## Pending Work Queue
 
@@ -101,6 +104,6 @@ Committed: feat: complete M001 import cockpit foundation
 
 ## Historical Memory
 
-- Last updated: 2026-03-27T22:47:02.664Z
+- Last updated: 2026-03-27T23:47:53.590Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
