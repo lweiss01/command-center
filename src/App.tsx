@@ -534,6 +534,28 @@ function App() {
   )
   const workflowConfidenceSupported = !workflowConfidenceDowngraded && projectPlan?.continuity.status === 'fresh'
 
+  const importSourceLabels = {
+    milestones: '.gsd/PROJECT.md',
+    requirements: '.gsd/REQUIREMENTS.md',
+    decisions: '.gsd/DECISIONS.md',
+  } as const
+
+  const formatImportSyncTime = (completedAt: string | null | undefined) => {
+    if (!completedAt) return 'unknown'
+    const parsed = new Date(completedAt)
+    if (Number.isNaN(parsed.getTime())) return 'unknown'
+    return parsed.toLocaleString()
+  }
+
+  const formatImportProvenance = (run: ImportRun | null, sourceLabel: string) => {
+    const syncedAt = formatImportSyncTime(run?.completedAt)
+    return `Last synced ${syncedAt} · source ${sourceLabel}`
+  }
+
+  const milestoneProvenance = formatImportProvenance(milestoneImportRun, importSourceLabels.milestones)
+  const requirementProvenance = formatImportProvenance(requirementsImportRun, importSourceLabels.requirements)
+  const decisionProvenance = formatImportProvenance(decisionsImportRun, importSourceLabels.decisions)
+
   return (
     <div className="flex flex-col lg:flex-row min-h-screen min-w-screen w-full bg-[#0b0f1a] text-slate-200 font-sans overflow-x-hidden">
       <aside className="w-full lg:w-64 xl:w-72 shrink-0 bg-[#111827] border-b lg:border-b-0 lg:border-r border-slate-800 p-5 md:p-8 flex flex-col">
@@ -651,10 +673,10 @@ function App() {
                         return (
                           <>
                             <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getWorkflowPhaseClassName(entry.workflowPhase as WorkflowState['phase'])}`}>
-                              {entry.workflowPhase}
+                              {entry.workflowPhase} · interp
                             </span>
                             <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getContinuityStatusClassName(entry.continuityStatus)}`}>
-                              {continuityLabel}
+                              {continuityLabel} · interp
                             </span>
                           </>
                         )
@@ -749,7 +771,7 @@ function App() {
                     <div>
                       <h4 className="text-xl font-black uppercase tracking-tight text-white">Workflow State</h4>
                       <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                        First-pass dominant phase for the active repo loop
+                        Interpreted phase derived from imported artifacts and repo continuity signals
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-3">
@@ -812,7 +834,7 @@ function App() {
                       <div>
                         <h4 className="text-xl font-black uppercase tracking-tight text-white">Workflow Readiness</h4>
                         <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                          Standard stack audit — GSD, Holistic, Beads, repo docs
+                          Derived readiness audit from repo docs, tool probes, and stack presence checks
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-3">
@@ -862,7 +884,7 @@ function App() {
                     <div>
                       <h4 className="text-xl font-black uppercase tracking-tight text-white">Continuity</h4>
                       <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                        Repo-local Holistic freshness and checkpoint hygiene
+                        Derived from repo-local Holistic freshness and checkpoint hygiene signals
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-3">
@@ -946,7 +968,7 @@ function App() {
                     <div>
                       <h4 className="text-xl font-black uppercase tracking-tight text-white">Next Action</h4>
                       <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                        First-pass recommendation for what to do next in this repo
+                        Interpreted recommendation derived from workflow, readiness, continuity, and blockers
                       </p>
                     </div>
                     <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getNextActionBlockersPresent(projectPlan?.nextAction.blockers) ? 'bg-red-500/10 text-red-300 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'}`}>
@@ -986,7 +1008,7 @@ function App() {
                       <div>
                         <h4 className="text-xl font-black uppercase tracking-tight text-white">Open Loops</h4>
                         <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                          What&apos;s next, blocked, and still unresolved.
+                          Derived open-loop view from milestones, requirements, and decisions still unresolved.
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -1238,6 +1260,9 @@ function App() {
                     <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
                       Canonical planning model from imported project docs
                     </p>
+                    <p className="text-[10px] text-slate-500 font-mono tracking-wide mt-2">
+                      {milestoneProvenance}
+                    </p>
                   </div>
                 </div>
 
@@ -1304,6 +1329,9 @@ function App() {
                     </h4>
                     <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
                       Canonical requirements imported from repo planning docs
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-mono tracking-wide mt-2">
+                      {requirementProvenance}
                     </p>
                   </div>
                 </div>
@@ -1380,6 +1408,9 @@ function App() {
                     </h4>
                     <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
                       Architectural and planning decisions imported from repo docs
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-mono tracking-wide mt-2">
+                      {decisionProvenance}
                     </p>
                   </div>
                 </div>
