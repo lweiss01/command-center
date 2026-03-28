@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T20:37:24.115Z
+- When: 2026-03-28T20:50:48.253Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: docs: rewrite user guide as actionable cockpit playbook
+- Summary: Committed: docs: expand operator guide and align README workflow usage
 - Work done:
 - No completed work recorded.
 - Why it mattered:

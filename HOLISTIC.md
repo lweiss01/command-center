@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: docs: rewrite user guide as actionable cockpit playbook
+Committed: docs: expand operator guide and align README workflow usage
 
 ## What Was Tried
 
@@ -67,7 +67,7 @@ Committed: docs: rewrite user guide as actionable cockpit playbook
 
 ## Changed Files In Current Session
 
-- .bg-shell/manifest.json
+- No repo changes detected for the active session.
 
 ## Pending Work Queue
 
@@ -99,6 +99,6 @@ Committed: docs: rewrite user guide as actionable cockpit playbook
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T20:36:14.697Z
+- Last updated: 2026-03-28T20:50:47.093Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

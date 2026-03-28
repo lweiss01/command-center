@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: rewrite user guide as actionable cockpit playbook
+Committed: docs: expand operator guide and align README workflow usage
 
 ## Before ending this session
 
