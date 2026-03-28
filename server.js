@@ -1270,6 +1270,42 @@ function computeNextAction({ milestones, requirements, decisions, workflowState,
   };
 }
 
+function computeOpenLoops({ milestones, requirements, decisions }) {
+  const nextMilestone = milestones.find((m) => m.status !== 'done') ?? null;
+
+  const blockedMilestones = milestones
+    .filter((m) => m.status === 'blocked')
+    .map((m) => ({ key: m.externalKey, title: m.title, status: m.status }));
+
+  const unresolvedRequirements = requirements
+    .filter((r) => r.status === 'active' && r.validation !== 'validated')
+    .map((r) => ({ key: r.externalKey, title: r.title, owner: r.primaryOwner ?? null }));
+
+  const deferredItems = requirements
+    .filter((r) => r.status === 'deferred')
+    .map((r) => ({ key: r.externalKey, title: r.title }));
+
+  const revisableDecisions = decisions
+    .filter((d) => d.revisable && d.revisable.toLowerCase().startsWith('yes'))
+    .map((d) => ({ key: d.externalKey, scope: d.scope ?? null, decision: d.decision }));
+
+  const summary = {
+    unresolvedCount: unresolvedRequirements.length,
+    pendingMilestoneCount: milestones.filter((m) => m.status !== 'done').length,
+    blockedCount: blockedMilestones.length,
+    deferredCount: deferredItems.length,
+  };
+
+  return {
+    nextMilestone,
+    blockedMilestones,
+    unresolvedRequirements,
+    deferredItems,
+    revisableDecisions,
+    summary,
+  };
+}
+
 function getValidatedProjectOrSend(projectIdParam, res) {
   const projectId = parseProjectId(projectIdParam);
   if (projectId === null) {
@@ -2350,6 +2386,7 @@ app.get('/api/projects/:id/plan', (req, res) => {
     const readiness = computeReadiness(validation.project);
     const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact });
     const nextAction = computeNextAction({ milestones, requirements, decisions, workflowState, continuity, readiness });
+    const openLoops = computeOpenLoops({ milestones, requirements, decisions });
 
     return res.json({
       project: serializeProjectRow(validation.project),
@@ -2365,6 +2402,7 @@ app.get('/api/projects/:id/plan', (req, res) => {
       continuity,
       readiness,
       nextAction,
+      openLoops,
     });
   } catch (error) {
     console.error('Failed to build project plan snapshot:', error);

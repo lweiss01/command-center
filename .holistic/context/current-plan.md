@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Added computeReadiness(project) to server.js — 10-component workf…
+Committed: feat: Added readiness panel to App.tsx — Workflow Readiness section wit…
 
 ## Planned Next Steps
 

@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: Added computeReadiness(project) to server.js — 10-component workf…
+Committed: feat: Added readiness panel to App.tsx — Workflow Readiness section wit…
 
 ## What Was Tried
 
@@ -68,9 +68,7 @@ Committed: feat: Added computeReadiness(project) to server.js — 10-component w
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- .gitattributes
-- mission_control.db-shm
-- server.js
+- src/App.tsx
 
 ## Pending Work Queue
 
@@ -102,6 +100,6 @@ Committed: feat: Added computeReadiness(project) to server.js — 10-component w
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T16:19:51.354Z
+- Last updated: 2026-03-28T16:31:18.688Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
