@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: add launcher doctor/stop flow and wire footer to package version
+Committed: docs: sync roadmap to current milestone reality
 
 ## What Was Tried
 
@@ -99,6 +99,6 @@ Committed: feat: add launcher doctor/stop flow and wire footer to package versio
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T18:47:49.049Z
+- Last updated: 2026-03-28T18:56:30.782Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

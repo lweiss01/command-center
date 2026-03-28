@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: add launcher doctor/stop flow and wire footer to package version
+Committed: docs: sync roadmap to current milestone reality
 
 ## Planned Next Steps
 
