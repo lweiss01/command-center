@@ -2,28 +2,21 @@
 
 ## Goal
 
-Keep planning docs, roadmap state, and repo memory reconciled with shipped product progress.
+Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: add workflow continuity and cockpit guidance
+Committed: docs: reconcile planning state and process guardrails
 
 ## Planned Next Steps
 
-- reconcile README, roadmap, and Holistic docs after meaningful product changes
-- preserve critical fixes and process guardrails in repo memory
-- continue M002 cockpit expansion with current milestone / active work / blocker summaries
+- Read HOLISTIC.md
+- Confirm next step with the user
 
 ## Project Impact
 
-- M001 import foundation is substantially complete and trustworthy for real repo use
-- M002 now has a working first pass of workflow state, continuity, confidence explanation, and next-action guidance
-- the cockpit is increasingly useful as a resumable planning surface instead of just an importer
+- No impact notes captured yet.
 
 ## References
 
-- README.md
-- ROADMAP.md
-- HOLISTIC.md
-- .holistic/context/project-history.md
-- .holistic/context/regression-watch.md
+- No linked references yet.
