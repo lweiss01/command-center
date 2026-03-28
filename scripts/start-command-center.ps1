@@ -76,6 +76,12 @@ function Start-ServiceWindow {
   $windowCommand = @"
 Set-Location -LiteralPath '$escapedRepoRoot'
 `$Host.UI.RawUI.WindowTitle = '$windowTitle'
+`$chcpPath = Join-Path `$env:SystemRoot 'System32\chcp.com'
+if (Test-Path -LiteralPath `$chcpPath) {
+  & `$chcpPath 65001 | Out-Null
+}
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+`$OutputEncoding = [System.Text.Encoding]::UTF8
 Write-Host '[command-center] Logging to $escapedLogPath'
 $Command 2>&1 | Tee-Object -FilePath '$escapedLogPath'
 "@
