@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Added computeOpenLoops() to server.js and wired openLoops into th…
+Committed: feat: Added OpenLoops TypeScript interfaces, extended ProjectPlan, and…
 
 ## Planned Next Steps
 

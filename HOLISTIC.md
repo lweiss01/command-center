@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: Added computeOpenLoops() to server.js and wired openLoops into th…
+Committed: feat: Added OpenLoops TypeScript interfaces, extended ProjectPlan, and…
 
 ## What Was Tried
 
@@ -68,8 +68,7 @@ Committed: feat: Added computeOpenLoops() to server.js and wired openLoops into 
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- mission_control.db-shm
-- server.js
+- src/App.tsx
 
 ## Pending Work Queue
 
@@ -101,6 +100,6 @@ Committed: feat: Added computeOpenLoops() to server.js and wired openLoops into 
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T16:34:50.455Z
+- Last updated: 2026-03-28T16:46:08.732Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

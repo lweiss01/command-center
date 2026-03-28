@@ -1075,7 +1075,7 @@ function computeContinuity(project) {
   }
 }
 
-function computeReadiness(project) {
+function computeReadiness(project, toolOverrides) {
   const root = project.root_path;
 
   // Helper: call a tool binary and return 'present' if it exits 0, else 'missing'
@@ -1152,7 +1152,7 @@ function computeReadiness(project) {
       id: 'holistic-tool',
       label: 'Holistic (tool)',
       kind: 'machine-tool',
-      status: toolStatus(holisticCmd),
+      status: toolOverrides ? toolOverrides.holisticStatus : toolStatus(holisticCmd),
       note: null,
       required: true,
     },
@@ -1160,7 +1160,7 @@ function computeReadiness(project) {
       id: 'gsd-tool',
       label: 'GSD (tool)',
       kind: 'machine-tool',
-      status: toolStatus(gsdCmd),
+      status: toolOverrides ? toolOverrides.gsdStatus : toolStatus(gsdCmd),
       note: null,
       required: true,
     },
@@ -1304,6 +1304,29 @@ function computeOpenLoops({ milestones, requirements, decisions }) {
     revisableDecisions,
     summary,
   };
+}
+
+function computeUrgencyScore({ continuity, readiness, openLoops, workflowState }) {
+  let score = 0;
+
+  // +0.40 if actively worked (fresh continuity)
+  if (continuity.status === 'fresh') score += 0.40;
+
+  // +0.25 if there are unresolved requirements
+  if (openLoops.summary.unresolvedCount > 0) score += 0.25;
+
+  // +0.20 if abandoned mid-flight (stalled or no-data, but continuity present)
+  if (
+    (workflowState.phase === 'stalled' || workflowState.phase === 'no-data') &&
+    continuity.status !== 'missing'
+  ) {
+    score += 0.20;
+  }
+
+  // +0.15 if the workflow stack has gaps
+  if (readiness.gaps.length > 0) score += 0.15;
+
+  return Math.min(1.0, Math.round(score * 100) / 100);
 }
 
 function getValidatedProjectOrSend(projectIdParam, res) {
@@ -2406,6 +2429,80 @@ app.get('/api/projects/:id/plan', (req, res) => {
     });
   } catch (error) {
     console.error('Failed to build project plan snapshot:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/api/portfolio', (_req, res) => {
+  try {
+    // Probe tool availability once — reused for all projects to avoid N execFileSync calls.
+    const gsdCmd = process.platform === 'win32' ? 'gsd.cmd' : 'gsd';
+    const holisticCmd = process.platform === 'win32' ? 'holistic.cmd' : 'holistic';
+
+    function probeToolStatus(cmd) {
+      try {
+        execFileSync(cmd, ['--version'], { timeout: 2000, stdio: 'pipe' });
+        return 'present';
+      } catch (_err) {
+        return 'missing';
+      }
+    }
+
+    const holisticToolStatus = probeToolStatus(holisticCmd);
+    const gsdToolStatus = probeToolStatus(gsdCmd);
+    const toolOverrides = { holisticStatus: holisticToolStatus, gsdStatus: gsdToolStatus };
+
+    const projects = listProjects.all().map(serializeProjectRow);
+
+    const entries = projects.map((project) => {
+      const milestones = listMilestonesByProjectId.all(project.id).map(serializeMilestoneRow);
+      const requirements = listRequirementsByProjectId.all(project.id).map(serializeRequirementRow);
+      const decisions = listDecisionsByProjectId.all(project.id).map(serializeDecisionRow);
+      const importRuns = listImportRunsByProjectId.all(project.id).map(serializeImportRunRow);
+
+      const latestImportRunsByArtifact = {
+        milestones: importRuns.find((run) => run.artifactType === 'gsd_project') ?? null,
+        requirements: importRuns.find((run) => run.artifactType === 'gsd_requirements') ?? null,
+        decisions: importRuns.find((run) => run.artifactType === 'gsd_decisions') ?? null,
+      };
+
+      // getProjectById includes artifact_count; use raw project row from listProjects which already
+      // has that column. We need the root_path for computeContinuity/computeReadiness — rebuild
+      // the minimal shape expected by those functions.
+      const projectForCompute = { id: project.id, root_path: project.rootPath, name: project.name };
+
+      const continuity = computeContinuity(projectForCompute);
+      const readiness = computeReadiness(projectForCompute, toolOverrides);
+      const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact });
+      const nextAction = computeNextAction({ milestones, requirements, decisions, workflowState, continuity, readiness });
+      const openLoops = computeOpenLoops({ milestones, requirements, decisions });
+      const urgencyScore = computeUrgencyScore({ continuity, readiness, openLoops, workflowState });
+
+      // First non-empty line of nextAction.action
+      const nextActionLabel = (nextAction.action ?? '').split(/\r?\n/).find((line) => line.trim().length > 0) ?? '';
+
+      return {
+        project,
+        workflowPhase: workflowState.phase,
+        workflowConfidence: workflowState.confidence,
+        continuityStatus: continuity.status,
+        continuityAgeHours: continuity.ageHours,
+        checkpointHygiene: continuity.checkpointHygiene,
+        overallReadiness: readiness.overallReadiness,
+        readinessGaps: readiness.gaps,
+        unresolvedCount: openLoops.summary.unresolvedCount,
+        pendingMilestoneCount: openLoops.summary.pendingMilestoneCount,
+        blockedCount: openLoops.summary.blockedCount,
+        nextActionLabel,
+        urgencyScore,
+      };
+    });
+
+    entries.sort((a, b) => b.urgencyScore - a.urgencyScore);
+
+    return res.json(entries);
+  } catch (error) {
+    console.error('Failed to build portfolio snapshot:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
