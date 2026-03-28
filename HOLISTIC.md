@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: Rewrote computeNextAction to return {action, rationale, blockers[…
+Committed: feat: Confirmed cockpit renders structured workflow phase, confidence,…
 
 ## What Was Tried
 
@@ -68,9 +68,6 @@ Committed: feat: Rewrote computeNextAction to return {action, rationale, blocker
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- mission_control.db-shm
-- server.js
-- src/App.tsx
 
 ## Pending Work Queue
 
@@ -102,6 +99,6 @@ Committed: feat: Rewrote computeNextAction to return {action, rationale, blocker
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T03:50:11.332Z
+- Last updated: 2026-03-28T03:53:56.129Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Rewrote computeNextAction to return {action, rationale, blockers[…
+Committed: feat: Confirmed cockpit renders structured workflow phase, confidence,…
 
 ## Planned Next Steps
 

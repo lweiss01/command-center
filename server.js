@@ -964,8 +964,12 @@ function computeContinuity(project) {
     const freshAt = updatedAt ?? null;
 
     // latestWork: best single-line summary of what was last worked on.
+    // Prefer resumeRecap[0] — it's an agent-composed sentence that better captures
+    // the current focus than raw currentGoal.
     let latestWork = null;
-    if (activeSession?.currentGoal) {
+    if (activeSession?.resumeRecap?.[0]) {
+      latestWork = activeSession.resumeRecap[0];
+    } else if (activeSession?.currentGoal) {
       latestWork = activeSession.currentGoal;
     } else if (activeSession?.latestStatus) {
       latestWork = activeSession.latestStatus;
@@ -977,10 +981,19 @@ function computeContinuity(project) {
     // 'ok'     — a checkpoint/handoff was written recently (within 24 h)
     // 'stale'  — a checkpoint exists but is older than 24 h
     // 'missing'— no checkpoint information present
+    //
+    // Key-path resolution (in priority order):
+    //   1. holisticState.passiveCapture?.lastCheckpointAt  — explicit passive-capture checkpoint
+    //   2. holisticState.lastAutoCheckpoint                — most recent auto-checkpoint timestamp
+    // The old top-level keys (lastCheckpointAt, lastHandoffAt) do not exist in state.json.
     let checkpointHygiene = 'missing';
     let hygieneNote = null;
 
-    const checkpointAt = holisticState?.lastCheckpointAt ?? holisticState?.lastHandoffAt ?? null;
+    const checkpointAt =
+      holisticState?.passiveCapture?.lastCheckpointAt ??
+      holisticState?.lastAutoCheckpoint ??
+      null;
+
     if (checkpointAt) {
       const cpAgeMs = Date.now() - Date.parse(checkpointAt);
       if (cpAgeMs <= 24 * 60 * 60 * 1000) {
@@ -991,12 +1004,16 @@ function computeContinuity(project) {
         hygieneNote = `Last checkpoint is ${Math.round(cpAgeMs / (24 * 60 * 60 * 1000) * 10) / 10} days old — consider running a handoff.`;
       }
     } else if (status === 'fresh') {
-      // State is fresh but no explicit checkpoint key — hygiene is unknown rather than missing.
+      // State is fresh but no checkpoint timestamp — treat as stale, not missing.
       checkpointHygiene = 'stale';
       hygieneNote = 'No explicit checkpoint timestamp found in Holistic state.';
     } else {
       hygieneNote = 'No checkpoint or handoff record found in Holistic state.';
     }
+
+    // Enrich with session-level checkpoint quality signals.
+    const checkpointCount = activeSession?.checkpointCount ?? null;
+    const lastCheckpointReason = activeSession?.lastCheckpointReason ?? null;
 
     return {
       status,
@@ -1005,6 +1022,8 @@ function computeContinuity(project) {
       latestWork,
       checkpointHygiene,
       hygieneNote,
+      checkpointCount,
+      lastCheckpointReason,
     };
   } catch (error) {
     console.warn(`Failed to read Holistic state for ${project.root_path}:`, error);
@@ -1022,18 +1041,29 @@ function computeContinuity(project) {
 function computeNextAction({ milestones, requirements, decisions, workflowState, continuity }) {
   const hasStructuredArtifacts = milestones.length > 0 || requirements.length > 0 || decisions.length > 0;
 
-  if (continuity?.status === 'missing' || continuity?.status === 'stale') {
-    const blocker =
-      continuity.status === 'missing'
-        ? 'Repo continuity is missing — no Holistic state found in this repo.'
-        : `Repo continuity is stale (last activity ${continuity.ageHours != null ? Math.round(continuity.ageHours) + 'h ago' : 'unknown'}) — checkpoint or handoff context may be outdated.`;
+  if (continuity?.status === 'missing') {
     return {
       action: 'Refresh continuity before continuing.',
       rationale:
-        'Continuity is not fresh, so resuming work without reviewing the latest handoff or checkpoint risks repeating already-done work or missing known blockers.',
-      blockers: [blocker],
+        'Continuity is missing — no Holistic state found in this repo. Resuming without context risks duplicating work or missing known blockers.',
+      blockers: ['Repo continuity is missing — no Holistic state found in this repo.'],
     };
   }
+
+  if (continuity?.status === 'stale' && continuity?.checkpointHygiene === 'missing') {
+    // Stale session AND no checkpoint record at all — hard blocker.
+    return {
+      action: 'Refresh continuity before continuing.',
+      rationale:
+        'Continuity is stale and no checkpoint or handoff record was found. Resuming without any context anchor risks repeating already-done work or missing known blockers.',
+      blockers: [
+        `Repo continuity is stale (last activity ${continuity.ageHours != null ? Math.round(continuity.ageHours) + 'h ago' : 'unknown'}) with no checkpoint record — run a handoff before resuming.`,
+      ],
+    };
+  }
+
+  // Stale session but hygiene is 'ok' or 'stale' (a checkpoint exists) — soft reminder only, not a blocker.
+  // The path is still clear; the hygiene callout in the UI covers the reminder.
 
   if (!hasStructuredArtifacts) {
     return {
