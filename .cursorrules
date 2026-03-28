@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: reconcile planning state and process guardrails
+Committed: docs: sync holistic memory after push
 
 ## Before ending this session
 
