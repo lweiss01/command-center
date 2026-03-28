@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: add header user guide link for in-app onboarding
+Committed: docs: sync roadmap with planned M008 UX redesign milestone
 
 ## Planned Next Steps
 

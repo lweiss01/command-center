@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T21:07:57.784Z
+- When: 2026-03-28T21:31:49.869Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: feat: add header user guide link for in-app onboarding
+- Summary: Committed: docs: sync roadmap with planned M008 UX redesign milestone
 - Work done:
 - No completed work recorded.
 - Why it mattered:

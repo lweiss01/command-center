@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: add header user guide link for in-app onboarding
+Committed: docs: sync roadmap with planned M008 UX redesign milestone
 
 ## What Was Tried
 
@@ -67,6 +67,7 @@ Committed: feat: add header user guide link for in-app onboarding
 
 ## Changed Files In Current Session
 
+- .bg-shell/manifest.json
 - .logs/command-center-frontend.log
 
 ## Pending Work Queue
@@ -99,6 +100,6 @@ Committed: feat: add header user guide link for in-app onboarding
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T21:07:56.514Z
+- Last updated: 2026-03-28T21:31:48.508Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
