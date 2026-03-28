@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat(m008/s04): focus-visible system, clean transitions, neutral sidebar logo
+Committed: feat: full visual redesign — Syne/IBM Plex Mono, lime accent, precision instrument design system
 
 ## Before ending this session
 
