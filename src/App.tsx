@@ -428,7 +428,7 @@ function App() {
       </div>
 
       {/* ── Right pane: detail ─────────────────────────────────────────────── */}
-      <div style={{ flex: 1, height: '100vh', overflowY: 'auto' }}>
+      <div style={{ flex: 1, height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {selectedProject ? (
           <div style={{ padding: '44px 52px', maxWidth: '860px' }} id="roadmap-section">
 
@@ -705,7 +705,7 @@ function App() {
             <div style={{ height: '80px' }} />
           </div>
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '6px' }}>Select a project</div>
               <div style={{ fontSize: '11px', color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>Choose from the list to open its command view</div>
