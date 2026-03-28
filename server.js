@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import { execFileSync } from 'child_process';
 
 const app = express();
 const db = new Database('mission_control.db');
@@ -794,7 +795,7 @@ function serializeImportRunRow(importRun) {
   };
 }
 
-function computeWorkflowState({ milestones, requirements, decisions, continuity, latestImportRunsByArtifact }) {
+function computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact }) {
   // evidence: explicit signals that produced the phase and confidence — never empty if confidence < 1
   const evidence = [];
   // reasons: human-readable explanations for the phase choice
@@ -852,6 +853,11 @@ function computeWorkflowState({ milestones, requirements, decisions, continuity,
   const continuityStatus = continuity?.status ?? 'missing';
   evidence.push({ label: 'Continuity', value: continuityStatus });
 
+  // Readiness signal — overall workflow stack health
+  if (readiness) {
+    evidence.push({ label: 'Readiness', value: readiness.overallReadiness });
+  }
+
   // --- Determine phase ---
 
   let phase;
@@ -882,6 +888,19 @@ function computeWorkflowState({ milestones, requirements, decisions, continuity,
   } else {
     phase = 'no-data';
     reasons.push('Insufficient signals to determine workflow phase.');
+  }
+
+  // Readiness override: if workflow stack is missing and phase would be 'active', force 'blocked'.
+  // Also add gap reasons whenever the stack is incomplete.
+  if (readiness) {
+    if (readiness.overallReadiness !== 'ready' && readiness.gaps.length > 0) {
+      reasons.push(
+        `Workflow stack is ${readiness.overallReadiness} — ${readiness.gaps.length} component(s) missing: ${readiness.gaps.join(', ')}.`
+      );
+    }
+    if (readiness.overallReadiness === 'missing' && phase === 'active') {
+      phase = 'blocked';
+    }
   }
 
   // --- Compute confidence (0-1) ---
@@ -1056,8 +1075,135 @@ function computeContinuity(project) {
   }
 }
 
-function computeNextAction({ milestones, requirements, decisions, workflowState, continuity }) {
+function computeReadiness(project) {
+  const root = project.root_path;
+
+  // Helper: call a tool binary and return 'present' if it exits 0, else 'missing'
+  function toolStatus(cmd) {
+    try {
+      execFileSync(cmd, ['--version'], { timeout: 2000, stdio: 'pipe' });
+      return 'present';
+    } catch (_err) {
+      return 'missing';
+    }
+  }
+
+  const gsdCmd = process.platform === 'win32' ? 'gsd.cmd' : 'gsd';
+  const holisticCmd = process.platform === 'win32' ? 'holistic.cmd' : 'holistic';
+
+  const components = [
+    {
+      id: 'gsd-dir',
+      label: 'GSD',
+      kind: 'repo-dir',
+      status: fs.existsSync(path.join(root, '.gsd')) ? 'present' : 'missing',
+      note: null,
+      required: true,
+    },
+    {
+      id: 'gsd-doc-project',
+      label: 'GSD project doc',
+      kind: 'repo-doc',
+      status: fs.existsSync(path.join(root, '.gsd', 'PROJECT.md')) ? 'present' : 'missing',
+      note: null,
+      required: true,
+    },
+    {
+      id: 'gsd-doc-preferences',
+      label: 'GSD v2 workflow',
+      kind: 'repo-doc',
+      status: fs.existsSync(path.join(root, '.gsd', 'preferences.md')) ? 'present' : 'missing',
+      note: 'Indicates fully initialized v2 setup',
+      required: false,
+    },
+    {
+      id: 'gsd-doc-requirements',
+      label: 'GSD requirements',
+      kind: 'repo-doc',
+      status: fs.existsSync(path.join(root, '.gsd', 'REQUIREMENTS.md')) ? 'present' : 'missing',
+      note: null,
+      required: false,
+    },
+    {
+      id: 'gsd-doc-decisions',
+      label: 'GSD decisions',
+      kind: 'repo-doc',
+      status: fs.existsSync(path.join(root, '.gsd', 'DECISIONS.md')) ? 'present' : 'missing',
+      note: null,
+      required: false,
+    },
+    {
+      id: 'gsd-doc-knowledge',
+      label: 'GSD knowledge',
+      kind: 'repo-doc',
+      status: fs.existsSync(path.join(root, '.gsd', 'KNOWLEDGE.md')) ? 'present' : 'missing',
+      note: null,
+      required: false,
+    },
+    {
+      id: 'holistic-dir',
+      label: 'Holistic (repo)',
+      kind: 'repo-dir',
+      status: fs.existsSync(path.join(root, '.holistic')) ? 'present' : 'missing',
+      note: null,
+      required: true,
+    },
+    {
+      id: 'holistic-tool',
+      label: 'Holistic (tool)',
+      kind: 'machine-tool',
+      status: toolStatus(holisticCmd),
+      note: null,
+      required: true,
+    },
+    {
+      id: 'gsd-tool',
+      label: 'GSD (tool)',
+      kind: 'machine-tool',
+      status: toolStatus(gsdCmd),
+      note: null,
+      required: true,
+    },
+    {
+      id: 'beads-dir',
+      label: 'Beads',
+      kind: 'repo-dir',
+      status: fs.existsSync(path.join(root, '.beads')) ? 'present' : 'missing',
+      note: null,
+      required: false,
+    },
+  ];
+
+  const gaps = components.filter((c) => c.required && c.status === 'missing').map((c) => c.label);
+
+  const requiredComponents = components.filter((c) => c.required);
+  const allRequiredPresent = requiredComponents.every((c) => c.status === 'present');
+  const noRequiredPresent = requiredComponents.every((c) => c.status === 'missing');
+
+  let overallReadiness;
+  if (noRequiredPresent) {
+    overallReadiness = 'missing';
+  } else if (allRequiredPresent) {
+    overallReadiness = 'ready';
+  } else {
+    overallReadiness = 'partial';
+  }
+
+  return { overallReadiness, components, gaps };
+}
+
+function computeNextAction({ milestones, requirements, decisions, workflowState, continuity, readiness }) {
   const hasStructuredArtifacts = milestones.length > 0 || requirements.length > 0 || decisions.length > 0;
+
+  // Readiness guard: missing stack is the hardest blocker — check before continuity.
+  if (readiness?.overallReadiness === 'missing') {
+    return {
+      action: 'Bootstrap the workflow stack before continuing.',
+      rationale:
+        'Critical workflow components are absent: ' + readiness.gaps.join(', ') + '.',
+      blockers: readiness.gaps,
+    };
+  }
 
   if (continuity?.status === 'missing') {
     return {
@@ -1110,11 +1256,17 @@ function computeNextAction({ milestones, requirements, decisions, workflowState,
     };
   }
 
+  const defaultBlockers = [];
+  // Partial readiness: gaps are soft warnings, append to blockers.
+  if (readiness?.overallReadiness === 'partial' && readiness.gaps.length > 0) {
+    defaultBlockers.push(...readiness.gaps);
+  }
+
   return {
     action: 'Review the current plan and continue execution.',
     rationale:
       'The repo has structured planning context and fresh continuity — the path is clear to advance the active work deliberately.',
-    blockers: [],
+    blockers: defaultBlockers,
   };
 }
 
@@ -2195,8 +2347,9 @@ app.get('/api/projects/:id/plan', (req, res) => {
       decisions: importRuns.find((run) => run.artifactType === 'gsd_decisions') ?? null,
     };
     const continuity = computeContinuity(validation.project);
-    const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity, latestImportRunsByArtifact });
-    const nextAction = computeNextAction({ milestones, requirements, decisions, workflowState, continuity });
+    const readiness = computeReadiness(validation.project);
+    const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact });
+    const nextAction = computeNextAction({ milestones, requirements, decisions, workflowState, continuity, readiness });
 
     return res.json({
       project: serializeProjectRow(validation.project),
@@ -2210,6 +2363,7 @@ app.get('/api/projects/:id/plan', (req, res) => {
       latestImportRunsByArtifact,
       workflowState,
       continuity,
+      readiness,
       nextAction,
     });
   } catch (error) {

@@ -11,7 +11,13 @@
     "restoreOnStartup": true,
     "trackedPaths": [
       "HOLISTIC.md",
+      "AGENTS.md",
       "HISTORY.md",
+      "CLAUDE.md",
+      "GEMINI.md",
+      ".cursorrules",
+      ".windsurfrules",
+      ".github/copilot-instructions.md",
       ".holistic"
     ],
     "stateRef": "refs/holistic/state"
