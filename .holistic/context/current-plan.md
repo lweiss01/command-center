@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: full redesign — two-pane list/detail, Inter, pure black, no sidebar
+Committed: fix: loading bug; warm off-black palette, indigo accent, desaturated status colors
 
 ## Planned Next Steps
 

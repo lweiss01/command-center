@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: full redesign — two-pane list/detail, Inter, pure black, no sidebar
+Committed: fix: loading bug; warm off-black palette, indigo accent, desaturated status colors
 
 ## What Was Tried
 
@@ -100,6 +100,6 @@ Committed: feat: full redesign — two-pane list/detail, Inter, pure black, no s
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T22:56:54.524Z
+- Last updated: 2026-03-28T23:03:58.446Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
