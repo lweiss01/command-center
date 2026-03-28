@@ -794,45 +794,138 @@ function serializeImportRunRow(importRun) {
   };
 }
 
-function computeWorkflowState({ milestones, requirements, decisions, continuity }) {
+function computeWorkflowState({ milestones, requirements, decisions, continuity, latestImportRunsByArtifact }) {
+  // evidence: explicit signals that produced the phase and confidence — never empty if confidence < 1
   const evidence = [];
-  let structuredGroups = 0;
+  // reasons: human-readable explanations for the phase choice
+  const reasons = [];
 
-  if (milestones.length > 0) {
-    structuredGroups += 1;
-    evidence.push(`Imported ${milestones.length} milestone${milestones.length === 1 ? '' : 's'} from .gsd/PROJECT.md`);
+  // --- Gather evidence signals ---
+
+  const hasMilestones = milestones.length > 0;
+  const hasRequirements = requirements.length > 0;
+  const hasDecisions = decisions.length > 0;
+  const hasAnyArtifacts = hasMilestones || hasRequirements || hasDecisions;
+
+  if (hasMilestones) {
+    evidence.push({ label: 'Milestones', value: `${milestones.length} imported` });
+  }
+  if (hasRequirements) {
+    evidence.push({ label: 'Requirements', value: `${requirements.length} imported` });
+  }
+  if (hasDecisions) {
+    evidence.push({ label: 'Decisions', value: `${decisions.length} imported` });
   }
 
-  if (requirements.length > 0) {
-    structuredGroups += 1;
-    evidence.push(`Imported ${requirements.length} requirement${requirements.length === 1 ? '' : 's'} from .gsd/REQUIREMENTS.md`);
+  // Import recency signals
+  const now = Date.now();
+  const msPerDay = 24 * 60 * 60 * 1000;
+  let mostRecentImportAgeMs = Number.POSITIVE_INFINITY;
+
+  if (latestImportRunsByArtifact) {
+    const runs = [
+      latestImportRunsByArtifact.milestones,
+      latestImportRunsByArtifact.requirements,
+      latestImportRunsByArtifact.decisions,
+    ].filter(Boolean);
+    for (const run of runs) {
+      const ts = run.completedAt ? Date.parse(run.completedAt) : Number.NaN;
+      if (!Number.isNaN(ts)) {
+        const ageMs = now - ts;
+        if (ageMs < mostRecentImportAgeMs) mostRecentImportAgeMs = ageMs;
+      }
+    }
   }
 
-  if (decisions.length > 0) {
-    structuredGroups += 1;
-    evidence.push(`Imported ${decisions.length} decision${decisions.length === 1 ? '' : 's'} from .gsd/DECISIONS.md`);
+  const importIsRecent = mostRecentImportAgeMs <= 3 * msPerDay;
+  const importIsStale = mostRecentImportAgeMs > 7 * msPerDay;
+
+  if (Number.isFinite(mostRecentImportAgeMs)) {
+    const ageDays = Math.round(mostRecentImportAgeMs / msPerDay);
+    evidence.push({
+      label: 'Last import',
+      value: ageDays === 0 ? 'today' : ageDays === 1 ? '1 day ago' : `${ageDays} days ago`,
+    });
   }
 
-  if (structuredGroups === 0) {
-    return {
-      phase: 'discuss',
-      confidence: 'low',
-      evidence: ['No structured planning artifacts imported yet'],
-    };
+  // Continuity signal
+  const continuityFreshness = continuity?.freshness ?? 'stale';
+  evidence.push({ label: 'Continuity', value: continuityFreshness });
+
+  // --- Determine phase ---
+
+  let phase;
+
+  if (!hasAnyArtifacts) {
+    phase = 'no-data';
+    reasons.push('No structured planning artifacts have been imported yet.');
+  } else if (hasMilestones && !hasRequirements && !hasDecisions) {
+    // Only milestones — check if there's real active work
+    if (importIsRecent && continuityFreshness !== 'stale') {
+      phase = 'active';
+      reasons.push('Milestones imported with recent activity and fresh continuity.');
+    } else {
+      phase = 'import-only';
+      reasons.push('Only milestones imported — requirements and decisions are still missing.');
+    }
+  } else if (hasAnyArtifacts) {
+    if (importIsStale && continuityFreshness === 'stale') {
+      phase = 'stalled';
+      reasons.push('Imports are stale and continuity is stale — no recent activity detected.');
+    } else if (continuityFreshness === 'stale' && !importIsRecent) {
+      phase = 'stalled';
+      reasons.push('Continuity is stale and imports are not recent — workflow may be paused.');
+    } else {
+      phase = 'active';
+      reasons.push('Structured artifacts are present with acceptable recency.');
+    }
+  } else {
+    phase = 'no-data';
+    reasons.push('Insufficient signals to determine workflow phase.');
   }
 
-  let confidence = structuredGroups >= 2 ? 'high' : 'medium';
+  // --- Compute confidence (0-1) ---
+  // Start at 0, add points for each positive signal, subtract for negatives.
+  // No magic weights — each signal contributes a fixed increment.
 
-  if (continuity?.freshness === 'stale') {
-    confidence = confidence === 'high' ? 'medium' : 'low';
-    evidence.push('Continuity is stale, so workflow confidence was reduced one step');
+  let confidence = 0;
+
+  // Artifact coverage: up to 0.45
+  if (hasMilestones) confidence += 0.15;
+  if (hasRequirements) confidence += 0.20;
+  if (hasDecisions) confidence += 0.10;
+
+  // Import recency: up to 0.25
+  if (importIsRecent) {
+    confidence += 0.25;
+  } else if (!importIsStale) {
+    confidence += 0.10;
+  }
+  // stale import: +0
+
+  // Continuity freshness: up to 0.30
+  if (continuityFreshness === 'fresh') {
+    confidence += 0.30;
+  } else if (continuityFreshness === 'aging') {
+    confidence += 0.15;
+  }
+  // stale continuity: +0
+
+  // Cap and round to 2 decimal places
+  confidence = Math.min(1, Math.round(confidence * 100) / 100);
+
+  // Explain low confidence
+  if (confidence < 1) {
+    if (!hasMilestones) reasons.push('Milestone data is missing — confidence is reduced.');
+    if (!hasRequirements) reasons.push('Requirements are missing — confidence is reduced.');
+    if (!hasDecisions) reasons.push('Decision log is missing — confidence is reduced.');
+    if (importIsStale) reasons.push('Imports are more than 7 days old — recency confidence is low.');
+    if (!importIsRecent && !importIsStale) reasons.push('Imports are aging (3–7 days old).');
+    if (continuityFreshness === 'stale') reasons.push('Continuity is stale — freshness confidence is zero.');
+    if (continuityFreshness === 'aging') reasons.push('Continuity is aging — freshness confidence is partial.');
   }
 
-  return {
-    phase: 'plan',
-    confidence,
-    evidence,
-  };
+  return { phase, confidence, reasons, evidence };
 }
 
 function computeContinuity(project) {
@@ -939,10 +1032,10 @@ function computeNextAction({ milestones, requirements, decisions, workflowState,
     };
   }
 
-  if (workflowState?.phase === 'discuss' && continuity?.freshness === 'fresh') {
+  if (workflowState?.phase === 'no-data' || workflowState?.phase === 'import-only') {
     return {
-      label: 'Clarify the current plan before implementation',
-      reason: 'Continuity is fresh, but the repo still looks discussion-heavy rather than structured enough for execution.',
+      label: 'Import more planning artifacts to build confidence',
+      reason: 'The repo has limited structured planning data — adding requirements, decisions, or milestone entries will improve the workflow signal.',
       priority: 'medium',
     };
   }
@@ -2031,7 +2124,7 @@ app.get('/api/projects/:id/plan', (req, res) => {
       decisions: importRuns.find((run) => run.artifactType === 'gsd_decisions') ?? null,
     };
     const continuity = computeContinuity(validation.project);
-    const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity });
+    const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity, latestImportRunsByArtifact });
     const nextAction = computeNextAction({ milestones, requirements, decisions, workflowState, continuity });
 
     return res.json({

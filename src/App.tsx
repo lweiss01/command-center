@@ -86,9 +86,10 @@ interface ImportRun {
 }
 
 interface WorkflowState {
-  phase: 'discuss' | 'research' | 'plan' | 'implement' | 'validate';
-  confidence: 'high' | 'medium' | 'low';
-  evidence: string[];
+  phase: 'no-data' | 'import-only' | 'active' | 'stalled' | 'blocked';
+  confidence: number;
+  reasons: string[];
+  evidence: { label: string; value: string }[];
 }
 
 interface ContinuityState {
@@ -377,16 +378,16 @@ function App() {
   }
 
   const getWorkflowPhaseClassName = (phase: WorkflowState['phase']) => {
-    if (phase === 'plan') return 'bg-blue-500/10 text-blue-300 border border-blue-500/20'
-    if (phase === 'implement') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-    if (phase === 'validate') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-    if (phase === 'research') return 'bg-violet-500/10 text-violet-300 border border-violet-500/20'
+    if (phase === 'active') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+    if (phase === 'stalled') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+    if (phase === 'blocked') return 'bg-red-500/10 text-red-300 border border-red-500/20'
+    if (phase === 'import-only') return 'bg-blue-500/10 text-blue-300 border border-blue-500/20'
     return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
   }
 
-  const getWorkflowConfidenceClassName = (confidence: WorkflowState['confidence']) => {
-    if (confidence === 'high') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-    if (confidence === 'medium') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+  const getWorkflowConfidenceClassName = (confidence: number) => {
+    if (confidence >= 0.7) return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+    if (confidence >= 0.4) return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
     return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
   }
 
@@ -431,8 +432,8 @@ function App() {
   const milestoneWarnings = parseWarnings(milestoneImportRun?.warningsJson ?? null)
   const requirementWarnings = parseWarnings(requirementsImportRun?.warningsJson ?? null)
   const decisionWarnings = parseWarnings(decisionsImportRun?.warningsJson ?? null)
-  const workflowConfidenceDowngraded = (projectPlan?.workflowState.evidence ?? []).includes(
-    'Continuity is stale, so workflow confidence was reduced one step'
+  const workflowConfidenceDowngraded = (projectPlan?.workflowState.reasons ?? []).some((r) =>
+    r.toLowerCase().includes('stale')
   )
   const workflowConfidenceSupported = !workflowConfidenceDowngraded && projectPlan?.continuity.freshness === 'fresh'
 
@@ -604,23 +605,37 @@ function App() {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getWorkflowPhaseClassName(projectPlan?.workflowState.phase ?? 'discuss')}`}>
-                        Phase: {projectPlan?.workflowState.phase ?? 'discuss'}
+                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getWorkflowPhaseClassName(projectPlan?.workflowState.phase ?? 'no-data')}`}>
+                        Phase: {projectPlan?.workflowState.phase ?? 'no-data'}
                       </span>
-                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getWorkflowConfidenceClassName(projectPlan?.workflowState.confidence ?? 'low')}`}>
-                        Confidence: {projectPlan?.workflowState.confidence ?? 'low'}
+                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getWorkflowConfidenceClassName(projectPlan?.workflowState.confidence ?? 0)}`}>
+                        Confidence: {projectPlan?.workflowState.confidence != null ? `${Math.round(projectPlan.workflowState.confidence * 100)}%` : '0%'}
                       </span>
                     </div>
                   </div>
 
                   <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4">
                     <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Evidence</p>
-                    <ul className="space-y-2 text-sm text-slate-300 list-disc pl-5">
+                    <ul className="space-y-2 text-sm text-slate-300">
                       {(projectPlan?.workflowState.evidence ?? []).map((item) => (
-                        <li key={item}>{item}</li>
+                        <li key={item.label} className="flex gap-2">
+                          <span className="text-slate-500 min-w-[110px] shrink-0">{item.label}</span>
+                          <span className="text-slate-200">{item.value}</span>
+                        </li>
                       ))}
                     </ul>
                   </div>
+
+                  {(projectPlan?.workflowState.reasons ?? []).length > 0 ? (
+                    <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Reasons</p>
+                      <ul className="space-y-1 text-sm text-slate-300 list-disc pl-5">
+                        {(projectPlan?.workflowState.reasons ?? []).map((reason) => (
+                          <li key={reason}>{reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
 
                   {workflowConfidenceDowngraded ? (
                     <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-4 max-w-3xl">

@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: docs: sync holistic memory after push
+Committed: feat: Audited computeWorkflowState, computeContinuity, and computeNextA…
 
 ## What Was Tried
 
@@ -57,15 +57,6 @@ Committed: docs: sync holistic memory after push
 
 - Review the regression watch document before changing related behavior.
 
-## Known Fixes — Do Not Regress
-
-### GSD auto-mode: runtime unit cache drift
-**Fixed:** 2026-03-28  
-**Symptom:** Auto-mode reports "derived N consecutive times without progress" or "rogue file write detected" even after work succeeds. `.gsd/runtime/units/*.json` files stay at `phase: "dispatched"` while the journal correctly records `unit-end` completed events.  
-**Recovery:** `npm run gsd:reconcile-runtime` (dry-run: `-- --check`)  
-**Script:** `scripts/reconcile-gsd-runtime.mjs`  
-**Reintroduction risk:** Any abnormal auto-mode stop (crash, stuck-loop, Ctrl+C) can leave the cache stale again. Run the script after any such event.
-
 ## Key Assumptions
 
 - None recorded.
@@ -77,6 +68,11 @@ Committed: docs: sync holistic memory after push
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
+- .gitignore
+- mission_control.db-shm
+- mission_control.db-wal
+- package.json
+- scripts/reconcile-gsd-runtime.mjs
 
 ## Pending Work Queue
 
@@ -108,6 +104,6 @@ Committed: docs: sync holistic memory after push
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T00:48:47.138Z
+- Last updated: 2026-03-28T00:50:48.816Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
