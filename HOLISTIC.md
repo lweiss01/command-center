@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: Added readiness panel to App.tsx — Workflow Readiness section wit…
+Committed: feat: Added computeOpenLoops() to server.js and wired openLoops into th…
 
 ## What Was Tried
 
@@ -68,7 +68,8 @@ Committed: feat: Added readiness panel to App.tsx — Workflow Readiness section
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- src/App.tsx
+- mission_control.db-shm
+- server.js
 
 ## Pending Work Queue
 
@@ -100,6 +101,6 @@ Committed: feat: Added readiness panel to App.tsx — Workflow Readiness section
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T16:31:18.688Z
+- Last updated: 2026-03-28T16:34:50.455Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

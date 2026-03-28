@@ -125,6 +125,29 @@ interface ReadinessReport {
   gaps: string[];
 }
 
+interface OpenLoopItem {
+  key: string | null;
+  title?: string;
+  status?: string;
+  owner?: string | null;
+  scope?: string | null;
+  decision?: string;
+}
+interface OpenLoopsSummary {
+  unresolvedCount: number;
+  pendingMilestoneCount: number;
+  blockedCount: number;
+  deferredCount: number;
+}
+interface OpenLoops {
+  nextMilestone: OpenLoopItem | null;
+  blockedMilestones: OpenLoopItem[];
+  unresolvedRequirements: OpenLoopItem[];
+  deferredItems: OpenLoopItem[];
+  revisableDecisions: OpenLoopItem[];
+  summary: OpenLoopsSummary;
+}
+
 interface ProjectPlan {
   project: Project;
   milestones: Milestone[];
@@ -143,6 +166,7 @@ interface ProjectPlan {
   continuity: ContinuityState;
   nextAction: NextAction;
   readiness: ReadinessReport;
+  openLoops: OpenLoops;
 }
 
 const API_BASE_URL = 'http://localhost:3001'
@@ -853,6 +877,126 @@ function App() {
                 </div>
               </section>
               </div>
+
+              {projectPlan?.openLoops && (
+                <section className="space-y-3 border-t border-slate-800/70 pt-6">
+                  <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div>
+                        <h4 className="text-xl font-black uppercase tracking-tight text-white">Open Loops</h4>
+                        <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
+                          What&apos;s next, blocked, and still unresolved.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                          {projectPlan.openLoops.summary.unresolvedCount} unresolved
+                        </span>
+                        {projectPlan.openLoops.summary.deferredCount > 0 && (
+                          <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-slate-700/40 text-slate-300 border border-slate-600/20">
+                            {projectPlan.openLoops.summary.deferredCount} deferred
+                          </span>
+                        )}
+                        {projectPlan.openLoops.summary.blockedCount > 0 && (
+                          <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-red-500/10 text-red-300 border border-red-500/20">
+                            {projectPlan.openLoops.summary.blockedCount} blocked
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Next Milestone */}
+                    <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-2">
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Next Milestone</p>
+                      {projectPlan.openLoops.nextMilestone ? (
+                        <div className="flex flex-wrap items-center gap-3">
+                          {projectPlan.openLoops.nextMilestone.key && (
+                            <span className="text-xs font-mono text-slate-500">{projectPlan.openLoops.nextMilestone.key}</span>
+                          )}
+                          <span className="text-sm font-bold text-slate-100">
+                            {projectPlan.openLoops.nextMilestone.title ?? '(untitled)'}
+                          </span>
+                          {projectPlan.openLoops.nextMilestone.status && (
+                            <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-[0.1em] bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                              {projectPlan.openLoops.nextMilestone.status}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-emerald-400 font-medium">All milestones complete</p>
+                      )}
+                    </div>
+
+                    {/* Blocked Milestones */}
+                    {projectPlan.openLoops.blockedMilestones.length > 0 && (
+                      <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-4 space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-red-300">Blocked</p>
+                        <ul className="space-y-1">
+                          {projectPlan.openLoops.blockedMilestones.map((m, i) => (
+                            <li key={m.key ?? i} className="flex flex-wrap items-center gap-2 text-sm text-red-200/80">
+                              {m.key && <span className="text-xs font-mono text-red-400/70">{m.key}</span>}
+                              <span>{m.title ?? '(untitled)'}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Unresolved Requirements */}
+                    {projectPlan.openLoops.unresolvedRequirements.length > 0 && (
+                      <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Unresolved Requirements</p>
+                        <ul className="space-y-1.5">
+                          {projectPlan.openLoops.unresolvedRequirements.slice(0, 5).map((r, i) => (
+                            <li key={r.key ?? i} className="flex flex-wrap items-start gap-2 text-sm text-slate-300">
+                              {r.key && <span className="text-xs font-mono text-slate-500 shrink-0 mt-0.5">{r.key}</span>}
+                              <span className="flex-1">{r.title ?? '(untitled)'}</span>
+                              {r.owner && <span className="text-xs text-slate-500 italic shrink-0">{r.owner}</span>}
+                            </li>
+                          ))}
+                          {projectPlan.openLoops.unresolvedRequirements.length > 5 && (
+                            <li className="text-xs text-slate-500 italic">
+                              + {projectPlan.openLoops.unresolvedRequirements.length - 5} more
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Deferred Items */}
+                    {projectPlan.openLoops.deferredItems.length > 0 && (
+                      <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Deferred</p>
+                        <ul className="space-y-1">
+                          {projectPlan.openLoops.deferredItems.map((d, i) => (
+                            <li key={d.key ?? i} className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                              {d.key && <span className="text-xs font-mono text-slate-500">{d.key}</span>}
+                              <span>{d.title ?? '(untitled)'}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Revisable Decisions */}
+                    {projectPlan.openLoops.revisableDecisions.length > 0 && (
+                      <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Revisable Decisions</p>
+                        <ul className="space-y-2">
+                          {projectPlan.openLoops.revisableDecisions.map((d, i) => (
+                            <li key={d.key ?? i} className="space-y-0.5">
+                              {d.scope && (
+                                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">{d.scope}</p>
+                              )}
+                              <p className="text-sm text-slate-300">{d.decision}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
 
               <section className="space-y-4 border-t border-slate-800/70 pt-8">
                 <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6 rounded-3xl border border-slate-800 bg-slate-950/40 p-6">

@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Added readiness panel to App.tsx — Workflow Readiness section wit…
+Committed: feat: Added computeOpenLoops() to server.js and wired openLoops into th…
 
 ## Planned Next Steps
 
