@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: fix: Fixed checkpoint key-path bug (passiveCapture.lastCheckpointAt / l…
+Committed: feat: Added handoffCommand to server.js computeContinuity and replaced…
 
 ## What Was Tried
 
@@ -70,6 +70,7 @@ Committed: fix: Fixed checkpoint key-path bug (passiveCapture.lastCheckpointAt /
 - .bg-shell/manifest.json
 - mission_control.db-shm
 - server.js
+- src/App.tsx
 
 ## Pending Work Queue
 
@@ -101,6 +102,6 @@ Committed: fix: Fixed checkpoint key-path bug (passiveCapture.lastCheckpointAt /
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T03:56:32.254Z
+- Last updated: 2026-03-28T04:06:47.313Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

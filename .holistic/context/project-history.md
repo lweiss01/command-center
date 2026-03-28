@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T04:06:47.300Z
+- When: 2026-03-28T16:15:21.364Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: fix: Fixed checkpoint key-path bug (passiveCapture.lastCheckpointAt / l…
+- Summary: Committed: feat: Added handoffCommand to server.js computeContinuity and replaced…
 - Work done:
 - No completed work recorded.
 - Why it mattered:

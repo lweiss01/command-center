@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: fix: Fixed checkpoint key-path bug (passiveCapture.lastCheckpointAt / l…
+Committed: feat: Added handoffCommand to server.js computeContinuity and replaced…
 
 ## Before ending this session
 
