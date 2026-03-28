@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Layout, Terminal, Globe, Plus, Search, CheckCircle2, Circle, Send, RefreshCw, FolderSearch, FileText, Flag, AlertCircle, BookOpen } from 'lucide-react'
+﻿import { useEffect, useMemo, useState } from 'react'
+import { Layout, Plus, Search, CheckCircle2, Circle, Send, RefreshCw, BookOpen } from 'lucide-react'
 
 interface Task {
   id: number;
@@ -437,68 +437,14 @@ function App() {
     })
   }, [projects, searchQuery, projectSortMode, portfolioData])
 
-  const getProjectBadgeLabel = (project: Project) => {
-    if (project.projectType === 'web_node') return 'Web/Node'
-    if (project.projectType === 'python') return 'Python'
-    if (project.projectType === 'general') return 'General'
-    return 'Unknown'
-  }
-
-  const getProjectIcon = (project: Project) => {
-    return project.projectType === 'web_node' ? Globe : Terminal
-  }
-
   const getPlanningStatusLabel = (status: Project['planningStatus']) => {
     if (status === 'structured') return 'Structured'
     if (status === 'partial') return 'Partial'
     return 'None'
   }
 
-  const getPlanningStatusClassName = (status: Project['planningStatus']) => {
-    if (status === 'structured') return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-    if (status === 'partial') return 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-    return 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
-  }
-
-  const getMilestoneStatusClassName = (status: Milestone['status']) => {
-    if (status === 'done') return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-    if (status === 'active') return 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-    if (status === 'blocked') return 'bg-red-500/10 text-red-400 border border-red-500/20'
-    if (status === 'draft') return 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
-    return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-  }
-
-  const getRequirementStatusClassName = (status: Requirement['status']) => {
-    if (status === 'validated') return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-    if (status === 'deferred' || status === 'out-of-scope') return 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-    return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-  }
-
-  const getWorkflowPhaseClassName = (phase: WorkflowState['phase']) => {
-    if (phase === 'active') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-    if (phase === 'stalled') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-    if (phase === 'blocked') return 'bg-red-500/10 text-red-300 border border-red-500/20'
-    if (phase === 'import-only') return 'bg-blue-500/10 text-blue-300 border border-blue-500/20'
-    return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
-  }
-
-  const getWorkflowConfidenceClassName = (confidence: number) => {
-    if (confidence >= 0.7) return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-    if (confidence >= 0.4) return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-    return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
-  }
-
-  const getContinuityStatusClassName = (status: ContinuityState['status']) => {
-    if (status === 'fresh') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-    if (status === 'stale') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-    return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
-  }
-
-  const getReadinessClassName = (status: 'ready' | 'partial' | 'missing'): string => {
-    if (status === 'ready') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-    if (status === 'partial') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-    return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
-  }
+  const getReadinessClassName = (_s: 'ready' | 'partial' | 'missing') => _s
+  void getReadinessClassName
 
   const getNextActionBlockersPresent = (blockers: string[] | undefined) => !!blockers && blockers.length > 0;
 
@@ -574,1040 +520,740 @@ function App() {
 
   const formatImportProvenance = (run: ImportRun | null, sourceLabel: string) => {
     const syncedAt = formatImportSyncTime(run?.completedAt)
-    return `Last synced ${syncedAt} · source ${sourceLabel}`
+    return `Last synced ${syncedAt} Â· source ${sourceLabel}`
   }
 
   const milestoneProvenance = formatImportProvenance(milestoneImportRun, importSourceLabels.milestones)
   const requirementProvenance = formatImportProvenance(requirementsImportRun, importSourceLabels.requirements)
   const decisionProvenance = formatImportProvenance(decisionsImportRun, importSourceLabels.decisions)
 
+  // â”€â”€â”€ Phase color helpers (new design system) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const phaseAccent = (phase: string) => {
+    if (phase === 'active')      return '#c8f135'
+    if (phase === 'stalled')     return '#f5a623'
+    if (phase === 'blocked')     return '#e05252'
+    if (phase === 'import-only') return '#5b9cf6'
+    return '#3a3a40'
+  }
+  const phaseTagClass = (phase: string) => {
+    if (phase === 'active')      return 'tag-lime'
+    if (phase === 'stalled')     return 'tag-amber'
+    if (phase === 'blocked')     return 'tag-red'
+    if (phase === 'import-only') return 'tag-blue'
+    return 'tag-muted'
+  }
+  const continuityTagClass = (s: ContinuityState['status']) => {
+    if (s === 'fresh')  return 'tag-lime'
+    if (s === 'stale')  return 'tag-amber'
+    return 'tag-muted'
+  }
+  const planTagClass = (s: Project['planningStatus']) => {
+    if (s === 'structured') return 'tag-lime'
+    if (s === 'partial')    return 'tag-amber'
+    return 'tag-muted'
+  }
+  const milestoneTagClass = (s: Milestone['status']) => {
+    if (s === 'done')    return 'tag-lime'
+    if (s === 'active')  return 'tag-amber'
+    if (s === 'blocked') return 'tag-red'
+    if (s === 'draft')   return 'tag-muted'
+    return 'tag-blue'
+  }
+  const reqTagClass = (s: Requirement['status']) => {
+    if (s === 'validated')   return 'tag-lime'
+    if (s === 'deferred' || s === 'out-of-scope') return 'tag-amber'
+    return 'tag-blue'
+  }
+  const confidenceTagClass = (c: number) => {
+    if (c >= 0.7) return 'tag-lime'
+    if (c >= 0.4) return 'tag-amber'
+    return 'tag-muted'
+  }
+  const readinessTagClass = (s: 'ready' | 'partial' | 'missing') => {
+    if (s === 'ready')   return 'tag-lime'
+    if (s === 'partial') return 'tag-amber'
+    return 'tag-muted'
+  }
+
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen min-w-screen w-full bg-[#0b0f1a] text-slate-200 font-sans overflow-x-hidden">
-      <aside className="w-full lg:w-64 xl:w-72 shrink-0 bg-[#111827] border-b lg:border-b-0 lg:border-r border-slate-800 p-5 md:p-8 flex flex-col">
-        <div className="flex items-center gap-4 mb-12">
-          <div className="bg-blue-600 p-2 rounded-lg text-white">
-            <Layout size={22} />
+    <div className="flex min-h-screen w-full overflow-x-hidden" style={{ background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+
+      {/* â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <aside style={{ background: 'var(--bg-surface)', borderRight: '1px solid var(--border)', width: '220px', flexShrink: 0 }}
+        className="hidden lg:flex flex-col min-h-screen">
+
+        {/* Logo mark */}
+        <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-3">
+            <div style={{ background: 'var(--accent)', borderRadius: '6px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Layout size={16} color="var(--accent-text)" strokeWidth={2.5} />
+            </div>
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '13px', letterSpacing: '0.06em', color: 'var(--text-primary)', lineHeight: 1 }}>
+                COMMAND
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.08em', marginTop: '3px' }}>
+                CENTER
+              </div>
+            </div>
           </div>
-          <h1 className="text-2xl font-black tracking-tighter text-white uppercase">Command</h1>
         </div>
-        <nav className="flex-none lg:flex-1 space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold mb-4 px-2">Main Menu</p>
-          <button className="flex items-center gap-3 w-full p-3 bg-blue-600/10 text-blue-400 rounded-xl border border-blue-500/20 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-            <Layout size={20} /> Dashboard
+
+        {/* Nav */}
+        <nav style={{ padding: '16px 12px', flex: 1 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.14em', padding: '0 8px 10px' }}>
+            NAVIGATION
+          </div>
+          <button style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 10px', borderRadius: '6px', background: 'rgba(200,241,53,0.08)', border: '1px solid rgba(200,241,53,0.18)', color: 'var(--accent)', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8f135]">
+            <Layout size={15} />
+            Dashboard
           </button>
         </nav>
-        <div className="mt-6 lg:mt-auto pt-6 border-t border-slate-800/50">
-          <p className="text-[10px] text-slate-600 font-mono tracking-widest uppercase text-center">Command Center v{APP_VERSION}</p>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+            v{APP_VERSION}
+          </div>
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 p-5 md:p-8 xl:p-12 bg-gradient-to-br from-[#0b0f1a] to-[#0f172a]">
-        <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end mb-12 gap-6">
-          <div>
-            <h2 className="text-5xl md:text-6xl font-black text-white tracking-tighter uppercase leading-none">Project Hub</h2>
-            <p className="text-slate-400 mt-3 font-mono text-sm tracking-widest uppercase opacity-70">
-              {projectsLoading ? 'Loading workspace...' : `${projects.length} Environments Discovered`}
-            </p>
+      {/* â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <main className="flex-1 min-w-0 flex flex-col" style={{ background: 'var(--bg-base)' }}>
+
+        {/* Top bar */}
+        <div style={{ borderBottom: '1px solid var(--border)', padding: '0 40px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', flexShrink: 0 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+            {projectsLoading ? 'Scanning...' : `${projects.length} projects`}
           </div>
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 w-full lg:w-auto lg:justify-end items-center">
-            <a
-              href={USER_GUIDE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 text-slate-400 px-4 py-3 rounded-full font-bold uppercase tracking-tighter hover:text-slate-200 transition-colors w-full sm:w-auto text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-              <BookOpen size={16} /> User Guide
+          <div className="flex items-center gap-3">
+            <a href={USER_GUIDE_URL} target="_blank" rel="noopener noreferrer"
+              style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', transition: 'color 0.15s' }}
+              className="hover:text-[#f0f0ee] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#c8f135] rounded">
+              <BookOpen size={13} /> Guide
             </a>
+            <div style={{ width: '1px', height: '16px', background: 'var(--border)' }} />
             <button
               disabled
               title="Coming soon"
-              className="flex items-center justify-center gap-2 border border-slate-700 text-slate-500 px-6 py-3 rounded-full font-bold uppercase tracking-tighter cursor-not-allowed w-full sm:w-auto text-sm"
-            >
-              <Plus size={16} /> New Project
+              style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', cursor: 'not-allowed', opacity: 0.4, padding: '4px 8px' }}>
+              <Plus size={13} /> New Project
             </button>
             <button
               onClick={handleScanWorkspace}
               disabled={scanInFlight}
-              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-            >
-              <RefreshCw size={20} className={scanInFlight ? 'animate-spin' : ''} />
-              {scanInFlight ? 'Scanning...' : 'Scan Workspace'}
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '7px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '6px', padding: '8px 16px', cursor: 'pointer', transition: 'opacity 0.15s' }}
+              className="hover:opacity-90 active:opacity-75 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8f135] focus-visible:ring-offset-2 focus-visible:ring-offset-[#161618]">
+              <RefreshCw size={13} className={scanInFlight ? 'animate-spin' : ''} />
+              {scanInFlight ? 'Scanningâ€¦' : 'Scan Workspace'}
             </button>
           </div>
-        </header>
-
-        <div className="relative mb-6 group max-w-2xl">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={22} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="FILTER PROJECTS..."
-            className="w-full bg-[#111827] border border-slate-800 rounded-2xl py-4 pl-14 pr-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus:border-blue-500/50 transition-colors font-bold uppercase tracking-wider text-sm shadow-inner"
-          />
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => setProjectSortMode(prev => prev === 'urgency' ? 'name' : 'urgency')}
-            className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-              projectSortMode === 'urgency'
-                ? 'bg-amber-500/10 text-amber-300 border-amber-500/20 hover:bg-amber-500/20'
-                : 'bg-slate-800 text-slate-400 border-slate-700/60 hover:border-slate-600'
-            }`}
-          >
-            Sort: {projectSortMode === 'urgency' ? 'Urgency' : 'Name'}
-          </button>
-          {portfolioLoading && (
-            <span className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">Loading signals…</span>
+        <div style={{ padding: '40px' }} className="flex-1">
+
+          {/* Page heading */}
+          <div className="flex items-end justify-between gap-6 mb-10">
+            <div>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '36px', letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--text-primary)', margin: 0 }}>
+                Project Hub
+              </h1>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: '8px' }}>
+                {projectsLoading ? 'LOADING WORKSPACE' : `${projects.length} ENVIRONMENTS DISCOVERED`}
+              </p>
+            </div>
+          </div>
+
+          {/* Controls row */}
+          <div className="flex items-center gap-4 mb-8">
+            {/* Search */}
+            <div className="relative flex-1 max-w-md">
+              <Search size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filter projectsâ€¦"
+                style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '9px 14px 9px 36px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s' }}
+                className="focus:border-[#c8f135]/40 focus-visible:ring-1 focus-visible:ring-[#c8f135]"
+              />
+            </div>
+            {/* Sort */}
+            <button
+              onClick={() => setProjectSortMode(prev => prev === 'urgency' ? 'name' : 'urgency')}
+              style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', letterSpacing: '0.08em', color: projectSortMode === 'urgency' ? 'var(--accent)' : 'var(--text-muted)', background: projectSortMode === 'urgency' ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${projectSortMode === 'urgency' ? 'rgba(200,241,53,0.25)' : 'var(--border)'}`, borderRadius: '4px', padding: '7px 12px', cursor: 'pointer', transition: 'all 0.15s' }}
+              className="focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#c8f135]">
+              {projectSortMode === 'urgency' ? 'â†“ Urgency' : 'â†“ Name'}
+            </button>
+            {portfolioLoading && (
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.06em' }}>Loading signalsâ€¦</span>
+            )}
+          </div>
+
+          {/* Error */}
+          {projectsError && (
+            <div style={{ background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.2)', borderRadius: '6px', padding: '12px 16px', marginBottom: '24px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#e05252', letterSpacing: '0.04em' }}>
+              {projectsError}
+            </div>
           )}
-        </div>
 
-        {projectsError ? (
-          <div className="mb-8 rounded-3xl border border-red-500/20 bg-red-500/10 px-6 py-5 text-sm font-bold uppercase tracking-wide text-red-300">
-            {projectsError}
-          </div>
-        ) : null}
+          {/* Project grid */}
+          {projectsLoading ? (
+            <div style={{ padding: '80px 0', textAlign: 'center' }}>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.12em' }}>LOADING PROJECTSâ€¦</p>
+            </div>
+          ) : filteredProjects.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-16">
+              {filteredProjects.map((project) => {
+                const entry = portfolioData.get(project.id)
+                const phase = entry?.workflowPhase ?? 'no-data'
+                const accent = phaseAccent(phase)
+                const isSelected = selectedProject?.id === project.id
+                const continuityLabel = entry
+                  ? (entry.continuityStatus === 'fresh' && entry.continuityAgeHours !== null
+                    ? `fresh ${Math.round(entry.continuityAgeHours)}h`
+                    : entry.continuityStatus)
+                  : null
+                const gapsCount = entry?.readinessGaps.length ?? 0
+                const unresolved = entry?.unresolvedCount ?? 0
+                const riskParts: string[] = []
+                if (gapsCount > 0) riskParts.push(`${gapsCount} gap${gapsCount !== 1 ? 's' : ''}`)
+                if (unresolved > 0) riskParts.push(`${unresolved} unresolved`)
 
-        {projectsLoading ? (
-          <div className="py-20 text-center border-2 border-dashed border-slate-800 rounded-3xl">
-            <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Loading discovered projects...</p>
-          </div>
-        ) : filteredProjects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProjects.map((project) => {
-              const Icon = getProjectIcon(project)
-              const typeLabel = getProjectBadgeLabel(project)
-
-              return (
-                <button
-                  key={project.id}
-                  type="button"
-                  onClick={() => setSelectedProject(project)}
-                  className={`group p-8 rounded-[2rem] border-2 transition-colors duration-200 text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0f1a] ${
-                    selectedProject?.id === project.id
-                      ? 'bg-[#1e293b] border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.15)] scale-[1.02]'
-                      : 'bg-[#111827] border-slate-800 hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-8 gap-4">
-                    <div className={`p-4 rounded-2xl ${project.projectType === 'web_node' ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                      <Icon size={32} />
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-900/50 px-3 py-1 rounded-full border border-slate-800">
-                        {typeLabel}
+                return (
+                  <button
+                    key={project.id}
+                    type="button"
+                    onClick={() => setSelectedProject(project)}
+                    style={{
+                      display: 'block',
+                      textAlign: 'left',
+                      width: '100%',
+                      background: isSelected ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+                      border: `1px solid ${isSelected ? accent : 'var(--border)'}`,
+                      borderTop: `3px solid ${accent}`,
+                      borderRadius: '8px',
+                      padding: '20px 22px 18px',
+                      cursor: 'pointer',
+                      transition: 'border-color 0.15s, background 0.15s',
+                      position: 'relative',
+                    }}
+                    className="hover:border-[var(--border-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8f135] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0e0e0f]"
+                  >
+                    {/* Card header */}
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '16px', letterSpacing: '-0.01em', color: isSelected ? 'var(--text-primary)' : 'var(--text-primary)', lineHeight: 1.2, margin: 0 }}>
+                        {project.name}
+                      </h3>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.1em', flexShrink: 0, paddingTop: '2px' }}>
+                        {project.projectType === 'web_node' ? 'WEB' : project.projectType === 'python' ? 'PY' : 'GEN'}
                       </span>
-                      <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getPlanningStatusClassName(project.planningStatus)}`}>
-                        Plan: {getPlanningStatusLabel(project.planningStatus)}
-                      </span>
-                      {portfolioLoading && !portfolioData.has(project.id) ? (
-                        <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-slate-800/50 text-slate-600 border border-slate-700/30">
-                          ···
-                        </span>
-                      ) : portfolioData.has(project.id) ? (() => {
-                        const entry = portfolioData.get(project.id)!
-                        const continuityLabel = entry.continuityStatus === 'fresh' && entry.continuityAgeHours !== null
-                          ? `fresh ${Math.round(entry.continuityAgeHours)}h`
-                          : entry.continuityStatus
-                        return (
-                          <>
-                            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getWorkflowPhaseClassName(entry.workflowPhase as WorkflowState['phase'])}`}>
-                              Phase: {entry.workflowPhase}
-                            </span>
-                            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getContinuityStatusClassName(entry.continuityStatus)}`}>
-                              Continuity: {continuityLabel}
-                            </span>
-                          </>
-                        )
-                      })() : null}
                     </div>
-                  </div>
 
-                  <h3 className="text-3xl font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tighter leading-none mb-3">
-                    {project.name}
-                  </h3>
+                    {/* Path */}
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '14px' }}>
+                      {project.rootPath}
+                    </p>
 
-                  <p className="text-xs text-slate-500 font-mono truncate lowercase tracking-tight opacity-50 mb-5">
-                    {project.rootPath}
-                  </p>
-
-                  <div className="flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold">
-                    <div className="flex items-center gap-2">
-                      <FileText size={14} />
-                      <span>{project.artifactCount} Sources</span>
+                    {/* Chips */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <Tag label={`Plan: ${getPlanningStatusLabel(project.planningStatus)}`} cls={planTagClass(project.planningStatus)} />
+                      {portfolioLoading && !entry ? (
+                        <Tag label="Â·Â·Â·" cls="tag-muted" />
+                      ) : entry ? (
+                        <>
+                          <Tag label={`Phase: ${phase}`} cls={phaseTagClass(phase)} />
+                          {continuityLabel && <Tag label={`Continuity: ${continuityLabel}`} cls={continuityTagClass(entry.continuityStatus)} />}
+                        </>
+                      ) : null}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <FolderSearch size={14} />
-                      <span>{project.hasGit ? 'Git Repo' : 'Local Folder'}</span>
-                    </div>
-                  </div>
-                  {(() => {
-                    const entry = portfolioData.get(project.id)
-                    if (!entry) return null
-                    const gapsCount = entry.readinessGaps.length
-                    const unresolved = entry.unresolvedCount
-                    if (gapsCount === 0 && unresolved === 0) return null
-                    const parts: string[] = []
-                    if (gapsCount > 0) parts.push(`${gapsCount} gap${gapsCount === 1 ? '' : 's'}`)
-                    if (unresolved > 0) parts.push(`${unresolved} unresolved`)
-                    return (
-                      <p className="mt-3 text-[10px] text-slate-500 font-mono truncate">
-                        {parts.join(' · ')}
+
+                    {/* Risk line */}
+                    {riskParts.length > 0 && (
+                      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>
+                        {riskParts.join(' Â· ')}
                       </p>
-                    )
-                  })()}
-                </button>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="py-20 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-4">
-            <p className="text-slate-500 font-black uppercase tracking-widest text-xs">
-              {projects.length === 0 ? 'No Projects Discovered Yet' : 'No Projects Match Current Filter'}
-            </p>
-            <div className="flex justify-center">
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div style={{ padding: '80px 0', textAlign: 'center', borderTop: '1px solid var(--border)' }}>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: '20px' }}>
+                {projects.length === 0 ? 'NO PROJECTS DISCOVERED YET' : 'NO PROJECTS MATCH FILTER'}
+              </p>
               <button
                 onClick={handleScanWorkspace}
                 disabled={scanInFlight}
-                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-              >
-                <RefreshCw size={18} className={scanInFlight ? 'animate-spin' : ''} />
-                {scanInFlight ? 'Scanning...' : 'Scan Workspace'}
+                style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '12px', letterSpacing: '0.06em', display: 'inline-flex', alignItems: 'center', gap: '7px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '6px', padding: '10px 20px', cursor: 'pointer', transition: 'opacity 0.15s' }}
+                className="disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8f135]">
+                <RefreshCw size={13} className={scanInFlight ? 'animate-spin' : ''} />
+                {scanInFlight ? 'Scanningâ€¦' : 'Scan Workspace'}
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        <div id="roadmap-section" className="mt-16 pb-20">
-          {selectedProject ? (
-            <div className="p-5 md:p-8 xl:p-10 bg-[#111827]/80 backdrop-blur-md rounded-[2.5rem] border-2 border-slate-800 shadow-2xl space-y-10">
-              <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
-                <div className="space-y-3">
-                  <h3 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">
-                    {selectedProject.name} Roadmap
-                  </h3>
-                  <p className="text-blue-500 font-mono text-xs uppercase tracking-[0.2em] font-bold">
-                    Planning Status: {getPlanningStatusLabel(selectedProject.planningStatus)}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-3 xl:justify-end">
-                  <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-slate-800/70 text-slate-300 border border-slate-700/60">
-                    Sources: {selectedProject.artifactCount}
-                  </span>
-                  <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-slate-800/70 text-slate-300 border border-slate-700/60">
-                    Repo: {selectedProject.hasGit ? 'git' : 'local'}
-                  </span>
-                  <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-slate-800/70 text-slate-300 border border-slate-700/60">
-                    Stack: {selectedProject.framework ?? selectedProject.projectType}
-                  </span>
-                </div>
-              </div>
+          {/* â”€â”€ Detail panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          <div id="roadmap-section">
+            {selectedProject ? (
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '40px' }}>
 
-              <div className="grid gap-6">
-                <section className="space-y-3 border-t border-slate-800/70 pt-6">
-                  <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                      <h4 className="text-xl font-black uppercase tracking-tight text-white">Workflow State</h4>
-                      <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                        Interpreted phase derived from imported artifacts and repo continuity signals
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getWorkflowPhaseClassName(projectPlan?.workflowState.phase ?? 'no-data')}`}>
-                        Phase: {projectPlan?.workflowState.phase ?? 'no-data'}
-                      </span>
-                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getWorkflowConfidenceClassName(projectPlan?.workflowState.confidence ?? 0)}`}>
-                        Confidence: {projectPlan?.workflowState.confidence != null ? `${Math.round(projectPlan.workflowState.confidence * 100)}%` : '0%'}
-                      </span>
-                    </div>
+                {/* Panel heading */}
+                <div className="flex items-start justify-between gap-6 mb-8">
+                  <div>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '26px', letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
+                      {selectedProject.name}
+                    </h2>
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: '6px' }}>
+                      {selectedProject.rootPath}
+                    </p>
                   </div>
-
-                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Evidence</p>
-                    <ul className="space-y-2 text-sm text-slate-300">
-                      {(projectPlan?.workflowState.evidence ?? []).map((item) => (
-                        <li key={item.label} className="flex gap-2">
-                          <span className="text-slate-500 min-w-[110px] shrink-0">{item.label}</span>
-                          <span className="text-slate-200">{item.value}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Tag label={`Plan: ${getPlanningStatusLabel(selectedProject.planningStatus)}`} cls={planTagClass(selectedProject.planningStatus)} />
+                    <Tag label={`${selectedProject.artifactCount} sources`} cls="tag-muted" />
+                    <Tag label={selectedProject.hasGit ? 'git' : 'local'} cls="tag-muted" />
+                    <Tag label={selectedProject.framework ?? selectedProject.projectType} cls="tag-muted" />
                   </div>
+                </div>
 
-                  {(projectPlan?.workflowState.reasons ?? []).length > 0 ? (
-                    <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4">
-                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Reasons</p>
-                      <ul className="space-y-1 text-sm text-slate-300 list-disc pl-5">
-                        {(projectPlan?.workflowState.reasons ?? []).map((reason) => (
-                          <li key={reason}>{reason}</li>
+                {/* â”€â”€ Panel sections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                <div className="space-y-6">
+
+                  {/* Workflow State */}
+                  <PanelSection title="Workflow State" subtitle="Interpreted phase from imported artifacts and continuity signals">
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Tag label={`Phase: ${projectPlan?.workflowState.phase ?? 'no-data'}`} cls={phaseTagClass(projectPlan?.workflowState.phase ?? 'no-data')} />
+                      <Tag label={`Confidence: ${projectPlan?.workflowState.confidence != null ? Math.round(projectPlan.workflowState.confidence * 100) + '%' : '0%'}`} cls={confidenceTagClass(projectPlan?.workflowState.confidence ?? 0)} />
+                    </div>
+                    <DataGrid rows={(projectPlan?.workflowState.evidence ?? []).map(e => [e.label, e.value])} />
+                    {(projectPlan?.workflowState.reasons ?? []).length > 0 && (
+                      <ul style={{ margin: '12px 0 0', paddingLeft: '16px' }}>
+                        {projectPlan!.workflowState.reasons.map(r => (
+                          <li key={r} style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{r}</li>
                         ))}
                       </ul>
-                    </div>
-                  ) : null}
+                    )}
+                    {workflowConfidenceDowngraded && (
+                      <CalloutBox variant="amber" label="Confidence note">Workflow confidence reduced â€” repo continuity is stale.</CalloutBox>
+                    )}
+                    {workflowConfidenceSupported && (
+                      <CalloutBox variant="lime" label="Confidence note">Confidence supported by fresh repo continuity.</CalloutBox>
+                    )}
+                  </PanelSection>
 
-                  {workflowConfidenceDowngraded ? (
-                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-4 max-w-3xl">
-                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-amber-300 mb-2">Confidence note</p>
-                      <p className="text-sm text-amber-100/90">
-                        Workflow confidence was reduced because repo-local Holistic continuity is stale.
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {workflowConfidenceSupported ? (
-                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-4 max-w-3xl">
-                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-300 mb-2">Confidence note</p>
-                      <p className="text-sm text-emerald-100/90">
-                        Confidence is supported by fresh repo-local Holistic continuity.
-                      </p>
-                    </div>
-                  ) : null}
-                </div>
-              </section>
-
-              {projectPlan?.readiness && (
-                <section className="space-y-3 border-t border-slate-800/70 pt-6">
-                  <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div>
-                        <h4 className="text-xl font-black uppercase tracking-tight text-white">Workflow Readiness</h4>
-                        <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                          Derived readiness audit from repo docs, tool probes, and stack presence checks
-                        </p>
+                  {/* Readiness */}
+                  {projectPlan?.readiness && (
+                    <PanelSection title="Workflow Readiness" subtitle="Repo docs, tool probes, and stack presence">
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <Tag label={`Readiness: ${projectPlan.readiness.overallReadiness}`} cls={readinessTagClass(projectPlan.readiness.overallReadiness)} />
                       </div>
-                      <div className="flex flex-wrap gap-3">
-                        <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getReadinessClassName(projectPlan.readiness.overallReadiness)}`}>
-                          Readiness: {projectPlan.readiness.overallReadiness}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4">
-                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Components</p>
-                      <ul className="space-y-2 text-sm text-slate-300">
-                        {projectPlan.readiness.components.map((component) => (
-                          <li key={component.id} className="flex gap-2 items-start">
-                            <span className={`shrink-0 mt-0.5 ${component.status === 'present' ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {component.status === 'present' ? '✓' : '✗'}
-                            </span>
-                            <span className="min-w-[160px] shrink-0 text-slate-300">
-                              {component.label}
-                              {component.required && <span className="text-slate-500 text-xs ml-1">(required)</span>}
-                            </span>
-                            {component.note && (
-                              <span className="text-slate-500 text-xs italic">{component.note}</span>
-                            )}
+                      <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {projectPlan.readiness.components.map(c => (
+                          <li key={c.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+                            <span style={{ color: c.status === 'present' ? '#4ade80' : '#e05252', flexShrink: 0, marginTop: '1px' }}>{c.status === 'present' ? 'âœ“' : 'âœ—'}</span>
+                            <span style={{ color: 'var(--text-secondary)', minWidth: '160px', flexShrink: 0 }}>{c.label}{c.required && <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>(req)</span>}</span>
+                            {c.note && <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>{c.note}</span>}
                           </li>
                         ))}
                       </ul>
-                    </div>
+                      {projectPlan.readiness.gaps.length > 0 && (
+                        <CalloutBox variant="red" label="Gaps">
+                          <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                            {projectPlan.readiness.gaps.map(g => <li key={g} style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#e05252', lineHeight: 1.7 }}>{g}</li>)}
+                          </ul>
+                        </CalloutBox>
+                      )}
+                    </PanelSection>
+                  )}
 
-                    {projectPlan.readiness.gaps.length > 0 && (
-                      <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-4">
-                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-red-300 mb-3">Gaps</p>
-                        <ul className="space-y-1 text-sm text-red-200/80 list-disc pl-5">
-                          {projectPlan.readiness.gaps.map((gap) => (
-                            <li key={gap}>{gap}</li>
-                          ))}
-                        </ul>
-                      </div>
+                  {/* Continuity */}
+                  <PanelSection title="Continuity" subtitle="Holistic freshness and checkpoint hygiene">
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Tag label={`Status: ${projectPlan?.continuity.status ?? 'missing'}`} cls={continuityTagClass(projectPlan?.continuity.status ?? 'missing')} />
+                      <Tag
+                        label={`Checkpoint: ${projectPlan?.continuity.checkpointHygiene ?? 'missing'}`}
+                        cls={projectPlan?.continuity.checkpointHygiene === 'ok' ? 'tag-lime' : projectPlan?.continuity.checkpointHygiene === 'stale' ? 'tag-amber' : 'tag-muted'}
+                      />
+                    </div>
+                    {projectPlan?.continuity.freshAt && (
+                      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                        Updated {new Date(projectPlan.continuity.freshAt).toLocaleString()}{projectPlan.continuity.ageHours !== null ? ` Â· ${projectPlan.continuity.ageHours}h ago` : ''}
+                      </p>
                     )}
-                  </div>
-                </section>
-              )}
-
-              <section className="space-y-3 border-t border-slate-800/70 pt-6">
-                <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                      <h4 className="text-xl font-black uppercase tracking-tight text-white">Continuity</h4>
-                      <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                        Derived from repo-local Holistic freshness and checkpoint hygiene signals
+                    {projectPlan?.continuity.latestWork && (
+                      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: 1.6 }}>
+                        {projectPlan.continuity.latestWork}
                       </p>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getContinuityStatusClassName(projectPlan?.continuity.status ?? 'missing')}`}>
-                        Status: {projectPlan?.continuity.status ?? 'missing'}
-                      </span>
-                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${projectPlan?.continuity.checkpointHygiene === 'ok' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : projectPlan?.continuity.checkpointHygiene === 'stale' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-slate-700/40 text-slate-300 border border-slate-600/20'}`}>
-                        Checkpoint: {projectPlan?.continuity.checkpointHygiene ?? 'missing'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {projectPlan?.continuity.freshAt ? (
-                    <p className="text-sm text-slate-400">
-                      Last updated {new Date(projectPlan.continuity.freshAt).toLocaleString()}
-                      {projectPlan.continuity.ageHours !== null ? ` (${projectPlan.continuity.ageHours} h ago)` : ''}
-                    </p>
-                  ) : null}
-
-                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-2">
-                    {projectPlan?.continuity.latestWork ? (
-                      <>
-                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Latest work</p>
-                        <p className="text-sm text-slate-300">{projectPlan.continuity.latestWork}</p>
-                      </>
-                    ) : null}
-                    {!projectPlan?.continuity.latestWork ? (
-                      <p className="text-sm text-slate-500 italic">No continuity detail available.</p>
-                    ) : null}
-                  </div>
-
-                  {/* Hygiene callout — visible when stale or missing, compact confirmation when ok */}
-                  {projectPlan?.continuity.checkpointHygiene === 'ok' ? (
-                    <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
-                      <CheckCircle2 size={16} className="text-emerald-400 mt-0.5 shrink-0" />
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-emerald-300">
-                          {projectPlan.continuity.hygieneNote ?? 'Checkpoint hygiene is good.'}
+                    )}
+                    {projectPlan?.continuity.checkpointHygiene === 'ok' ? (
+                      <CalloutBox variant="lime" label="Hygiene">
+                        {projectPlan.continuity.hygieneNote ?? 'Checkpoint hygiene is good.'}
+                        {projectPlan.continuity.checkpointCount ? ` Â· ${projectPlan.continuity.checkpointCount} capture${projectPlan.continuity.checkpointCount !== 1 ? 's' : ''}` : ''}
+                      </CalloutBox>
+                    ) : (projectPlan?.continuity.checkpointHygiene === 'stale' || projectPlan?.continuity.checkpointHygiene === 'missing') ? (
+                      <CalloutBox variant={projectPlan.continuity.checkpointHygiene === 'missing' ? 'red' : 'amber'} label={`Hygiene: ${projectPlan.continuity.checkpointHygiene}`}>
+                        <p style={{ margin: '0 0 8px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                          {projectPlan.continuity.hygieneNote ?? 'No checkpoint record found. Run a handoff to preserve continuity.'}
                         </p>
-                        {projectPlan.continuity.checkpointCount != null && projectPlan.continuity.checkpointCount > 0 ? (
-                          <p className="text-[11px] text-emerald-200/70">
-                            {projectPlan.continuity.checkpointCount} passive capture{projectPlan.continuity.checkpointCount === 1 ? '' : 's'}
-                            {projectPlan.continuity.lastCheckpointReason ? `, last reason: ${projectPlan.continuity.lastCheckpointReason}` : ''}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : (projectPlan?.continuity.checkpointHygiene === 'stale' || projectPlan?.continuity.checkpointHygiene === 'missing') ? (
-                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/8 px-4 py-4 space-y-3">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle size={16} className={`mt-0.5 shrink-0 ${projectPlan.continuity.checkpointHygiene === 'missing' ? 'text-red-400' : 'text-amber-400'}`} />
-                        <div className="space-y-1">
-                          <p className={`text-xs font-bold uppercase tracking-[0.1em] ${projectPlan.continuity.checkpointHygiene === 'missing' ? 'text-red-300' : 'text-amber-300'}`}>
-                            Checkpoint hygiene: {projectPlan.continuity.checkpointHygiene}
-                          </p>
-                          <p className="text-sm text-slate-300">
-                            {projectPlan.continuity.hygieneNote ?? 'No checkpoint record found. Run a handoff to preserve continuity.'}
-                          </p>
-                          {projectPlan.continuity.checkpointCount != null && projectPlan.continuity.checkpointCount > 0 ? (
-                            <p className="text-[11px] text-slate-400">
-                              {projectPlan.continuity.checkpointCount} passive capture{projectPlan.continuity.checkpointCount === 1 ? '' : 's'}
-                              {projectPlan.continuity.lastCheckpointReason ? `, last reason: ${projectPlan.continuity.lastCheckpointReason}` : ''}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                      {projectPlan.continuity.handoffCommand ? (
-                        <div className="flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-900/50 px-3 py-2">
-                          <Send size={13} className="text-slate-400 shrink-0" />
-                          <code className="text-xs text-slate-300 font-mono break-all">{projectPlan.continuity.handoffCommand}</code>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              </section>
+                        {projectPlan.continuity.handoffCommand && (
+                          <code style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.25)', borderRadius: '4px', padding: '8px 10px', wordBreak: 'break-all' }}>
+                            {projectPlan.continuity.handoffCommand}
+                          </code>
+                        )}
+                      </CalloutBox>
+                    ) : null}
+                  </PanelSection>
 
-              <section className="space-y-3 border-t border-slate-800/70 pt-6">
-                <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                      <h4 className="text-xl font-black uppercase tracking-tight text-white">Next Action</h4>
-                      <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                        Interpreted recommendation derived from workflow, readiness, continuity, and blockers
-                      </p>
+                  {/* Next Action */}
+                  <PanelSection title="Next Action" subtitle="Interpreted recommendation from workflow, readiness, continuity, and blockers">
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Tag label={nextActionHasBlockers ? 'Blocked' : 'Clear'} cls={nextActionHasBlockers ? 'tag-red' : 'tag-lime'} />
                     </div>
-                    <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${nextActionHasBlockers ? 'bg-red-500/10 text-red-300 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'}`}>
-                      {nextActionHasBlockers ? 'Blocked' : 'Clear'}
-                    </span>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-3">
-                    <p className="text-lg font-bold tracking-tight text-slate-100">
+                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', marginBottom: '8px', lineHeight: 1.4 }}>
                       {projectPlan?.nextAction.action ?? 'No recommendation available'}
                     </p>
-                    <p className="text-sm text-slate-300 leading-relaxed max-w-3xl">
-                      {projectPlan?.nextAction.rationale ?? 'The cockpit does not have enough evidence to recommend a next step yet.'}
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: '600px', marginBottom: '12px' }}>
+                      {projectPlan?.nextAction.rationale ?? 'Insufficient evidence to recommend a next step.'}
                     </p>
-
-                    {nextActionSuggestedCommand ? (
-                      <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-3 space-y-2">
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-blue-300">Suggested command</p>
-                        <code className="block text-xs text-blue-100 font-mono break-all">{nextActionSuggestedCommand}</code>
-                      </div>
-                    ) : null}
-
+                    {nextActionSuggestedCommand && (
+                      <code style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: '4px', padding: '8px 12px', marginBottom: '12px', border: '1px solid rgba(200,241,53,0.15)' }}>
+                        {nextActionSuggestedCommand}
+                      </code>
+                    )}
                     {nextActionHasBlockers && (
-                      <div className="space-y-2 pt-1 rounded-xl border border-red-500/25 bg-red-500/8 px-3 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-[11px] font-bold uppercase tracking-widest text-red-300">Blockers</p>
-                          <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest bg-red-500/10 text-red-300 border border-red-500/20">
-                            {nextActionBlockers.length}
-                          </span>
-                        </div>
-                        <ul className="space-y-1">
-                          {nextActionBlockers.map((b) => (
-                            <li key={b} className="text-sm text-red-200 flex gap-2 items-start">
-                              <span className="mt-0.5 shrink-0">⚠</span>
-                              <span>{b}</span>
-                            </li>
-                          ))}
+                      <CalloutBox variant="red" label={`${nextActionBlockers.length} blocker${nextActionBlockers.length !== 1 ? 's' : ''}`}>
+                        <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                          {nextActionBlockers.map(b => <li key={b} style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#e05252', lineHeight: 1.7 }}>{b}</li>)}
                         </ul>
-                      </div>
+                      </CalloutBox>
                     )}
-                  </div>
-                </div>
-              </section>
-              </div>
+                  </PanelSection>
 
-              {projectPlan?.openLoops && (
-                <section className="space-y-3 border-t border-slate-800/70 pt-6">
-                  <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 space-y-3">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div>
-                        <h4 className="text-xl font-black uppercase tracking-tight text-white">Open Loops</h4>
-                        <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                          Derived open-loop view from milestones, requirements, and decisions still unresolved.
-                        </p>
+                  {/* Open Loops */}
+                  {projectPlan?.openLoops && (
+                    <PanelSection title="Open Loops" subtitle="Milestones, requirements, and decisions still unresolved">
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <Tag label={`${projectPlan.openLoops.summary.unresolvedCount} unresolved`} cls="tag-amber" />
+                        {projectPlan.openLoops.summary.deferredCount > 0 && <Tag label={`${projectPlan.openLoops.summary.deferredCount} deferred`} cls="tag-muted" />}
+                        {projectPlan.openLoops.summary.blockedCount > 0 && <Tag label={`${projectPlan.openLoops.summary.blockedCount} blocked`} cls="tag-red" />}
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                          {projectPlan.openLoops.summary.unresolvedCount} unresolved
-                        </span>
-                        {projectPlan.openLoops.summary.deferredCount > 0 && (
-                          <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-slate-700/40 text-slate-300 border border-slate-600/20">
-                            {projectPlan.openLoops.summary.deferredCount} deferred
-                          </span>
-                        )}
-                        {projectPlan.openLoops.summary.blockedCount > 0 && (
-                          <span className="text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] bg-red-500/10 text-red-300 border border-red-500/20">
-                            {projectPlan.openLoops.summary.blockedCount} blocked
-                          </span>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Next Milestone */}
-                    <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Next Milestone</p>
-                      {projectPlan.openLoops.nextMilestone ? (
-                        <div className="flex flex-wrap items-center gap-3">
-                          {projectPlan.openLoops.nextMilestone.key && (
-                            <span className="text-xs font-mono text-slate-500">{projectPlan.openLoops.nextMilestone.key}</span>
-                          )}
-                          <span className="text-sm font-bold text-slate-100">
-                            {projectPlan.openLoops.nextMilestone.title ?? '(untitled)'}
-                          </span>
-                          {projectPlan.openLoops.nextMilestone.status && (
-                            <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-[0.1em] bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                              {projectPlan.openLoops.nextMilestone.status}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-emerald-400 font-medium">All milestones complete</p>
-                      )}
-                    </div>
-
-                    {/* Blocked Milestones */}
-                    {projectPlan.openLoops.blockedMilestones.length > 0 && (
-                      <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-4 space-y-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-red-300">Blocked</p>
-                        <ul className="space-y-1">
-                          {projectPlan.openLoops.blockedMilestones.map((m, i) => (
-                            <li key={m.key ?? i} className="flex flex-wrap items-center gap-2 text-sm text-red-200/80">
-                              {m.key && <span className="text-xs font-mono text-red-400/70">{m.key}</span>}
-                              <span>{m.title ?? '(untitled)'}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Unresolved Requirements */}
-                    {projectPlan.openLoops.unresolvedRequirements.length > 0 && (
-                      <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Unresolved Requirements</p>
-                        <ul className="space-y-1.5">
-                          {projectPlan.openLoops.unresolvedRequirements.slice(0, 5).map((r, i) => (
-                            <li key={r.key ?? i} className="flex flex-wrap items-start gap-2 text-sm text-slate-300">
-                              {r.key && <span className="text-xs font-mono text-slate-500 shrink-0 mt-0.5">{r.key}</span>}
-                              <span className="flex-1">{r.title ?? '(untitled)'}</span>
-                              {r.owner && <span className="text-xs text-slate-500 italic shrink-0">{r.owner}</span>}
-                            </li>
-                          ))}
-                          {projectPlan.openLoops.unresolvedRequirements.length > 5 && (
-                            <li className="text-xs text-slate-500 italic">
-                              + {projectPlan.openLoops.unresolvedRequirements.length - 5} more
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Deferred Items */}
-                    {projectPlan.openLoops.deferredItems.length > 0 && (
-                      <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Deferred</p>
-                        <ul className="space-y-1">
-                          {projectPlan.openLoops.deferredItems.map((d, i) => (
-                            <li key={d.key ?? i} className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
-                              {d.key && <span className="text-xs font-mono text-slate-500">{d.key}</span>}
-                              <span>{d.title ?? '(untitled)'}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Revisable Decisions */}
-                    {projectPlan.openLoops.revisableDecisions.length > 0 && (
-                      <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Revisable Decisions</p>
-                        <ul className="space-y-2">
-                          {projectPlan.openLoops.revisableDecisions.map((d, i) => (
-                            <li key={d.key ?? i} className="space-y-0.5">
-                              {d.scope && (
-                                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">{d.scope}</p>
-                              )}
-                              <p className="text-sm text-slate-300">{d.decision}</p>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </section>
-              )}
-
-              <section className="space-y-4 border-t border-slate-800/70 pt-8">
-                <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6 rounded-3xl border border-slate-800 bg-slate-950/40 p-6">
-                  <div className="space-y-2">
-                    <h4 className="text-xl font-black uppercase tracking-tight text-white">Import Controls</h4>
-                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
-                      Re-import canonical planning artifacts from repo docs
-                    </p>
-                    {projectPlan?.latestImportRun ? (
-                      <div className="space-y-3 pt-2">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className={`inline-flex text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${projectPlan.latestImportRun.status === 'success'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : projectPlan.latestImportRun.status === 'partial'
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
-                            }`}>
-                            Latest import {projectPlan.latestImportRun.status}
-                          </span>
-                          <span className={`inline-flex text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${latestImportWarnings.length > 0
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
-                            }`}>
-                            {latestImportWarnings.length} warning{latestImportWarnings.length === 1 ? '' : 's'}
-                          </span>
-                        </div>
-                        {projectPlan.latestImportRun.summary ? (
-                          <p className="text-sm text-slate-400 max-w-2xl">{projectPlan.latestImportRun.summary}</p>
-                        ) : null}
-                        {latestImportWarnings.length > 0 ? (
-                          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-4 max-w-3xl">
-                            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-amber-300 mb-3">Import warnings</p>
-                            <ul className="space-y-2 text-sm text-amber-100/90 list-disc pl-5">
-                              {latestImportWarnings.map((warning, index) => (
-                                <li key={`${index}-${warning}`}>{warning}</li>
-                              ))}
-                            </ul>
+                      {/* Next Milestone */}
+                      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '14px 16px', marginBottom: '8px' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: '8px' }}>NEXT MILESTONE</div>
+                        {projectPlan.openLoops.nextMilestone ? (
+                          <div className="flex flex-wrap items-center gap-3">
+                            {projectPlan.openLoops.nextMilestone.key && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>{projectPlan.openLoops.nextMilestone.key}</span>}
+                            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{projectPlan.openLoops.nextMilestone.title ?? '(untitled)'}</span>
+                            {projectPlan.openLoops.nextMilestone.status && <Tag label={projectPlan.openLoops.nextMilestone.status} cls="tag-blue" />}
                           </div>
-                        ) : null}
+                        ) : (
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#4ade80' }}>All milestones complete</span>
+                        )}
+                      </div>
+
+                      {projectPlan.openLoops.blockedMilestones.length > 0 && (
+                        <CalloutBox variant="red" label="Blocked milestones">
+                          {projectPlan.openLoops.blockedMilestones.map((m, i) => (
+                            <div key={m.key ?? i} style={{ display: 'flex', gap: '10px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#e05252', lineHeight: 1.7 }}>
+                              {m.key && <span style={{ color: 'rgba(224,82,82,0.5)' }}>{m.key}</span>}
+                              <span>{m.title ?? '(untitled)'}</span>
+                            </div>
+                          ))}
+                        </CalloutBox>
+                      )}
+
+                      {projectPlan.openLoops.unresolvedRequirements.length > 0 && (
+                        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '14px 16px', marginTop: '8px' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: '10px' }}>UNRESOLVED REQUIREMENTS</div>
+                          <div className="space-y-2">
+                            {projectPlan.openLoops.unresolvedRequirements.slice(0, 5).map((r, i) => (
+                              <div key={r.key ?? i} className="flex items-start gap-3">
+                                {r.key && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', flexShrink: 0, paddingTop: '2px' }}>{r.key}</span>}
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)', flex: 1 }}>{r.title ?? '(untitled)'}</span>
+                              </div>
+                            ))}
+                            {projectPlan.openLoops.unresolvedRequirements.length > 5 && (
+                              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>+{projectPlan.openLoops.unresolvedRequirements.length - 5} more</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {projectPlan.openLoops.revisableDecisions.length > 0 && (
+                        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '14px 16px', marginTop: '8px' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: '10px' }}>REVISABLE DECISIONS</div>
+                          {projectPlan.openLoops.revisableDecisions.map((d, i) => (
+                            <div key={d.key ?? i} style={{ marginBottom: '8px' }}>
+                              {d.scope && <p style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: '2px' }}>{d.scope.toUpperCase()}</p>}
+                              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{d.decision}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </PanelSection>
+                  )}
+
+                  {/* Import Controls */}
+                  <PanelSection title="Import Controls" subtitle="Re-import canonical planning artifacts from repo docs">
+                    <div className="flex flex-wrap gap-3 mb-6">
+                      <ActionButton onClick={handleImportMilestones} loading={milestonesImportInFlight} disabled={projectPlanLoading} color="blue">
+                        Import Milestones
+                      </ActionButton>
+                      <ActionButton onClick={handleImportRequirements} loading={requirementsImportInFlight} disabled={projectPlanLoading} color="lime">
+                        Import Requirements
+                      </ActionButton>
+                      <ActionButton onClick={handleImportDecisions} loading={decisionsImportInFlight} disabled={projectPlanLoading} color="violet">
+                        Import Decisions
+                      </ActionButton>
+                    </div>
+
+                    {projectPlan?.latestImportRun && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <Tag label={`Latest: ${projectPlan.latestImportRun.status}`} cls={projectPlan.latestImportRun.status === 'success' ? 'tag-lime' : projectPlan.latestImportRun.status === 'partial' ? 'tag-amber' : 'tag-muted'} />
+                        {latestImportWarnings.length > 0 && <Tag label={`${latestImportWarnings.length} warning${latestImportWarnings.length !== 1 ? 's' : ''}`} cls="tag-amber" />}
+                      </div>
+                    )}
+
+                    {latestImportWarnings.length > 0 && (
+                      <CalloutBox variant="amber" label="Import warnings">
+                        <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                          {latestImportWarnings.map((w, i) => <li key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#f5a623', lineHeight: 1.7 }}>{w}</li>)}
+                        </ul>
+                      </CalloutBox>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                      {[
+                        { label: 'Milestones', run: milestoneImportRun, warnings: milestoneWarnings },
+                        { label: 'Requirements', run: requirementsImportRun, warnings: requirementWarnings },
+                        { label: 'Decisions', run: decisionsImportRun, warnings: decisionWarnings },
+                      ].map(({ label, run, warnings }) => (
+                        <div key={label} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '14px' }}>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>{label.toUpperCase()}</span>
+                            <Tag label={run?.status ?? 'none'} cls={run?.status === 'success' ? 'tag-lime' : run?.status === 'partial' ? 'tag-amber' : run?.status === 'failed' ? 'tag-red' : 'tag-muted'} />
+                          </div>
+                          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', margin: '0 0 4px' }}>{warnings.length} warning{warnings.length !== 1 ? 's' : ''}</p>
+                          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>{run?.summary ?? 'No import recorded yet.'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </PanelSection>
+
+                  {/* Imported Milestones */}
+                  <PanelSection title="Imported Milestones" subtitle={milestoneProvenance}>
+                    {projectPlanLoading ? (
+                      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>Loadingâ€¦</p>
+                    ) : projectPlanError ? (
+                      <CalloutBox variant="red" label="Error">{projectPlanError}</CalloutBox>
+                    ) : importedMilestones.length > 0 ? (
+                      <div className="space-y-2">
+                        {importedMilestones.map(m => (
+                          <div key={m.id} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '14px 16px' }}>
+                            <div>
+                              {m.externalKey && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.06em', display: 'block', marginBottom: '4px' }}>{m.externalKey}</span>}
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{m.title}</span>
+                              {m.description && <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', margin: '6px 0 0', lineHeight: 1.6 }}>{m.description}</p>}
+                            </div>
+                            <Tag label={m.status} cls={milestoneTagClass(m.status)} />
+                          </div>
+                        ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-500 max-w-2xl">
-                        No imports recorded yet for this project.
-                      </p>
+                      <EmptyState message="No imported milestones yet." sub="Import .gsd/REQUIREMENTS.md to populate." />
                     )}
-                  </div>
-                  <div className="flex flex-wrap gap-3 xl:justify-end">
-                    <button
-                      onClick={handleImportMilestones}
-                      disabled={milestonesImportInFlight || projectPlanLoading}
-                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                    >
-                      <RefreshCw size={16} className={milestonesImportInFlight ? 'animate-spin' : ''} />
-                      {milestonesImportInFlight ? 'Importing...' : 'Import Milestones'}
-                    </button>
-                    <button
-                      onClick={handleImportRequirements}
-                      disabled={requirementsImportInFlight || projectPlanLoading}
-                      className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-emerald-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
-                    >
-                      <RefreshCw size={16} className={requirementsImportInFlight ? 'animate-spin' : ''} />
-                      {requirementsImportInFlight ? 'Importing...' : 'Import Requirements'}
-                    </button>
-                    <button
-                      onClick={handleImportDecisions}
-                      disabled={decisionsImportInFlight || projectPlanLoading}
-                      className="flex items-center gap-2 bg-violet-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-violet-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-                    >
-                      <RefreshCw size={16} className={decisionsImportInFlight ? 'animate-spin' : ''} />
-                      {decisionsImportInFlight ? 'Importing...' : 'Import Decisions'}
-                    </button>
-                  </div>
-                </div>
+                  </PanelSection>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 p-4 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-300">Milestones</p>
-                      <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] ${milestoneImportRun?.status === 'success'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : milestoneImportRun?.status === 'partial'
-                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          : milestoneImportRun?.status === 'failed'
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
-                        }`}>
-                        {milestoneImportRun?.status ?? 'none'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400">{milestoneWarnings.length} warning{milestoneWarnings.length === 1 ? '' : 's'}</p>
-                    <p className="text-xs text-slate-500">{milestoneImportRun?.summary ?? 'No milestone import recorded yet.'}</p>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 p-4 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-300">Requirements</p>
-                      <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] ${requirementsImportRun?.status === 'success'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : requirementsImportRun?.status === 'partial'
-                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          : requirementsImportRun?.status === 'failed'
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
-                        }`}>
-                        {requirementsImportRun?.status ?? 'none'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400">{requirementWarnings.length} warning{requirementWarnings.length === 1 ? '' : 's'}</p>
-                    <p className="text-xs text-slate-500">{requirementsImportRun?.summary ?? 'No requirements import recorded yet.'}</p>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 p-4 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-violet-300">Decisions</p>
-                      <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] ${decisionsImportRun?.status === 'success'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : decisionsImportRun?.status === 'partial'
-                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          : decisionsImportRun?.status === 'failed'
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            : 'bg-slate-700/40 text-slate-400 border border-slate-600/20'
-                        }`}>
-                        {decisionsImportRun?.status ?? 'none'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400">{decisionWarnings.length} warning{decisionWarnings.length === 1 ? '' : 's'}</p>
-                    <p className="text-xs text-slate-500">{decisionsImportRun?.summary ?? 'No decisions import recorded yet.'}</p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h4 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3">
-                      <Flag size={20} className="text-blue-400" /> Imported Milestones
-                    </h4>
-                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                      Canonical planning model from imported project docs
-                    </p>
-                    <p className="text-[10px] text-slate-500 font-mono tracking-wide mt-2">
-                      {milestoneProvenance}
-                    </p>
-                  </div>
-                </div>
-
-                {projectPlanLoading ? (
-                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl">
-                    <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Loading canonical plan...</p>
-                  </div>
-                ) : projectPlanError ? (
-                  <div className="rounded-3xl border border-red-500/20 bg-red-500/10 px-6 py-5 text-sm font-bold uppercase tracking-wide text-red-300 flex items-center gap-3">
-                    <AlertCircle size={18} />
-                    {projectPlanError}
-                  </div>
-                ) : importedMilestones.length > 0 ? (
-                  <div className="grid gap-4">
-                    {importedMilestones.map((milestone) => (
-                      <div
-                        key={milestone.id}
-                        className="flex items-center justify-between p-6 bg-[#1e293b]/30 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all"
-                      >
-                        <div className="flex items-start gap-5">
-                          <Flag className="text-blue-400 mt-1" size={22} />
-                          <div>
-                            <div className="flex items-center gap-3 flex-wrap">
-                              {milestone.externalKey ? (
-                                <span className="text-[10px] font-black px-2 py-1 rounded bg-blue-500/10 text-blue-400 uppercase tracking-[0.15em] border border-blue-500/20">
-                                  {milestone.externalKey}
-                                </span>
-                              ) : null}
-                              <span className="text-xl font-bold tracking-tight text-slate-100">
-                                {milestone.title}
-                              </span>
+                  {/* Imported Requirements */}
+                  <PanelSection title="Imported Requirements" subtitle={requirementProvenance}>
+                    {importedRequirements.length > 0 ? (
+                      <div className="space-y-2">
+                        {importedRequirements.map(r => (
+                          <div key={r.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '14px 16px' }}>
+                            <div className="flex items-start justify-between gap-4 mb-2">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                {r.externalKey && <Tag label={r.externalKey} cls="tag-blue" />}
+                                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{r.title}</span>
+                              </div>
+                              <Tag label={r.status} cls={reqTagClass(r.status)} />
                             </div>
-                            <div className="flex gap-2 mt-3 flex-wrap">
-                              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-500 uppercase tracking-tighter">
-                                {milestone.origin}
-                              </span>
-                              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-500 uppercase tracking-tighter">
-                                Confidence {Math.round(milestone.confidence * 100)}%
-                              </span>
+                            {r.description && <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', margin: '0 0 8px', lineHeight: 1.6 }}>{r.description}</p>}
+                            <div className="flex flex-wrap gap-2">
+                              {r.primaryOwner && <Tag label={`Owner: ${r.primaryOwner}`} cls="tag-muted" />}
+                              {r.validation && <Tag label="Validation defined" cls="tag-muted" />}
                             </div>
                           </div>
-                        </div>
-                        <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getMilestoneStatusClassName(milestone.status)}`}>
-                          {milestone.status}
-                        </span>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-3">
-                    <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No Imported Milestones Found Yet</p>
-                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
-                      This project may not have been imported yet or may not have supported docs.
-                    </p>
-                  </div>
-                )}
-              </section>
+                    ) : (
+                      <EmptyState message="No imported requirements yet." sub="Import .gsd/REQUIREMENTS.md to populate." />
+                    )}
+                  </PanelSection>
 
-              <section className="space-y-4 border-t border-slate-800/70 pt-8">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h4 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3">
-                      <FileText size={20} className="text-emerald-400" /> Imported Requirements
-                    </h4>
-                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                      Canonical requirements imported from repo planning docs
-                    </p>
-                    <p className="text-[10px] text-slate-500 font-mono tracking-wide mt-2">
-                      {requirementProvenance}
-                    </p>
-                  </div>
-                </div>
-
-                {projectPlanLoading ? (
-                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl">
-                    <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Loading imported requirements...</p>
-                  </div>
-                ) : importedRequirements.length > 0 ? (
-                  <div className="grid gap-4">
-                    {importedRequirements.map((requirement) => (
-                      <div
-                        key={requirement.id}
-                        className="p-6 bg-[#1e293b]/30 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all space-y-4"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              {requirement.externalKey ? (
-                                <span className="text-[10px] font-black px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 uppercase tracking-[0.15em] border border-emerald-500/20">
-                                  {requirement.externalKey}
-                                </span>
-                              ) : null}
-                              <span className="text-xl font-bold tracking-tight text-slate-100">
-                                {requirement.title}
-                              </span>
+                  {/* Imported Decisions */}
+                  <PanelSection title="Imported Decisions" subtitle={decisionProvenance}>
+                    {importedDecisions.length > 0 ? (
+                      <div className="space-y-2">
+                        {importedDecisions.map(d => (
+                          <div key={d.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '14px 16px' }}>
+                            <div className="flex items-center gap-3 flex-wrap mb-2">
+                              {d.externalKey && <Tag label={d.externalKey} cls="tag-muted" />}
+                              {d.scope && <Tag label={d.scope} cls="tag-muted" />}
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{d.decision}</span>
                             </div>
-                            {requirement.description ? (
-                              <p className="text-sm text-slate-400 leading-relaxed max-w-3xl">
-                                {requirement.description}
-                              </p>
-                            ) : null}
+                            {d.choice && <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', margin: '0 0 4px', lineHeight: 1.6 }}>Choice: {d.choice}</p>}
+                            {d.rationale && <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>{d.rationale}</p>}
                           </div>
-                          <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getRequirementStatusClassName(requirement.status)}`}>
-                            {requirement.status}
-                          </span>
-                        </div>
-
-                        <div className="flex gap-2 flex-wrap">
-                          {requirement.primaryOwner ? (
-                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-tighter">
-                              Owner {requirement.primaryOwner}
-                            </span>
-                          ) : null}
-                          {requirement.supportingSlices ? (
-                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-tighter">
-                              Support {requirement.supportingSlices}
-                            </span>
-                          ) : null}
-                          {requirement.validation ? (
-                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-tighter">
-                              Validation defined
-                            </span>
-                          ) : null}
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-3">
-                    <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No Imported Requirements Found Yet</p>
-                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
-                      Import `.gsd/REQUIREMENTS.md` to populate the canonical requirements model.
-                    </p>
-                  </div>
-                )}
-              </section>
+                    ) : (
+                      <EmptyState message="No imported decisions yet." sub="Import .gsd/DECISIONS.md to populate." />
+                    )}
+                  </PanelSection>
 
-              <section className="space-y-4 border-t border-slate-800/70 pt-8">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h4 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3">
-                      <FileText size={20} className="text-violet-400" /> Imported Decisions
-                    </h4>
-                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                      Architectural and planning decisions imported from repo docs
-                    </p>
-                    <p className="text-[10px] text-slate-500 font-mono tracking-wide mt-2">
-                      {decisionProvenance}
-                    </p>
-                  </div>
-                </div>
-
-                {projectPlanLoading ? (
-                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl">
-                    <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Loading imported decisions...</p>
-                  </div>
-                ) : importedDecisions.length > 0 ? (
-                  <div className="grid gap-4">
-                    {importedDecisions.map((decision) => (
-                      <div
-                        key={decision.id}
-                        className="p-6 bg-[#1e293b]/30 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all space-y-4"
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="space-y-3 flex-1">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              {decision.externalKey ? (
-                                <span className="text-[10px] font-black px-2 py-1 rounded bg-violet-500/10 text-violet-400 uppercase tracking-[0.15em] border border-violet-500/20">
-                                  {decision.externalKey}
-                                </span>
-                              ) : null}
-                              {decision.scope ? (
-                                <span className="text-[10px] font-black px-2 py-1 rounded bg-slate-800 text-slate-400 uppercase tracking-[0.15em] border border-slate-700/50">
-                                  {decision.scope}
-                                </span>
-                              ) : null}
-                              <span className="text-xl font-bold tracking-tight text-slate-100">
-                                {decision.decision}
-                              </span>
+                  {/* Legacy Tasks */}
+                  <PanelSection title="Legacy Tasks" subtitle="SQLite task rows preserved during migration to canonical planning">
+                    <form onSubmit={handleAddTask} className="flex gap-3 mb-6">
+                      <input
+                        type="text"
+                        value={newTask}
+                        onChange={(e) => setNewTask(e.target.value)}
+                        placeholder="Log new taskâ€¦"
+                        style={{ flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '9px 14px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', transition: 'border-color 0.15s', boxSizing: 'border-box' }}
+                        className="focus:border-[#c8f135]/40 focus-visible:ring-1 focus-visible:ring-[#c8f135]"
+                      />
+                      <button type="submit"
+                        style={{ background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '6px', padding: '9px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8f135]">
+                        <Send size={14} />
+                      </button>
+                    </form>
+                    {tasks.length > 0 ? (
+                      <div className="space-y-2">
+                        {tasks.map(task => (
+                          <div key={task.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '12px 16px' }}>
+                            <div className="flex items-center gap-3">
+                              {task.status === 'Done'
+                                ? <CheckCircle2 size={16} style={{ color: '#4ade80', flexShrink: 0 }} />
+                                : <Circle size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: '13px', color: task.status === 'Done' ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: task.status === 'Done' ? 'line-through' : 'none' }}>{task.title}</span>
                             </div>
-                            {decision.choice ? (
-                              <p className="text-sm text-slate-300 leading-relaxed max-w-3xl">
-                                Choice: {decision.choice}
-                              </p>
-                            ) : null}
-                            {decision.rationale ? (
-                              <p className="text-sm text-slate-400 leading-relaxed max-w-3xl">
-                                {decision.rationale}
-                              </p>
-                            ) : null}
+                            <Tag label={task.status} cls={task.status === 'Done' ? 'tag-lime' : task.status === 'In-Progress' ? 'tag-amber' : 'tag-blue'} />
                           </div>
-                        </div>
-
-                        <div className="flex gap-2 flex-wrap">
-                          {decision.whenContext ? (
-                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-tighter">
-                              When {decision.whenContext}
-                            </span>
-                          ) : null}
-                          {decision.revisable ? (
-                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-tighter">
-                              Revisable {decision.revisable}
-                            </span>
-                          ) : null}
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-3">
-                    <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No Imported Decisions Found Yet</p>
-                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
-                      Import `.gsd/DECISIONS.md` to populate the canonical decision register.
-                    </p>
-                  </div>
-                )}
-              </section>
+                    ) : (
+                      <EmptyState message="No legacy tasks." sub="Canonical milestones are the primary planning surface." />
+                    )}
+                  </PanelSection>
 
-              <section className="space-y-4 border-t border-slate-800/70 pt-8">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h4 className="text-xl font-black uppercase tracking-tight text-white flex items-center gap-3">
-                      <Send size={18} className="text-slate-400" /> Legacy SQLite Tasks
-                    </h4>
-                    <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                      Existing task rows preserved during migration to canonical planning
-                    </p>
-                  </div>
                 </div>
+              </div>
+            ) : (
+              <div style={{ paddingTop: '60px', paddingBottom: '60px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.16em' }}>
+                  SELECT A PROJECT TO INITIALIZE COMMAND VIEW
+                </p>
+              </div>
+            )}
+          </div>
 
-                <form onSubmit={handleAddTask} className="mb-8 flex gap-3">
-                  <input
-                    type="text"
-                    value={newTask}
-                    onChange={(e) => setNewTask(e.target.value)}
-                    placeholder="LOG NEW TASK OR MILESTONE..."
-                    className="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl px-6 py-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus:border-blue-500 transition-colors font-bold text-sm uppercase tracking-wider"
-                  />
-                  <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl transition-colors shadow-lg active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
-                    <Send size={20} />
-                  </button>
-                </form>
-
-                <div className="grid gap-4">
-                  {tasks.length > 0 ? tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-center justify-between p-6 bg-[#1e293b]/30 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all group/task"
-                    >
-                      <div className="flex items-center gap-5">
-                        {task.status === 'Done' ? (
-                          <CheckCircle2 className="text-emerald-500" size={24} />
-                        ) : (
-                          <Circle className="text-slate-600 group-hover/task:text-blue-500 transition-colors" size={24} />
-                        )}
-                        <div>
-                          <span className={`text-xl font-bold tracking-tight ${task.status === 'Done' ? 'text-slate-600 line-through' : 'text-slate-100'}`}>
-                            {task.title}
-                          </span>
-                          <div className="flex gap-2 mt-1">
-                            <span className="text-[9px] font-black px-2 py-0.5 rounded bg-slate-800 text-slate-500 uppercase tracking-tighter">
-                              {task.category}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${
-                        task.status === 'Done' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                          : task.status === 'In-Progress' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                      }`}>
-                        {task.status}
-                      </span>
-                    </div>
-                  )) : (
-                    <div className="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl space-y-3">
-                      <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No Legacy Roadmap Tasks Found in SQLite</p>
-                      <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em]">
-                        Canonical milestones are now the primary planning surface.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </section>
-            </div>
-          ) : (
-            <div className="py-20 text-center border-t border-slate-800/30">
-              <p className="text-slate-700 font-black uppercase tracking-[0.4em] text-[10px]">Select Project to Initialize Command View</p>
-            </div>
-          )}
         </div>
       </main>
+    </div>
+  )
+}
+
+// â”€â”€ Design system sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function Tag({ label, cls }: { label: string; cls: string }) {
+  const base: React.CSSProperties = { fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.06em', padding: '3px 7px', borderRadius: '3px', display: 'inline-block', lineHeight: 1.4, whiteSpace: 'nowrap' }
+  const styles: Record<string, React.CSSProperties> = {
+    'tag-lime':  { background: 'rgba(200,241,53,0.1)',  color: '#c8f135',  border: '1px solid rgba(200,241,53,0.2)' },
+    'tag-amber': { background: 'rgba(245,166,35,0.1)',  color: '#f5a623',  border: '1px solid rgba(245,166,35,0.2)' },
+    'tag-red':   { background: 'rgba(224,82,82,0.1)',   color: '#e05252',  border: '1px solid rgba(224,82,82,0.2)' },
+    'tag-blue':  { background: 'rgba(91,156,246,0.1)',  color: '#5b9cf6',  border: '1px solid rgba(91,156,246,0.2)' },
+    'tag-muted': { background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)', border: '1px solid var(--border)' },
+  }
+  return <span style={{ ...base, ...(styles[cls] ?? styles['tag-muted']) }}>{label}</span>
+}
+
+function PanelSection({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '24px' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '15px', letterSpacing: '0.01em', color: 'var(--text-primary)', margin: 0 }}>
+          {title}
+        </h3>
+        {subtitle && (
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.06em', marginTop: '5px', marginBottom: 0 }}>
+            {subtitle}
+          </p>
+        )}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function DataGrid({ rows }: { rows: [string, string][] }) {
+  if (!rows.length) return null
+  return (
+    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {rows.map(([label, value]) => (
+        <div key={label} style={{ display: 'flex', gap: '16px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+          <span style={{ color: 'var(--text-muted)', minWidth: '130px', flexShrink: 0 }}>{label}</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{value}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CalloutBox({ variant, label, children }: { variant: 'lime' | 'amber' | 'red' | 'blue'; label: string; children: React.ReactNode }) {
+  const colors = {
+    lime:  { bg: 'rgba(200,241,53,0.06)',  border: 'rgba(200,241,53,0.18)', label: '#c8f135' },
+    amber: { bg: 'rgba(245,166,35,0.06)',  border: 'rgba(245,166,35,0.2)',  label: '#f5a623' },
+    red:   { bg: 'rgba(224,82,82,0.06)',   border: 'rgba(224,82,82,0.2)',   label: '#e05252' },
+    blue:  { bg: 'rgba(91,156,246,0.06)',  border: 'rgba(91,156,246,0.2)',  label: '#5b9cf6' },
+  }
+  const c = colors[variant]
+  return (
+    <div style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: '6px', padding: '12px 14px', marginTop: '10px' }}>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: c.label, letterSpacing: '0.14em', marginBottom: '6px' }}>{label.toUpperCase()}</div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{children}</div>
+    </div>
+  )
+}
+
+function ActionButton({ onClick, loading, disabled, color, children }: { onClick: () => void; loading: boolean; disabled: boolean; color: 'blue' | 'lime' | 'violet'; children: React.ReactNode }) {
+  const colors = {
+    blue:   { bg: 'rgba(91,156,246,0.12)',  border: 'rgba(91,156,246,0.25)',  text: '#5b9cf6',  ring: '#5b9cf6' },
+    lime:   { bg: 'rgba(200,241,53,0.1)',   border: 'rgba(200,241,53,0.25)',  text: '#c8f135',  ring: '#c8f135' },
+    violet: { bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.25)', text: '#a78bfa',  ring: '#a78bfa' },
+  }
+  const c = colors[color]
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '12px', letterSpacing: '0.04em', display: 'inline-flex', alignItems: 'center', gap: '7px', background: c.bg, color: c.text, border: `1px solid ${c.border}`, borderRadius: '6px', padding: '8px 16px', cursor: 'pointer', transition: 'opacity 0.15s' }}
+      className={`disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[${c.ring}]`}
+    >
+      <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+      {loading ? 'Importingâ€¦' : children}
+    </button>
+  )
+}
+
+function EmptyState({ message, sub }: { message: string; sub?: string }) {
+  return (
+    <div style={{ padding: '32px 0', textAlign: 'center', borderTop: '1px solid var(--border)' }}>
+      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.1em', margin: '0 0 4px' }}>{message}</p>
+      {sub && <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', opacity: 0.6, margin: 0 }}>{sub}</p>}
     </div>
   )
 }
