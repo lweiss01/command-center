@@ -607,25 +607,29 @@ function App() {
               {projectsLoading ? 'Loading workspace...' : `${projects.length} Environments Discovered`}
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 w-full lg:w-auto lg:justify-end">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 w-full lg:w-auto lg:justify-end items-center">
             <a
               href={USER_GUIDE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 bg-violet-600 text-white px-6 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-violet-500 transition-all shadow-xl active:scale-95 w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 text-slate-400 px-4 py-3 rounded-full font-bold uppercase tracking-tighter hover:text-slate-200 transition-colors w-full sm:w-auto text-sm"
             >
-              <BookOpen size={20} /> User Guide
+              <BookOpen size={16} /> User Guide
             </a>
+            <button
+              disabled
+              title="Coming soon"
+              className="flex items-center justify-center gap-2 border border-slate-700 text-slate-500 px-6 py-3 rounded-full font-bold uppercase tracking-tighter cursor-not-allowed w-full sm:w-auto text-sm"
+            >
+              <Plus size={16} /> New Project
+            </button>
             <button
               onClick={handleScanWorkspace}
               disabled={scanInFlight}
-              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               <RefreshCw size={20} className={scanInFlight ? 'animate-spin' : ''} />
               {scanInFlight ? 'Scanning...' : 'Scan Workspace'}
-            </button>
-            <button className="flex items-center justify-center gap-2 bg-white text-black px-8 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 hover:text-white transition-all shadow-xl active:scale-95 w-full sm:w-auto">
-              <Plus size={20} /> New Project
             </button>
           </div>
         </header>
