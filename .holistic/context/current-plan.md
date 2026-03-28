@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: fix: force utf-8 output in launcher service windows
+Committed: docs: rewrite user guide as actionable cockpit playbook
 
 ## Planned Next Steps
 

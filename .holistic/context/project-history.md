@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T20:24:18.272Z
+- When: 2026-03-28T20:37:24.115Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: fix: force utf-8 output in launcher service windows
+- Summary: Committed: docs: rewrite user guide as actionable cockpit playbook
 - Work done:
 - No completed work recorded.
 - Why it mattered:

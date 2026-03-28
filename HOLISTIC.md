@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: fix: force utf-8 output in launcher service windows
+Committed: docs: rewrite user guide as actionable cockpit playbook
 
 ## What Was Tried
 
@@ -99,6 +99,6 @@ Committed: fix: force utf-8 output in launcher service windows
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T20:21:52.452Z
+- Last updated: 2026-03-28T20:36:14.697Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
