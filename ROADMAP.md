@@ -19,7 +19,10 @@ The product's job is to ingest repo-native planning state (GSD/GSD2, Holistic, a
 - **M001:** complete
 - **M002:** complete
 - **M007:** complete
-- **Active milestone:** none
+- **M008:** active (planned)
+- **Active milestone:** M008
+
+> Milestone IDs are durable and may be non-contiguous (for example M001, M002, M007, M008).
 
 The app now includes:
 
@@ -76,33 +79,40 @@ The app now includes:
   - suggested command affordance
 - package-driven footer version wiring (`vite define` + UI rendering)
 
-## Next Milestone (recommended)
+## Next Milestone (active)
 
-## M008 — Clear-state actionability + authoring ergonomics
+## M008 — Premium UX Redesign and Onboarding Clarity
 
-**Status:** ⏳ Proposed (not yet planned)
+**Status:** ▶ Active (planned)
 
-### Why this next
+### Why this milestone
 
-Current local data has blocked next-action states across all discovered repos (`clear=0`), which limited clear-state assertion coverage. The next step should close that verification gap while continuing usability gains.
+Current UI communicates a lot of signal, but key surfaces still require too much interpretation effort for first-time users. This milestone formalizes a premium redesign focused on:
 
-### Suggested slices
+- explicit signal semantics (no ambiguous status pills)
+- clear action hierarchy (no deceptive/dead-end primary actions)
+- in-app onboarding discoverability (guide/help always reachable)
+- polished, professional visual and interaction consistency
 
-1. **S01 — Clear-state verification fixtures**
-   - add deterministic fixture/setup path so Next Action clear-state can be asserted in browser tests
-2. **S02 — Action flow polish**
-   - extend command affordance and lightweight copy/run UX where appropriate
-3. **S03 — Docs-first authoring entrypoint (optional)**
-   - begin M003-style bootstrap assist for missing-plan repos if desired
+### Planned slices
+
+1. **S01 — UX Baseline Audit and Signal Taxonomy**
+   - produce prioritized UI defect map and signal taxonomy with acceptance criteria
+2. **S02 — Project Card Redesign for Semantic Clarity**
+   - replace ambiguous pills with labeled, scannable signals
+3. **S03 — Action Hierarchy and In-App Onboarding Surface**
+   - align header CTA hierarchy and onboarding/help discoverability
+4. **S04 — Visual Polish, Accessibility, and Interaction Consistency**
+   - unify focus/motion/typography/spacing for a professional final pass
 
 ## Open Questions
 
-1. Should clear-state verification rely on fixtures, seeded DB state, or a deterministic mock route?
-2. How far should command affordances go (copy-only vs click-to-run integrations)?
-3. Which authoring assist scope should land first once cockpit/actionability gaps are closed?
+1. How dense can card-level signal labeling be before readability regresses?
+2. Which action model should replace/implement the current New Project affordance?
+3. What minimum UI quality gates should be enforced for future contributions (focus, semantics, motion)?
 
 ## Current Recommendation
 
-1. Plan and execute **M008/S01** first (clear-state verification coverage).
-2. Then execute **M008/S02** (action flow polish).
-3. Reassess whether to start docs-first authoring as M008/S03 or as a dedicated new milestone.
+1. Execute **M008/S01** first to lock redesign contract and acceptance criteria.
+2. Land **S02** next to solve card-signal comprehension.
+3. Complete **S03** and **S04** to finish onboarding + polish with accessibility safeguards.
