@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: chore: update holistic session context and history
+Committed: feat: add one-click windows launcher and desktop shortcut scripts
 
 ## Before ending this session
 
