@@ -46,6 +46,25 @@ Use the repo-local Holistic helper in this repo: Windows `.\.holistic\system\hol
 -  the repo-local Holistic helper in this repo: Windows `.\.holistic\system\holistic.cmd start-new --goal "<goal>"`; macOS/Linux `./.holistic/system/holistic start-new --goal "<goal>"`.
 -  the repo-local Holistic helper in this repo: Windows `.\.holistic\system\holistic.cmd watch`; macOS/Linux `./.holistic/system/holistic watch`.
 
+## Known Fixes — Do Not Regress
+
+### GSD auto-mode: runtime unit cache drift
+**Fixed:** 2026-03-28  
+**Symptom:** Auto-mode stops with "derived N consecutive times without progress" or "rogue file write detected" even though the journal shows `unit-end` completed events. The `.gsd/runtime/units/*.json` files stay at `phase: "dispatched"` and never converge with the journal.  
+**Root cause:** The runtime unit cache files are not automatically reconciled against the journal when the controller stalls or is stopped mid-run. The journal is correct; the cache is stale.  
+**Fix files:** `.gsd/runtime/units/`, `scripts/reconcile-gsd-runtime.mjs`  
+**Recovery command:**
+```
+npm run gsd:reconcile-runtime
+```
+Dry-run first to see what would change:
+```
+npm run gsd:reconcile-runtime -- --check
+```
+**What reintroduces it:** Stopping auto-mode mid-unit (Ctrl+C, crash, stuck-loop detection) leaves the cache stale. The fix must be run again after any abnormal auto-mode stop. It is safe to run any time — it is idempotent and only writes fields that the journal proves are complete.
+
+---
+
 ## Before Ending a Session
 
 ## Before ending this session
