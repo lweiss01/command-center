@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: Audited computeWorkflowState, computeContinuity, and computeNextA…
+Committed: feat: Rewrote computeWorkflowState to return structured phase, numeric…
 
 ## What Was Tried
 
@@ -68,11 +68,9 @@ Committed: feat: Audited computeWorkflowState, computeContinuity, and computeNex
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- .gitignore
 - mission_control.db-shm
-- mission_control.db-wal
-- package.json
-- scripts/reconcile-gsd-runtime.mjs
+- server.js
+- src/App.tsx
 
 ## Pending Work Queue
 
@@ -104,6 +102,6 @@ Committed: feat: Audited computeWorkflowState, computeContinuity, and computeNex
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T00:50:48.816Z
+- Last updated: 2026-03-28T03:40:38.261Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

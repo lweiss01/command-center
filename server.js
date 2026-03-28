@@ -848,9 +848,9 @@ function computeWorkflowState({ milestones, requirements, decisions, continuity,
     });
   }
 
-  // Continuity signal
-  const continuityFreshness = continuity?.freshness ?? 'stale';
-  evidence.push({ label: 'Continuity', value: continuityFreshness });
+  // Continuity signal — reads from the new structured shape: status 'fresh'|'stale'|'missing'
+  const continuityStatus = continuity?.status ?? 'missing';
+  evidence.push({ label: 'Continuity', value: continuityStatus });
 
   // --- Determine phase ---
 
@@ -861,7 +861,7 @@ function computeWorkflowState({ milestones, requirements, decisions, continuity,
     reasons.push('No structured planning artifacts have been imported yet.');
   } else if (hasMilestones && !hasRequirements && !hasDecisions) {
     // Only milestones — check if there's real active work
-    if (importIsRecent && continuityFreshness !== 'stale') {
+    if (importIsRecent && continuityStatus === 'fresh') {
       phase = 'active';
       reasons.push('Milestones imported with recent activity and fresh continuity.');
     } else {
@@ -869,12 +869,12 @@ function computeWorkflowState({ milestones, requirements, decisions, continuity,
       reasons.push('Only milestones imported — requirements and decisions are still missing.');
     }
   } else if (hasAnyArtifacts) {
-    if (importIsStale && continuityFreshness === 'stale') {
+    if (importIsStale && continuityStatus !== 'fresh') {
       phase = 'stalled';
-      reasons.push('Imports are stale and continuity is stale — no recent activity detected.');
-    } else if (continuityFreshness === 'stale' && !importIsRecent) {
+      reasons.push('Imports are stale and continuity is not fresh — no recent activity detected.');
+    } else if (continuityStatus !== 'fresh' && !importIsRecent) {
       phase = 'stalled';
-      reasons.push('Continuity is stale and imports are not recent — workflow may be paused.');
+      reasons.push('Continuity is not fresh and imports are not recent — workflow may be paused.');
     } else {
       phase = 'active';
       reasons.push('Structured artifacts are present with acceptable recency.');
@@ -904,12 +904,13 @@ function computeWorkflowState({ milestones, requirements, decisions, continuity,
   // stale import: +0
 
   // Continuity freshness: up to 0.30
-  if (continuityFreshness === 'fresh') {
+  // fresh → full +0.30, stale → partial +0.15, missing → +0
+  if (continuityStatus === 'fresh') {
     confidence += 0.30;
-  } else if (continuityFreshness === 'aging') {
+  } else if (continuityStatus === 'stale') {
     confidence += 0.15;
   }
-  // stale continuity: +0
+  // missing continuity: +0
 
   // Cap and round to 2 decimal places
   confidence = Math.min(1, Math.round(confidence * 100) / 100);
@@ -921,8 +922,8 @@ function computeWorkflowState({ milestones, requirements, decisions, continuity,
     if (!hasDecisions) reasons.push('Decision log is missing — confidence is reduced.');
     if (importIsStale) reasons.push('Imports are more than 7 days old — recency confidence is low.');
     if (!importIsRecent && !importIsStale) reasons.push('Imports are aging (3–7 days old).');
-    if (continuityFreshness === 'stale') reasons.push('Continuity is stale — freshness confidence is zero.');
-    if (continuityFreshness === 'aging') reasons.push('Continuity is aging — freshness confidence is partial.');
+    if (continuityStatus === 'missing') reasons.push('Continuity is missing — no Holistic state found, freshness confidence is zero.');
+    if (continuityStatus === 'stale') reasons.push('Continuity is stale — freshness confidence is partial.');
   }
 
   return { phase, confidence, reasons, evidence };
@@ -930,77 +931,90 @@ function computeWorkflowState({ milestones, requirements, decisions, continuity,
 
 function computeContinuity(project) {
   const holisticStatePath = path.join(project.root_path, '.holistic', 'state.json');
-  const currentPlanPath = path.join(project.root_path, '.holistic', 'context', 'current-plan.md');
 
+  // No Holistic state file present — continuity is entirely unknown.
   if (!fs.existsSync(holisticStatePath)) {
     return {
-      freshness: 'stale',
-      activeSession: false,
-      lastUpdatedAt: null,
-      summary: ['No repo-local Holistic state detected'],
+      status: 'missing',
+      freshAt: null,
+      ageHours: null,
+      latestWork: null,
+      checkpointHygiene: 'missing',
+      hygieneNote: 'No repo-local Holistic state detected.',
     };
   }
 
   try {
     const holisticState = JSON.parse(fs.readFileSync(holisticStatePath, 'utf8'));
+
+    // Resolve the timestamp: prefer the active session's updatedAt, fall back to top-level.
     const activeSession = holisticState?.activeSession ?? null;
     const updatedAt = activeSession?.updatedAt ?? holisticState?.updatedAt ?? null;
     const updatedAtMs = updatedAt ? Date.parse(updatedAt) : Number.NaN;
     const ageMs = Number.isNaN(updatedAtMs) ? Number.POSITIVE_INFINITY : Date.now() - updatedAtMs;
+    const ageHours = Number.isFinite(ageMs) ? Math.round(ageMs / (60 * 60 * 1000) * 10) / 10 : null;
 
-    let freshness = 'stale';
+    // status: fresh ≤ 6 h, stale > 6 h (or no parsable timestamp).
+    let status = 'stale';
     if (ageMs <= 6 * 60 * 60 * 1000) {
-      freshness = 'fresh';
-    } else if (ageMs <= 3 * 24 * 60 * 60 * 1000) {
-      freshness = 'aging';
+      status = 'fresh';
     }
 
-    const summary = [];
+    // freshAt: human-readable ISO string of the last update, or null.
+    const freshAt = updatedAt ?? null;
 
+    // latestWork: best single-line summary of what was last worked on.
+    let latestWork = null;
     if (activeSession?.currentGoal) {
-      summary.push(`Goal: ${activeSession.currentGoal}`);
+      latestWork = activeSession.currentGoal;
+    } else if (activeSession?.latestStatus) {
+      latestWork = activeSession.latestStatus;
+    } else if (holisticState?.lastSummary) {
+      latestWork = holisticState.lastSummary;
     }
 
-    if (activeSession?.latestStatus) {
-      summary.push(`Status: ${activeSession.latestStatus}`);
-    }
+    // checkpointHygiene: does the state contain a usable checkpoint/handoff record?
+    // 'ok'     — a checkpoint/handoff was written recently (within 24 h)
+    // 'stale'  — a checkpoint exists but is older than 24 h
+    // 'missing'— no checkpoint information present
+    let checkpointHygiene = 'missing';
+    let hygieneNote = null;
 
-    if (Array.isArray(activeSession?.currentPlan)) {
-      for (const item of activeSession.currentPlan.slice(0, 2)) {
-        if (typeof item === 'string' && item.trim().length > 0) {
-          summary.push(`Plan: ${item.trim()}`);
-        }
+    const checkpointAt = holisticState?.lastCheckpointAt ?? holisticState?.lastHandoffAt ?? null;
+    if (checkpointAt) {
+      const cpAgeMs = Date.now() - Date.parse(checkpointAt);
+      if (cpAgeMs <= 24 * 60 * 60 * 1000) {
+        checkpointHygiene = 'ok';
+        hygieneNote = `Last checkpoint recorded ${Math.round(cpAgeMs / (60 * 60 * 1000) * 10) / 10} h ago.`;
+      } else {
+        checkpointHygiene = 'stale';
+        hygieneNote = `Last checkpoint is ${Math.round(cpAgeMs / (24 * 60 * 60 * 1000) * 10) / 10} days old — consider running a handoff.`;
       }
-    }
-
-    if (summary.length === 0 && fs.existsSync(currentPlanPath)) {
-      const currentPlanMarkdown = fs.readFileSync(currentPlanPath, 'utf8');
-      const fallbackLines = currentPlanMarkdown
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => line.startsWith('- '))
-        .slice(0, 2)
-        .map((line) => `Plan: ${line.slice(2).trim()}`);
-      summary.push(...fallbackLines);
-    }
-
-    if (summary.length === 0) {
-      summary.push('Holistic state detected, but no active summary items were available');
+    } else if (status === 'fresh') {
+      // State is fresh but no explicit checkpoint key — hygiene is unknown rather than missing.
+      checkpointHygiene = 'stale';
+      hygieneNote = 'No explicit checkpoint timestamp found in Holistic state.';
+    } else {
+      hygieneNote = 'No checkpoint or handoff record found in Holistic state.';
     }
 
     return {
-      freshness,
-      activeSession: Boolean(activeSession && activeSession.status === 'active'),
-      lastUpdatedAt: updatedAt,
-      summary,
+      status,
+      freshAt,
+      ageHours,
+      latestWork,
+      checkpointHygiene,
+      hygieneNote,
     };
   } catch (error) {
     console.warn(`Failed to read Holistic state for ${project.root_path}:`, error);
     return {
-      freshness: 'stale',
-      activeSession: false,
-      lastUpdatedAt: null,
-      summary: ['Holistic state exists but could not be read'],
+      status: 'stale',
+      freshAt: null,
+      ageHours: null,
+      latestWork: null,
+      checkpointHygiene: 'missing',
+      hygieneNote: 'Holistic state file exists but could not be parsed.',
     };
   }
 }
@@ -1008,7 +1022,7 @@ function computeContinuity(project) {
 function computeNextAction({ milestones, requirements, decisions, workflowState, continuity }) {
   const hasStructuredArtifacts = milestones.length > 0 || requirements.length > 0 || decisions.length > 0;
 
-  if (continuity?.freshness === 'stale') {
+  if (continuity?.status === 'missing' || continuity?.status === 'stale') {
     return {
       label: 'Refresh continuity before continuing',
       reason: 'Repo-local Holistic continuity is stale, so the next safest step is to review the latest handoff or checkpoint context first.',

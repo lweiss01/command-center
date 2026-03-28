@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Audited computeWorkflowState, computeContinuity, and computeNextA…
+Committed: feat: Rewrote computeWorkflowState to return structured phase, numeric…
 
 ## Before ending this session
 

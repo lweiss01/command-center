@@ -93,10 +93,12 @@ interface WorkflowState {
 }
 
 interface ContinuityState {
-  freshness: 'fresh' | 'aging' | 'stale';
-  activeSession: boolean;
-  lastUpdatedAt: string | null;
-  summary: string[];
+  status: 'fresh' | 'stale' | 'missing';
+  freshAt: string | null;
+  ageHours: number | null;
+  latestWork: string | null;
+  checkpointHygiene: 'ok' | 'stale' | 'missing';
+  hygieneNote: string | null;
 }
 
 interface NextAction {
@@ -391,9 +393,9 @@ function App() {
     return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
   }
 
-  const getContinuityFreshnessClassName = (freshness: ContinuityState['freshness']) => {
-    if (freshness === 'fresh') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-    if (freshness === 'aging') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+  const getContinuityStatusClassName = (status: ContinuityState['status']) => {
+    if (status === 'fresh') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+    if (status === 'stale') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
     return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
   }
 
@@ -435,7 +437,7 @@ function App() {
   const workflowConfidenceDowngraded = (projectPlan?.workflowState.reasons ?? []).some((r) =>
     r.toLowerCase().includes('stale')
   )
-  const workflowConfidenceSupported = !workflowConfidenceDowngraded && projectPlan?.continuity.freshness === 'fresh'
+  const workflowConfidenceSupported = !workflowConfidenceDowngraded && projectPlan?.continuity.status === 'fresh'
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen min-w-screen w-full bg-[#0b0f1a] text-slate-200 font-sans overflow-x-hidden">
@@ -663,32 +665,39 @@ function App() {
                     <div>
                       <h4 className="text-xl font-black uppercase tracking-tight text-white">Continuity</h4>
                       <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] mt-2">
-                        Repo-local Holistic freshness and active session hints
+                        Repo-local Holistic freshness and checkpoint hygiene
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getContinuityFreshnessClassName(projectPlan?.continuity.freshness ?? 'stale')}`}>
-                        Freshness: {projectPlan?.continuity.freshness ?? 'stale'}
+                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getContinuityStatusClassName(projectPlan?.continuity.status ?? 'missing')}`}>
+                        Status: {projectPlan?.continuity.status ?? 'missing'}
                       </span>
-                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${projectPlan?.continuity.activeSession ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'bg-slate-700/40 text-slate-300 border border-slate-600/20'}`}>
-                        Session: {projectPlan?.continuity.activeSession ? 'active' : 'inactive'}
+                      <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${projectPlan?.continuity.checkpointHygiene === 'ok' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : projectPlan?.continuity.checkpointHygiene === 'stale' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-slate-700/40 text-slate-300 border border-slate-600/20'}`}>
+                        Checkpoint: {projectPlan?.continuity.checkpointHygiene ?? 'missing'}
                       </span>
                     </div>
                   </div>
 
-                  {projectPlan?.continuity.lastUpdatedAt ? (
+                  {projectPlan?.continuity.freshAt ? (
                     <p className="text-sm text-slate-400">
-                      Last updated {new Date(projectPlan.continuity.lastUpdatedAt).toLocaleString()}
+                      Last updated {new Date(projectPlan.continuity.freshAt).toLocaleString()}
+                      {projectPlan.continuity.ageHours !== null ? ` (${projectPlan.continuity.ageHours} h ago)` : ''}
                     </p>
                   ) : null}
 
-                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Summary</p>
-                    <ul className="space-y-2 text-sm text-slate-300 list-disc pl-5">
-                      {(projectPlan?.continuity.summary ?? []).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
+                  <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-2">
+                    {projectPlan?.continuity.latestWork ? (
+                      <>
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Latest work</p>
+                        <p className="text-sm text-slate-300">{projectPlan.continuity.latestWork}</p>
+                      </>
+                    ) : null}
+                    {projectPlan?.continuity.hygieneNote ? (
+                      <p className="text-xs text-slate-500 mt-1">{projectPlan.continuity.hygieneNote}</p>
+                    ) : null}
+                    {!projectPlan?.continuity.latestWork && !projectPlan?.continuity.hygieneNote ? (
+                      <p className="text-sm text-slate-500 italic">No continuity detail available.</p>
+                    ) : null}
                   </div>
                 </div>
               </section>
