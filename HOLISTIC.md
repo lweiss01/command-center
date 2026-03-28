@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: docs/ui: align README and guide with current app behavior
+Committed: fix: run launcher services hidden with reliable netstat lifecycle checks
 
 ## What Was Tried
 
@@ -68,7 +68,6 @@ Committed: docs/ui: align README and guide with current app behavior
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- .logs/command-center-frontend.log
 
 ## Pending Work Queue
 
@@ -100,6 +99,6 @@ Committed: docs/ui: align README and guide with current app behavior
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T21:41:11.095Z
+- Last updated: 2026-03-28T21:59:47.966Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

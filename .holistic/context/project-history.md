@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T21:41:12.248Z
+- When: 2026-03-28T21:59:49.549Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: docs/ui: align README and guide with current app behavior
+- Summary: Committed: fix: run launcher services hidden with reliable netstat lifecycle checks
 - Work done:
 - No completed work recorded.
 - Why it mattered:

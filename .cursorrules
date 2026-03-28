@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs/ui: align README and guide with current app behavior
+Committed: fix: run launcher services hidden with reliable netstat lifecycle checks
 
 ## Before ending this session
 
