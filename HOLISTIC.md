@@ -28,30 +28,38 @@ That is the intended end state for this project. Prefer changes that reduce cere
 
 ## Current Objective
 
-**Capture work and prepare a clean handoff.**
+**Keep planning docs, roadmap state, and repo memory reconciled with shipped product progress.**
 
-Capture work and prepare a clean handoff.
+Keep planning docs, roadmap state, and repo memory reconciled with shipped product progress.
 
 ## Latest Work Status
 
-Committed: docs: refresh README and roadmap state contract
+Committed: feat: add workflow continuity and cockpit guidance
 
 ## What Was Tried
 
-- Nothing recorded yet.
+- completed first-pass workflow-state and continuity-backed cockpit guidance
+- added first-pass next-action recommendation to the project cockpit
+- polished the cockpit header and summary cluster for better readability
+- identified a tooling/browser divergence during resize testing; the automated browser session should not be treated as the source of truth when it disagrees with real Chrome
 
 ## What To Try Next
 
-- Ask the user what they'd like to work on.
+- reconcile README, roadmap, and Holistic planning docs after meaningful product changes
+- continue M002 by adding current milestone / active work / blocker summaries
+- treat real-browser behavior as the deciding signal for UI correctness when the automated browser diverges
 
 ## Active Plan
 
-- Read HOLISTIC.md
-- Confirm next step with the user
+- reconcile planning and continuity docs with current shipped progress
+- preserve known fixes and process guardrails in repo memory
+- continue M002 cockpit expansion with smaller, explainable slices
 
 ## Overall Impact So Far
 
-- Nothing recorded yet.
+- M001 import foundation is substantially complete and trustworthy enough for real repo use
+- M002 now has a live first pass of workflow state, continuity, confidence explanation, and next-action guidance
+- Command Center is moving from “import viewer” toward a genuinely resumable planning cockpit
 
 ## Regression Watch
 
@@ -68,11 +76,6 @@ Committed: docs: refresh README and roadmap state contract
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- ROADMAP.md
-- mission_control.db-shm
-- server.js
-- src/App.tsx
-- src/index.css
 
 ## Pending Work Queue
 
@@ -104,6 +107,6 @@ Committed: docs: refresh README and roadmap state contract
 
 ## Historical Memory
 
-- Last updated: 2026-03-27T23:47:53.590Z
+- Last updated: 2026-03-28T00:34:16.655Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

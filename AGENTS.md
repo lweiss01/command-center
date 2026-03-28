@@ -33,6 +33,8 @@ Every agent working in this repo should:
 5. Use the repo-local Holistic helper for explicit recap or recovery flows in this repo.
 6. Recap the current state for the user and ask whether to continue, tweak the plan, or start something new.
 7. Record a checkpoint when focus changes, before likely context compaction, and before handoff.
+8. Before commit, push, or handoff, reconcile README.md, ROADMAP.md, HOLISTIC.md, and the key `.holistic/context/` planning docs with the actual shipped state when the session changed product behavior.
+9. Do not let browser/tooling investigations silently replace the active user task; if diagnostics become the main thread, say so explicitly and get confirmation.
 
 Use the repo-local Holistic helper in this repo: Windows `.\.holistic\system\holistic.cmd resume --agent <your-agent-name>`; macOS/Linux `./.holistic/system/holistic resume --agent <your-agent-name>`.
 

@@ -40,7 +40,7 @@ Command Center imports and interprets that state instead of trying to replace it
 
 ## Current Status
 
-Command Center is now beyond the initial seed/demo stage and has a real M001 foundation in place.
+Command Center is now beyond the initial seed/demo stage and has a real M001 foundation in place plus a meaningful first pass of M002 cockpit intelligence.
 
 ### Working today
 
@@ -52,15 +52,23 @@ Command Center is now beyond the initial seed/demo stage and has a real M001 fou
 - requirements import from `.gsd/REQUIREMENTS.md`
 - decisions import from `.gsd/DECISIONS.md`
 - provenance / import run tracking
+- per-artifact import review state for milestones / requirements / decisions
+- stale imported row cleanup when source entries are removed from docs
 - unified import controls in the project cockpit
+- first-pass workflow-state computation (`discuss` / `plan`)
+- Holistic-backed continuity summary and freshness signals in the cockpit
+- continuity-aware workflow confidence
+- inline confidence notes explaining stale downgrade or fresh support
+- first-pass next-action recommendation with priority and rationale
 - project dashboard with imported planning surfaces
 - Holistic repo memory and roadmap docs committed into the repo
 
 ### Still in progress
 
-- richer import warning/review UI
+- richer import warning/review UI beyond first-pass status and warnings
 - slice/task import into the canonical model
-- workflow-state normalization across repos
+- richer phase inference beyond `discuss` / `plan`
+- blockers / current milestone / active work summaries
 - cross-repo apples-to-apples progress semantics
 - deeper Holistic + Beads integration in the cockpit
 

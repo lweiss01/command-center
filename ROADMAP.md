@@ -306,7 +306,7 @@ The key assumption is that workflow state is **iterative and repeating** within 
 ### Current Progress
 
 M002 is no longer purely planned work.
-A first pass of **S01 — Workflow-state contract** is now implemented in the product.
+A first pass of **S01 — Workflow-state contract** and the opening layer of **S02 — Project cockpit v2** are now implemented in the product.
 
 Current delivered behavior:
 - backend project plan payload includes `workflowState`
@@ -316,10 +316,12 @@ Current delivered behavior:
 - the cockpit renders a first-pass next-action recommendation with priority and rationale
 - confidence is now partially explained through continuity freshness
 - inline confidence notes are visible for both stale downgrade and fresh support cases
+- cockpit header and summary cluster have been polished into a clearer project summary strip
 
 What remains is the broader normalization and expansion work:
 - richer phase inference beyond `discuss` / `plan`
 - blockers / next-action semantics beyond the current first-pass rules
+- current milestone / active work summaries
 - cross-repo comparable progress rules
 - stronger Beads and Holistic signal integration
 
