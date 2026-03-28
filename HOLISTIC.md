@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: docs: sync roadmap to current milestone reality
+Committed: fix: force utf-8 output in launcher service windows
 
 ## What Was Tried
 
@@ -99,6 +99,6 @@ Committed: docs: sync roadmap to current milestone reality
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T18:56:30.782Z
+- Last updated: 2026-03-28T20:21:52.452Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

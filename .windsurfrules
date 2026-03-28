@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: sync roadmap to current milestone reality
+Committed: fix: force utf-8 output in launcher service windows
 
 ## Before ending this session
 
