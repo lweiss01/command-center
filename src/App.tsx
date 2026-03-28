@@ -102,9 +102,9 @@ interface ContinuityState {
 }
 
 interface NextAction {
-  label: string;
-  reason: string;
-  priority: 'high' | 'medium' | 'low';
+  action: string;
+  rationale: string;
+  blockers: string[];
 }
 
 interface ProjectPlan {
@@ -399,11 +399,7 @@ function App() {
     return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
   }
 
-  const getNextActionPriorityClassName = (priority: NextAction['priority']) => {
-    if (priority === 'high') return 'bg-red-500/10 text-red-300 border border-red-500/20'
-    if (priority === 'medium') return 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-    return 'bg-slate-700/40 text-slate-300 border border-slate-600/20'
-  }
+  const getNextActionBlockersPresent = (blockers: string[] | undefined) => !!blockers && blockers.length > 0;
 
   const importedMilestones = projectPlan?.milestones ?? []
   const importedRequirements = projectPlan?.requirements ?? []
@@ -711,18 +707,31 @@ function App() {
                         First-pass recommendation for what to do next in this repo
                       </p>
                     </div>
-                    <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getNextActionPriorityClassName(projectPlan?.nextAction.priority ?? 'low')}`}>
-                      Priority: {projectPlan?.nextAction.priority ?? 'low'}
+                    <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getNextActionBlockersPresent(projectPlan?.nextAction.blockers) ? 'bg-red-500/10 text-red-300 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'}`}>
+                      {getNextActionBlockersPresent(projectPlan?.nextAction.blockers) ? 'Blocked' : 'Clear'}
                     </span>
                   </div>
 
                   <div className="rounded-2xl border border-slate-800 bg-[#1e293b]/30 px-4 py-4 space-y-3">
                     <p className="text-lg font-bold tracking-tight text-slate-100">
-                      {projectPlan?.nextAction.label ?? 'No recommendation available'}
+                      {projectPlan?.nextAction.action ?? 'No recommendation available'}
                     </p>
                     <p className="text-sm text-slate-300 leading-relaxed max-w-3xl">
-                      {projectPlan?.nextAction.reason ?? 'The cockpit does not have enough evidence to recommend a next step yet.'}
+                      {projectPlan?.nextAction.rationale ?? 'The cockpit does not have enough evidence to recommend a next step yet.'}
                     </p>
+                    {getNextActionBlockersPresent(projectPlan?.nextAction.blockers) && (
+                      <div className="space-y-1 pt-1">
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-red-400">Blockers</p>
+                        <ul className="space-y-1">
+                          {(projectPlan?.nextAction.blockers ?? []).map((b) => (
+                            <li key={b} className="text-sm text-red-300 flex gap-2 items-start">
+                              <span className="mt-0.5 shrink-0">⚠</span>
+                              <span>{b}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>

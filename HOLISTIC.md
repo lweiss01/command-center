@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: Rewrote computeWorkflowState to return structured phase, numeric…
+Committed: feat: Rewrote computeContinuity to return structured {status, freshAt,…
 
 ## What Was Tried
 
@@ -102,6 +102,6 @@ Committed: feat: Rewrote computeWorkflowState to return structured phase, numeri
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T03:40:38.261Z
+- Last updated: 2026-03-28T03:44:50.916Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

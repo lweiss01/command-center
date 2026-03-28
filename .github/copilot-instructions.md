@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Rewrote computeWorkflowState to return structured phase, numeric…
+Committed: feat: Rewrote computeContinuity to return structured {status, freshAt,…
 
 ## Before ending this session
 

@@ -1023,41 +1023,50 @@ function computeNextAction({ milestones, requirements, decisions, workflowState,
   const hasStructuredArtifacts = milestones.length > 0 || requirements.length > 0 || decisions.length > 0;
 
   if (continuity?.status === 'missing' || continuity?.status === 'stale') {
+    const blocker =
+      continuity.status === 'missing'
+        ? 'Repo continuity is missing — no Holistic state found in this repo.'
+        : `Repo continuity is stale (last activity ${continuity.ageHours != null ? Math.round(continuity.ageHours) + 'h ago' : 'unknown'}) — checkpoint or handoff context may be outdated.`;
     return {
-      label: 'Refresh continuity before continuing',
-      reason: 'Repo-local Holistic continuity is stale, so the next safest step is to review the latest handoff or checkpoint context first.',
-      priority: 'high',
+      action: 'Refresh continuity before continuing.',
+      rationale:
+        'Continuity is not fresh, so resuming work without reviewing the latest handoff or checkpoint risks repeating already-done work or missing known blockers.',
+      blockers: [blocker],
     };
   }
 
   if (!hasStructuredArtifacts) {
     return {
-      label: 'Import planning artifacts',
-      reason: 'No structured planning artifacts have been imported yet, so the cockpit needs repo docs before it can provide stronger guidance.',
-      priority: 'high',
+      action: 'Import planning artifacts.',
+      rationale:
+        'No structured planning artifacts have been imported yet, so the cockpit cannot provide phase-aware guidance until repo docs are loaded.',
+      blockers: ['No milestones, requirements, or decisions have been imported into the cockpit.'],
     };
   }
 
   if (milestones.length > 0 && requirements.length === 0) {
     return {
-      label: 'Import requirements for fuller planning coverage',
-      reason: 'Milestones are present, but requirements are still missing, so the canonical plan is incomplete.',
-      priority: 'medium',
+      action: 'Import requirements for fuller planning coverage.',
+      rationale:
+        'Milestones are present but requirements are missing, leaving the canonical plan incomplete and phase confidence lower than it could be.',
+      blockers: ['Requirements are missing — only milestones are present.'],
     };
   }
 
   if (workflowState?.phase === 'no-data' || workflowState?.phase === 'import-only') {
     return {
-      label: 'Import more planning artifacts to build confidence',
-      reason: 'The repo has limited structured planning data — adding requirements, decisions, or milestone entries will improve the workflow signal.',
-      priority: 'medium',
+      action: 'Import more planning artifacts to build workflow confidence.',
+      rationale:
+        'The repo has minimal structured planning data — adding requirements, decisions, or detailed milestone entries will raise phase confidence above the current floor.',
+      blockers: [],
     };
   }
 
   return {
-    label: 'Review the current plan and continue execution prep',
-    reason: 'The repo has structured planning context and usable continuity, so the next step is to advance the active work deliberately.',
-    priority: 'medium',
+    action: 'Review the current plan and continue execution.',
+    rationale:
+      'The repo has structured planning context and fresh continuity — the path is clear to advance the active work deliberately.',
+    blockers: [],
   };
 }
 

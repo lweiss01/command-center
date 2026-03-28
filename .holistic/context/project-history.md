@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T03:44:50.899Z
+- When: 2026-03-28T03:50:11.320Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: feat: Rewrote computeWorkflowState to return structured phase, numeric…
+- Summary: Committed: feat: Rewrote computeContinuity to return structured {status, freshAt,…
 - Work done:
 - No completed work recorded.
 - Why it mattered:
