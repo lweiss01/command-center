@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Added OpenLoops TypeScript interfaces, extended ProjectPlan, and…
+Committed: feat: Added computeUrgencyScore pure function and GET /api/portfolio en…
 
 ## Before ending this session
 

@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: Added OpenLoops TypeScript interfaces, extended ProjectPlan, and…
+Committed: feat: Added computeUrgencyScore pure function and GET /api/portfolio en…
 
 ## What Was Tried
 
@@ -68,7 +68,8 @@ Committed: feat: Added OpenLoops TypeScript interfaces, extended ProjectPlan, an
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- src/App.tsx
+- mission_control.db-shm
+- server.js
 
 ## Pending Work Queue
 
@@ -100,6 +101,6 @@ Committed: feat: Added OpenLoops TypeScript interfaces, extended ProjectPlan, an
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T16:46:08.732Z
+- Last updated: 2026-03-28T16:49:06.142Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

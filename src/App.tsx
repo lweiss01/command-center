@@ -169,6 +169,22 @@ interface ProjectPlan {
   openLoops: OpenLoops;
 }
 
+interface PortfolioEntry {
+  project: Project;
+  workflowPhase: string;
+  workflowConfidence: number;
+  continuityStatus: 'fresh' | 'stale' | 'missing';
+  continuityAgeHours: number | null;
+  checkpointHygiene: 'ok' | 'stale' | 'missing';
+  overallReadiness: 'ready' | 'partial' | 'missing';
+  readinessGaps: string[];
+  unresolvedCount: number;
+  pendingMilestoneCount: number;
+  blockedCount: number;
+  nextActionLabel: string;
+  urgencyScore: number;
+}
+
 const API_BASE_URL = 'http://localhost:3001'
 const DEFAULT_SCAN_ROOT = 'C:/Users/lweis/Documents'
 
@@ -187,6 +203,9 @@ function App() {
   const [milestonesImportInFlight, setMilestonesImportInFlight] = useState(false)
   const [requirementsImportInFlight, setRequirementsImportInFlight] = useState(false)
   const [decisionsImportInFlight, setDecisionsImportInFlight] = useState(false)
+  const [portfolioData, setPortfolioData] = useState<Map<number, PortfolioEntry>>(new Map())
+  const [portfolioLoading, setPortfolioLoading] = useState(false)
+  const [projectSortMode, setProjectSortMode] = useState<'urgency' | 'name'>('urgency')
 
   const loadProjects = async () => {
     setProjectsLoading(true)
@@ -233,6 +252,26 @@ function App() {
   useEffect(() => {
     loadProjects()
   }, [])
+
+  useEffect(() => {
+    if (projects.length === 0) return
+    setPortfolioLoading(true)
+    fetch(`${API_BASE_URL}/api/portfolio`)
+      .then(res => res.json())
+      .then((data: PortfolioEntry[]) => {
+        const map = new Map<number, PortfolioEntry>()
+        for (const entry of data) {
+          map.set(entry.project.id, entry)
+        }
+        setPortfolioData(map)
+      })
+      .catch(err => {
+        console.error('Portfolio fetch failed (degraded mode):', err)
+      })
+      .finally(() => {
+        setPortfolioLoading(false)
+      })
+  }, [projects])
 
   useEffect(() => {
     if (!selectedProject) {
@@ -368,22 +407,33 @@ function App() {
 
   const filteredProjects = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase()
-    if (!normalizedQuery) return projects
+    let result = projects
 
-    return projects.filter((project) => {
-      const haystack = [
-        project.name,
-        project.rootPath,
-        project.projectType,
-        project.framework ?? '',
-        project.primaryLanguage ?? '',
-        project.packageManager ?? '',
-        project.planningStatus,
-      ].join(' ').toLowerCase()
+    if (normalizedQuery) {
+      result = projects.filter((project) => {
+        const haystack = [
+          project.name,
+          project.rootPath,
+          project.projectType,
+          project.framework ?? '',
+          project.primaryLanguage ?? '',
+          project.packageManager ?? '',
+          project.planningStatus,
+        ].join(' ').toLowerCase()
 
-      return haystack.includes(normalizedQuery)
+        return haystack.includes(normalizedQuery)
+      })
+    }
+
+    return [...result].sort((a, b) => {
+      if (projectSortMode === 'urgency') {
+        const scoreA = portfolioData.get(a.id)?.urgencyScore ?? -1
+        const scoreB = portfolioData.get(b.id)?.urgencyScore ?? -1
+        return scoreB - scoreA
+      }
+      return a.name.localeCompare(b.name)
     })
-  }, [projects, searchQuery])
+  }, [projects, searchQuery, projectSortMode, portfolioData])
 
   const getProjectBadgeLabel = (project: Project) => {
     if (project.projectType === 'web_node') return 'Web/Node'
@@ -536,6 +586,22 @@ function App() {
           />
         </div>
 
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => setProjectSortMode(prev => prev === 'urgency' ? 'name' : 'urgency')}
+            className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border transition-all ${
+              projectSortMode === 'urgency'
+                ? 'bg-amber-500/10 text-amber-300 border-amber-500/20 hover:bg-amber-500/20'
+                : 'bg-slate-800 text-slate-400 border-slate-700/60 hover:border-slate-600'
+            }`}
+          >
+            Sort: {projectSortMode === 'urgency' ? 'Urgency' : 'Name'}
+          </button>
+          {portfolioLoading && (
+            <span className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">Loading signals…</span>
+          )}
+        </div>
+
         {projectsError ? (
           <div className="mb-8 rounded-3xl border border-red-500/20 bg-red-500/10 px-6 py-5 text-sm font-bold uppercase tracking-wide text-red-300">
             {projectsError}
@@ -573,6 +639,26 @@ function App() {
                       <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getPlanningStatusClassName(project.planningStatus)}`}>
                         {getPlanningStatusLabel(project.planningStatus)}
                       </span>
+                      {portfolioLoading && !portfolioData.has(project.id) ? (
+                        <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-slate-800/50 text-slate-600 border border-slate-700/30">
+                          ···
+                        </span>
+                      ) : portfolioData.has(project.id) ? (() => {
+                        const entry = portfolioData.get(project.id)!
+                        const continuityLabel = entry.continuityStatus === 'fresh' && entry.continuityAgeHours !== null
+                          ? `fresh ${Math.round(entry.continuityAgeHours)}h`
+                          : entry.continuityStatus
+                        return (
+                          <>
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getWorkflowPhaseClassName(entry.workflowPhase as WorkflowState['phase'])}`}>
+                              {entry.workflowPhase}
+                            </span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getContinuityStatusClassName(entry.continuityStatus)}`}>
+                              {continuityLabel}
+                            </span>
+                          </>
+                        )
+                      })() : null}
                     </div>
                   </div>
 
@@ -594,6 +680,21 @@ function App() {
                       <span>{project.hasGit ? 'Git Repo' : 'Local Folder'}</span>
                     </div>
                   </div>
+                  {(() => {
+                    const entry = portfolioData.get(project.id)
+                    if (!entry) return null
+                    const gapsCount = entry.readinessGaps.length
+                    const unresolved = entry.unresolvedCount
+                    if (gapsCount === 0 && unresolved === 0) return null
+                    const parts: string[] = []
+                    if (gapsCount > 0) parts.push(`${gapsCount} gap${gapsCount === 1 ? '' : 's'}`)
+                    if (unresolved > 0) parts.push(`${unresolved} unresolved`)
+                    return (
+                      <p className="mt-3 text-[10px] text-slate-500 font-mono truncate">
+                        {parts.join(' · ')}
+                      </p>
+                    )
+                  })()}
                 </div>
               )
             })}
