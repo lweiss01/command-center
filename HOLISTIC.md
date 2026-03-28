@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: Added computeUrgencyScore pure function and GET /api/portfolio en…
+Committed: feat: Added PortfolioEntry interface, lazy /api/portfolio fetch, phase/…
 
 ## What Was Tried
 
@@ -68,8 +68,7 @@ Committed: feat: Added computeUrgencyScore pure function and GET /api/portfolio 
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- mission_control.db-shm
-- server.js
+- src/App.tsx
 
 ## Pending Work Queue
 
@@ -101,6 +100,6 @@ Committed: feat: Added computeUrgencyScore pure function and GET /api/portfolio 
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T16:49:06.142Z
+- Last updated: 2026-03-28T17:01:18.480Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

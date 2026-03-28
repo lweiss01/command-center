@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Added computeUrgencyScore pure function and GET /api/portfolio en…
+Committed: feat: Added PortfolioEntry interface, lazy /api/portfolio fetch, phase/…
 
 ## Planned Next Steps
 
