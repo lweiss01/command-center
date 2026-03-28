@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: docs: refresh README and roadmap state contract
+Committed: feat: add workflow continuity and cockpit guidance
 
 ## What Was Tried
 
@@ -67,7 +67,7 @@ Committed: docs: refresh README and roadmap state contract
 
 ## Changed Files In Current Session
 
-- No repo changes detected for the active session.
+- .bg-shell/manifest.json
 
 ## Pending Work Queue
 
@@ -99,6 +99,6 @@ Committed: docs: refresh README and roadmap state contract
 
 ## Historical Memory
 
-- Last updated: 2026-03-27T22:50:22.878Z
+- Last updated: 2026-03-28T00:34:16.655Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: refresh README and roadmap state contract
+Committed: feat: add workflow continuity and cockpit guidance
 
 ## Planned Next Steps
 
