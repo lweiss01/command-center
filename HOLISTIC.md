@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: fix: center empty state in right pane
+Committed: fix: darken left pane and replace ambiguous project row signals with explicit labels
 
 ## What Was Tried
 
@@ -100,6 +100,6 @@ Committed: fix: center empty state in right pane
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T23:05:04.804Z
+- Last updated: 2026-03-28T23:29:21.939Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

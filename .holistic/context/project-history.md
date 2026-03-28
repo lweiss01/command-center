@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T23:05:05.985Z
+- When: 2026-03-28T23:29:23.186Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: fix: center empty state in right pane
+- Summary: Committed: fix: darken left pane and replace ambiguous project row signals with explicit labels
 - Work done:
 - No completed work recorded.
 - Why it mattered:

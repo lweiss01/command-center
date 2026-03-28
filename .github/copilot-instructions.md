@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: fix: center empty state in right pane
+Committed: fix: darken left pane and replace ambiguous project row signals with explicit labels
 
 ## Before ending this session
 
