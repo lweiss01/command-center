@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: docs: expand operator guide and align README workflow usage
+Committed: feat: add header user guide link for in-app onboarding
 
 ## What Was Tried
 
@@ -67,7 +67,7 @@ Committed: docs: expand operator guide and align README workflow usage
 
 ## Changed Files In Current Session
 
-- No repo changes detected for the active session.
+- .logs/command-center-frontend.log
 
 ## Pending Work Queue
 
@@ -99,6 +99,6 @@ Committed: docs: expand operator guide and align README workflow usage
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T20:50:47.093Z
+- Last updated: 2026-03-28T21:07:56.514Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

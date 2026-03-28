@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: expand operator guide and align README workflow usage
+Committed: feat: add header user guide link for in-app onboarding
 
 ## Planned Next Steps
 
