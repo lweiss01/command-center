@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat(m008/s02): replace card signal shorthand with labeled semantic chips
+Committed: feat(m008/s03): establish header action hierarchy, demote dead-end New Project CTA
 
 ## Planned Next Steps
 

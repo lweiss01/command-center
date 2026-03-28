@@ -37,4 +37,4 @@ Zero-touch architecture exists to close the gap between the current protocol and
 - Prefer workflow-disappearance improvements over adding more visible user ceremony.
 
 Project: command-center
-Updated: 2026-03-28T22:14:27.398Z
+Updated: 2026-03-28T22:19:34.138Z

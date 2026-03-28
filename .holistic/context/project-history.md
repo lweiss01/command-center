@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T22:14:28.620Z
+- When: 2026-03-28T22:19:35.309Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: feat(m008/s02): replace card signal shorthand with labeled semantic chips
+- Summary: Committed: feat(m008/s03): establish header action hierarchy, demote dead-end New Project CTA
 - Work done:
 - No completed work recorded.
 - Why it mattered:

@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat(m008/s02): replace card signal shorthand with labeled semantic chips
+Committed: feat(m008/s03): establish header action hierarchy, demote dead-end New Project CTA
 
 ## What Was Tried
 
@@ -99,6 +99,6 @@ Committed: feat(m008/s02): replace card signal shorthand with labeled semantic c
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T22:14:27.398Z
+- Last updated: 2026-03-28T22:19:34.138Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
