@@ -1,7 +1,7 @@
 {
   "name": "command-center",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,8 @@
     "preview": "vite preview",
     "gsd:reconcile-runtime": "node scripts/reconcile-gsd-runtime.mjs",
     "cc:launch": "powershell -ExecutionPolicy Bypass -File scripts/start-command-center.ps1",
+    "cc:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-command-center.ps1",
+    "cc:doctor": "powershell -ExecutionPolicy Bypass -File scripts/check-command-center-launcher.ps1",
     "cc:shortcut": "powershell -ExecutionPolicy Bypass -File scripts/create-command-center-shortcut.ps1 -Force"
   },
   "dependencies": {

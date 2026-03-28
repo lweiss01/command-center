@@ -161,6 +161,35 @@ Run the backend bridge:
 node server.js
 ```
 
+### Windows one-click launcher
+
+Create/update desktop shortcuts (Launch + Stop):
+
+```bash
+npm run cc:shortcut
+```
+
+Launch Command Center from terminal:
+
+```bash
+npm run cc:launch
+```
+
+Stop Command Center services (ports 3001 and 5173):
+
+```bash
+npm run cc:stop
+```
+
+#### Launcher troubleshooting
+
+| Symptom | Command to run | Where to inspect |
+|---|---|---|
+| Launch shortcut does nothing or opens wrong script | `npm run cc:shortcut` | Desktop shortcuts: `Command Center.lnk`, `Command Center (Stop).lnk` |
+| Launch fails or hangs waiting for readiness | `npm run cc:doctor` then `npm run cc:launch -- -NoBrowser` | `.logs/command-center-backend.log`, `.logs/command-center-frontend.log` |
+| Ports 3001/5173 already in use and launch is blocked | `npm run cc:stop` | Re-run `npm run cc:doctor` to confirm ports are clear |
+| Need clean lifecycle reset | `npm run cc:stop` then `npm run cc:launch -- -NoBrowser` | Launcher console output + `.logs/*` |
+
 Build the app:
 
 ```bash

@@ -187,6 +187,7 @@ interface PortfolioEntry {
 
 const API_BASE_URL = 'http://localhost:3001'
 const DEFAULT_SCAN_ROOT = 'C:/Users/lweis/Documents'
+const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0'
 
 function App() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
@@ -500,6 +501,29 @@ function App() {
 
   const getNextActionBlockersPresent = (blockers: string[] | undefined) => !!blockers && blockers.length > 0;
 
+  const getNextActionSuggestedCommand = (nextAction: NextAction | null): string | null => {
+    if (!nextAction) return null
+
+    const blockers = nextAction.blockers ?? []
+    if (blockers.some((b) => /holistic|gsd|tool/i.test(b))) {
+      return 'npm run cc:doctor'
+    }
+
+    if (/import/i.test(nextAction.action)) {
+      return 'npm run cc:launch -- -NoBrowser'
+    }
+
+    if (/continue execution|review the current plan/i.test(nextAction.action)) {
+      return 'npm run cc:launch -- -NoBrowser'
+    }
+
+    return null
+  }
+
+  const nextActionBlockers = projectPlan?.nextAction.blockers ?? []
+  const nextActionHasBlockers = getNextActionBlockersPresent(nextActionBlockers)
+  const nextActionSuggestedCommand = getNextActionSuggestedCommand(projectPlan?.nextAction ?? null)
+
   const importedMilestones = projectPlan?.milestones ?? []
   const importedRequirements = projectPlan?.requirements ?? []
   const importedDecisions = projectPlan?.decisions ?? []
@@ -570,7 +594,7 @@ function App() {
           </button>
         </nav>
         <div className="mt-6 lg:mt-auto pt-6 border-t border-slate-800/50">
-          <p className="text-[10px] text-slate-600 font-mono tracking-widest uppercase text-center">L.W. Hub v1.0.0</p>
+          <p className="text-[10px] text-slate-600 font-mono tracking-widest uppercase text-center">L.W. Hub v{APP_VERSION}</p>
         </div>
       </aside>
 
@@ -971,8 +995,8 @@ function App() {
                         Interpreted recommendation derived from workflow, readiness, continuity, and blockers
                       </p>
                     </div>
-                    <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${getNextActionBlockersPresent(projectPlan?.nextAction.blockers) ? 'bg-red-500/10 text-red-300 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'}`}>
-                      {getNextActionBlockersPresent(projectPlan?.nextAction.blockers) ? 'Blocked' : 'Clear'}
+                    <span className={`text-[10px] font-black px-4 py-2 rounded-lg uppercase tracking-[0.15em] ${nextActionHasBlockers ? 'bg-red-500/10 text-red-300 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'}`}>
+                      {nextActionHasBlockers ? 'Blocked' : 'Clear'}
                     </span>
                   </div>
 
@@ -983,12 +1007,25 @@ function App() {
                     <p className="text-sm text-slate-300 leading-relaxed max-w-3xl">
                       {projectPlan?.nextAction.rationale ?? 'The cockpit does not have enough evidence to recommend a next step yet.'}
                     </p>
-                    {getNextActionBlockersPresent(projectPlan?.nextAction.blockers) && (
-                      <div className="space-y-1 pt-1">
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-red-400">Blockers</p>
+
+                    {nextActionSuggestedCommand ? (
+                      <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-3 space-y-2">
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-blue-300">Suggested command</p>
+                        <code className="block text-xs text-blue-100 font-mono break-all">{nextActionSuggestedCommand}</code>
+                      </div>
+                    ) : null}
+
+                    {nextActionHasBlockers && (
+                      <div className="space-y-2 pt-1 rounded-xl border border-red-500/25 bg-red-500/8 px-3 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-red-300">Blockers</p>
+                          <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest bg-red-500/10 text-red-300 border border-red-500/20">
+                            {nextActionBlockers.length}
+                          </span>
+                        </div>
                         <ul className="space-y-1">
-                          {(projectPlan?.nextAction.blockers ?? []).map((b) => (
-                            <li key={b} className="text-sm text-red-300 flex gap-2 items-start">
+                          {nextActionBlockers.map((b) => (
+                            <li key={b} className="text-sm text-red-200 flex gap-2 items-start">
                               <span className="mt-0.5 shrink-0">⚠</span>
                               <span>{b}</span>
                             </li>
