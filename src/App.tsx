@@ -585,12 +585,14 @@ function App() {
     <div className="flex flex-col lg:flex-row min-h-screen min-w-screen w-full bg-[#0b0f1a] text-slate-200 font-sans overflow-x-hidden">
       <aside className="w-full lg:w-64 xl:w-72 shrink-0 bg-[#111827] border-b lg:border-b-0 lg:border-r border-slate-800 p-5 md:p-8 flex flex-col">
         <div className="flex items-center gap-4 mb-12">
-          <div className="bg-blue-600 px-3 py-1 rounded-lg font-black text-white text-xl uppercase tracking-tighter text-center min-w-[45px]">LW</div>
+          <div className="bg-blue-600 p-2 rounded-lg text-white">
+            <Layout size={22} />
+          </div>
           <h1 className="text-2xl font-black tracking-tighter text-white uppercase">Command</h1>
         </div>
         <nav className="flex-none lg:flex-1 space-y-2">
           <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold mb-4 px-2">Main Menu</p>
-          <button className="flex items-center gap-3 w-full p-3 bg-blue-600/10 text-blue-400 rounded-xl border border-blue-500/20 font-bold">
+          <button className="flex items-center gap-3 w-full p-3 bg-blue-600/10 text-blue-400 rounded-xl border border-blue-500/20 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
             <Layout size={20} /> Dashboard
           </button>
         </nav>
@@ -612,7 +614,7 @@ function App() {
               href={USER_GUIDE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 text-slate-400 px-4 py-3 rounded-full font-bold uppercase tracking-tighter hover:text-slate-200 transition-colors w-full sm:w-auto text-sm"
+              className="flex items-center justify-center gap-2 text-slate-400 px-4 py-3 rounded-full font-bold uppercase tracking-tighter hover:text-slate-200 transition-colors w-full sm:w-auto text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
               <BookOpen size={16} /> User Guide
             </a>
@@ -626,7 +628,7 @@ function App() {
             <button
               onClick={handleScanWorkspace}
               disabled={scanInFlight}
-              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-4 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             >
               <RefreshCw size={20} className={scanInFlight ? 'animate-spin' : ''} />
               {scanInFlight ? 'Scanning...' : 'Scan Workspace'}
@@ -641,14 +643,14 @@ function App() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="FILTER PROJECTS..."
-            className="w-full bg-[#111827] border border-slate-800 rounded-2xl py-4 pl-14 pr-6 focus:outline-none focus:border-blue-500/50 transition-all font-bold uppercase tracking-wider text-sm shadow-inner"
+            className="w-full bg-[#111827] border border-slate-800 rounded-2xl py-4 pl-14 pr-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus:border-blue-500/50 transition-colors font-bold uppercase tracking-wider text-sm shadow-inner"
           />
         </div>
 
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => setProjectSortMode(prev => prev === 'urgency' ? 'name' : 'urgency')}
-            className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border transition-all ${
+            className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
               projectSortMode === 'urgency'
                 ? 'bg-amber-500/10 text-amber-300 border-amber-500/20 hover:bg-amber-500/20'
                 : 'bg-slate-800 text-slate-400 border-slate-700/60 hover:border-slate-600'
@@ -682,7 +684,7 @@ function App() {
                   key={project.id}
                   type="button"
                   onClick={() => setSelectedProject(project)}
-                  className={`group p-8 rounded-[2rem] border-2 transition-colors duration-200 text-left w-full ${
+                  className={`group p-8 rounded-[2rem] border-2 transition-colors duration-200 text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0f1a] ${
                     selectedProject?.id === project.id
                       ? 'bg-[#1e293b] border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.15)] scale-[1.02]'
                       : 'bg-[#111827] border-slate-800 hover:border-slate-600'
@@ -768,7 +770,7 @@ function App() {
               <button
                 onClick={handleScanWorkspace}
                 disabled={scanInFlight}
-                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
               >
                 <RefreshCw size={18} className={scanInFlight ? 'animate-spin' : ''} />
                 {scanInFlight ? 'Scanning...' : 'Scan Workspace'}
@@ -1221,7 +1223,7 @@ function App() {
                     <button
                       onClick={handleImportMilestones}
                       disabled={milestonesImportInFlight || projectPlanLoading}
-                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                     >
                       <RefreshCw size={16} className={milestonesImportInFlight ? 'animate-spin' : ''} />
                       {milestonesImportInFlight ? 'Importing...' : 'Import Milestones'}
@@ -1229,7 +1231,7 @@ function App() {
                     <button
                       onClick={handleImportRequirements}
                       disabled={requirementsImportInFlight || projectPlanLoading}
-                      className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-emerald-500 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-emerald-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                     >
                       <RefreshCw size={16} className={requirementsImportInFlight ? 'animate-spin' : ''} />
                       {requirementsImportInFlight ? 'Importing...' : 'Import Requirements'}
@@ -1237,7 +1239,7 @@ function App() {
                     <button
                       onClick={handleImportDecisions}
                       disabled={decisionsImportInFlight || projectPlanLoading}
-                      className="flex items-center gap-2 bg-violet-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-violet-500 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 bg-violet-600 text-white px-4 py-3 rounded-full font-black uppercase tracking-tighter hover:bg-violet-500 transition-colors shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
                     >
                       <RefreshCw size={16} className={decisionsImportInFlight ? 'animate-spin' : ''} />
                       {decisionsImportInFlight ? 'Importing...' : 'Import Decisions'}
@@ -1550,9 +1552,9 @@ function App() {
                     value={newTask}
                     onChange={(e) => setNewTask(e.target.value)}
                     placeholder="LOG NEW TASK OR MILESTONE..."
-                    className="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl px-6 py-4 focus:outline-none focus:border-blue-500 transition-all font-bold text-sm uppercase tracking-wider"
+                    className="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl px-6 py-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus:border-blue-500 transition-colors font-bold text-sm uppercase tracking-wider"
                   />
-                  <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl transition-all shadow-lg active:scale-95">
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl transition-colors shadow-lg active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
                     <Send size={20} />
                   </button>
                 </form>
