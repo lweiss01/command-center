@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Added PortfolioEntry interface, lazy /api/portfolio fetch, phase/…
+Committed: chore: auto-commit after execute-task
 
 ## Planned Next Steps
 
