@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: Rewrote computeContinuity to return structured {status, freshAt,…
+Committed: feat: Rewrote computeNextAction to return {action, rationale, blockers[…
 
 ## What Was Tried
 
@@ -102,6 +102,6 @@ Committed: feat: Rewrote computeContinuity to return structured {status, freshAt
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T03:44:50.916Z
+- Last updated: 2026-03-28T03:50:11.332Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

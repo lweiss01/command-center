@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: Rewrote computeContinuity to return structured {status, freshAt,…
+Committed: feat: Rewrote computeNextAction to return {action, rationale, blockers[…
 
 ## Planned Next Steps
 
