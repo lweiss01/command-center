@@ -139,9 +139,9 @@ npm run cc:stop
 1. Launch (`cc:launch` or desktop shortcut)
 2. Select a project card
 3. Read panels in this order:
-   - Workflow State
    - Workflow Readiness
    - Continuity
+   - Workflow State
    - Next Action
    - Open Loops
 4. Run the suggested command in Next Action when blocked
@@ -197,3 +197,4 @@ This repo keeps planning + continuity artifacts close to the code:
 - [AGENTS.md](./AGENTS.md)
 - `.holistic/` continuity artifacts
 - `.gsd/` milestone/slice/task planning and summaries
+
