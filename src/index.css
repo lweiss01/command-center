@@ -1,35 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  /* Surfaces — warm off-black, not pure black */
-  --bg:             #111110;
-  --bg-panel:       #161614;
-  --bg-elevated:    #1c1c1a;
-  --bg-row:         #191917;
-  --bg-row-hover:   #1e1e1c;
-  --bg-row-active:  #222220;
-  --border:         #2a2a27;
-  --border-subtle:  #1e1e1c;
-  --border-hover:   #3a3a36;
+  /* Retro-inspired bespoke palette (tonally lowered for less glow) */
+  --bg:             #060b17;
+  --bg-panel:       #070d1b;
+  --bg-elevated:    #0d1831;
+  --bg-row:         #081021;
+  --bg-row-hover:   #0b152b;
+  --bg-row-active:  #0d1b37;
+  --border:         rgba(246,220,172,0.12);
+  --border-subtle:  rgba(246,220,172,0.06);
+  --border-hover:   rgba(246,220,172,0.22);
 
-  /* Text — warm whites and grays, never pure #fff */
-  --text-primary:   #eeede8;
-  --text-secondary: #8c8b84;
-  --text-muted:     #4a4a46;
-  --text-faint:     #2e2e2a;
+  --text-primary:   #e8d4ae;
+  --text-title:     #bfaa84;
+  --text-secondary: #b19e7d;
+  --text-muted:     #8b7a5f;
+  --text-faint:     #5a4d3d;
 
-  /* Accent — a single signature color: warm indigo */
-  --accent:         #8b7cf6;
-  --accent-muted:   rgba(139,124,246,0.1);
-  --accent-border:  rgba(139,124,246,0.22);
+  /* Accent + status from reference image */
+  --accent:         #028391;
+  --accent-muted:   rgba(2,131,145,0.16);
+  --accent-border:  rgba(2,131,145,0.34);
 
-  /* Status — desaturated enough to feel considered, not garish */
-  --ok:      #6fcf97;
-  --warn:    #e2a35c;
-  --danger:  #e07373;
-  --info:    #6fa8e2;
+  --ok:      #028391;
+  --warn:    #faa968;
+  --danger:  #f85525;
+  --info:    #f6dcac;
 
-  /* Typography */
   --font:      'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'IBM Plex Mono', 'Fira Code', ui-monospace, monospace;
 }

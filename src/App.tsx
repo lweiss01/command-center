@@ -85,11 +85,11 @@ const USER_GUIDE_URL = 'https://github.com/lweiss01/command-center/blob/main/doc
 
 // ── Color helpers ──────────────────────────────────────────────────────────────
 const C = {
-  ok:     '#6fcf97',
-  warn:   '#e2a35c',
-  danger: '#e07373',
-  info:   '#6fa8e2',
-  accent: '#8b7cf6',
+  ok:     '#028391',
+  warn:   '#FAA968',
+  danger: '#F85525',
+  info:   '#F6DCAC',
+  accent: '#028391',
   muted:  'var(--text-muted)',
 }
 function phaseColor(p: string) {
@@ -366,13 +366,30 @@ function App() {
             const entry = portfolioData.get(project.id)
             const phase = entry?.workflowPhase ?? 'no-data'
             const isSelected = selectedProject?.id === project.id
-            const hasWarning = (entry?.unresolvedCount ?? 0) > 0 || (entry?.readinessGaps.length ?? 0) > 0
+            const gaps = entry?.readinessGaps.length ?? 0
+            const unresolved = entry?.unresolvedCount ?? 0
+            const continuityLabel = entry
+              ? (entry.continuityStatus === 'fresh' && entry.continuityAgeHours !== null
+                ? `Fresh (${Math.round(entry.continuityAgeHours)}h)`
+                : entry.continuityStatus === 'stale'
+                  ? 'Stale'
+                  : entry.continuityStatus === 'missing'
+                    ? 'Missing'
+                    : 'Fresh')
+              : 'Unknown'
+            const phaseLabel =
+              phase === 'no-data' ? 'No data' :
+              phase === 'import-only' ? 'Import-only' :
+              phase.charAt(0).toUpperCase() + phase.slice(1)
+            const attentionText = gaps > 0 || unresolved > 0
+              ? ` · Attention: ${gaps} gap${gaps === 1 ? '' : 's'} / ${unresolved} unresolved`
+              : ''
 
             return (
               <button key={project.id} type="button" onClick={() => setSelectedProject(project)}
                 style={{
                   display: 'block', width: '100%', textAlign: 'left',
-                  padding: '9px 18px 9px 16px',
+                  padding: '10px 18px 10px 16px',
                   background: isSelected ? 'var(--bg-row-active)' : 'transparent',
                   border: 'none',
                   borderLeft: `2px solid ${isSelected ? 'var(--accent)' : 'transparent'}`,
@@ -382,18 +399,15 @@ function App() {
                 onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: isSelected ? 500 : 400, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                  <span style={{ fontSize: '13px', fontWeight: isSelected ? 500 : 400, color: isSelected ? 'var(--text-secondary)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                     {project.name}
                   </span>
-                  {hasWarning && <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--warn)', flexShrink: 0 }} />}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                  <span style={{ fontSize: '11px', color: phaseColor(phase), ...S.mono }}>{phase}</span>
-                  {entry && (
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', ...S.mono }}>
-                      {entry.continuityStatus === 'fresh' && entry.continuityAgeHours !== null ? `${Math.round(entry.continuityAgeHours)}h` : entry.continuityStatus}
-                    </span>
-                  )}
+                <div style={{ marginTop: '3px', fontSize: '10px', color: 'var(--text-faint)', ...S.mono, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Phase: <span style={{ color: phaseColor(phase) }}>{phaseLabel}</span>
+                  {' · '}
+                  Continuity: <span style={{ color: 'var(--text-muted)' }}>{continuityLabel}</span>
+                  <span style={{ color: 'var(--warn)' }}>{attentionText}</span>
                 </div>
               </button>
             )
