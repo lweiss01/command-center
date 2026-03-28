@@ -674,10 +674,11 @@ function App() {
               const typeLabel = getProjectBadgeLabel(project)
 
               return (
-                <div
+                <button
                   key={project.id}
+                  type="button"
                   onClick={() => setSelectedProject(project)}
-                  className={`group p-8 rounded-[2rem] border-2 transition-all duration-300 cursor-pointer ${
+                  className={`group p-8 rounded-[2rem] border-2 transition-colors duration-200 text-left w-full ${
                     selectedProject?.id === project.id
                       ? 'bg-[#1e293b] border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.15)] scale-[1.02]'
                       : 'bg-[#111827] border-slate-800 hover:border-slate-600'
@@ -692,7 +693,7 @@ function App() {
                         {typeLabel}
                       </span>
                       <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getPlanningStatusClassName(project.planningStatus)}`}>
-                        {getPlanningStatusLabel(project.planningStatus)}
+                        Plan: {getPlanningStatusLabel(project.planningStatus)}
                       </span>
                       {portfolioLoading && !portfolioData.has(project.id) ? (
                         <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-slate-800/50 text-slate-600 border border-slate-700/30">
@@ -706,10 +707,10 @@ function App() {
                         return (
                           <>
                             <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getWorkflowPhaseClassName(entry.workflowPhase as WorkflowState['phase'])}`}>
-                              {entry.workflowPhase} · interp
+                              Phase: {entry.workflowPhase}
                             </span>
                             <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getContinuityStatusClassName(entry.continuityStatus)}`}>
-                              {continuityLabel} · interp
+                              Continuity: {continuityLabel}
                             </span>
                           </>
                         )
@@ -750,7 +751,7 @@ function App() {
                       </p>
                     )
                   })()}
-                </div>
+                </button>
               )
             })}
           </div>
