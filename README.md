@@ -1,214 +1,199 @@
-# Command Center
+# 🚀 Command Center
 
-Command Center is a local-first planning cockpit for code repos.
+Command Center is a **local-first planning cockpit** for code repositories.
 
-It is built for an existing working style:
+It pulls planning state you already maintain (GSD/GSD2 docs, Holistic context, roadmap artifacts), normalizes it, and helps you answer:
 
-- discuss
-- research
-- plan
-- implement
-- validate
+- Where is this repo in the workflow loop?
+- What is blocked right now?
+- What should happen next?
+- How does this compare across repos?
 
-The purpose is not to become a general-purpose agent operating system.
-The purpose is to make repo planning state easier to discover, import, compare, resume, and advance across real projects.
+---
 
-## What Command Center Does
+## ✨ Current Progress Snapshot
 
-Command Center is designed to:
+Milestone status (current):
 
-- discover projects across a local workspace
-- detect planning artifacts already living in those repos
-- import repo planning state into a canonical local model
-- normalize milestones, requirements, decisions, and related planning entities into one cockpit
-- preserve continuity with Holistic repo memory
-- move toward apples-to-apples progress comparison across repos
-- eventually understand Beads issue graphs as part of the same planning picture
+- ✅ **M001 complete** — import-first foundation
+- ✅ **M002 complete** — resume-first cockpit intelligence + trust surfaces
+- ✅ **M007 complete** — launcher hardening + cockpit actionability iteration
+- ⏳ No active milestone in execution
 
-## Current Product Direction
+For planning detail, see [ROADMAP.md](./ROADMAP.md).
 
-Command Center follows a docs-first approach.
+### ✅ Latest launcher verification
 
-That means the source of truth should remain in repo-local planning artifacts whenever possible, especially:
+The launcher lifecycle is verified in this environment:
 
-- GSD / GSD2 planning docs
-- Holistic continuity docs
-- Beads issue/task graphs
-- lightweight repo-local roadmap artifacts
+- `npm run cc:doctor` ✅
+- `npm run cc:launch -- -NoBrowser` ✅
+- `npm run cc:stop` ✅
 
-Command Center imports and interprets that state instead of trying to replace it with a bloated central system.
+Launcher diagnostics and stop now use resilient port probing to avoid earlier PowerShell networking-call hangs in this setup.
 
-## Current Status
+---
 
-Command Center is now beyond the initial seed/demo stage and has a real M001 foundation in place plus a meaningful first pass of M002 cockpit intelligence.
+## 🧠 What Works Today
 
-### Working today
+### Planning ingestion + normalization
 
-- workspace project discovery
-- source artifact detection
-- canonical SQLite planning schema
-- canonical project plan snapshot API
-- milestone import from `.gsd/PROJECT.md`
-- requirements import from `.gsd/REQUIREMENTS.md`
-- decisions import from `.gsd/DECISIONS.md`
-- provenance / import run tracking
-- per-artifact import review state for milestones / requirements / decisions
-- stale imported row cleanup when source entries are removed from docs
-- unified import controls in the project cockpit
-- first-pass workflow-state computation (`discuss` / `plan`)
-- Holistic-backed continuity summary and freshness signals in the cockpit
-- continuity-aware workflow confidence
-- inline confidence notes explaining stale downgrade or fresh support
-- first-pass next-action recommendation with priority and rationale
-- project dashboard with imported planning surfaces
-- Holistic repo memory and roadmap docs committed into the repo
+- Workspace project discovery
+- Source artifact detection
+- Canonical SQLite planning model
+- Plan snapshot API
+- Imports for:
+  - `.gsd/PROJECT.md`
+  - `.gsd/REQUIREMENTS.md`
+  - `.gsd/DECISIONS.md`
+- Import provenance + warning tracking
 
-### Still in progress
+### Cockpit intelligence
 
-- richer import warning/review UI beyond first-pass status and warnings
-- slice/task import into the canonical model
-- richer phase inference beyond `discuss` / `plan`
-- blockers / current milestone / active work summaries
-- cross-repo apples-to-apples progress semantics
-- deeper Holistic + Beads integration in the cockpit
+- Workflow State panel (confidence + evidence)
+- Workflow Readiness panel (stack/component gaps)
+- Continuity panel (freshness + checkpoint hygiene)
+- Next Action panel (blocker-aware recommendation)
+- Open Loops panel (next, blocked, unresolved, deferred)
+- Explicit interpreted/provenance labels on trust-sensitive surfaces
 
-## Why This Exists
+### Windows launcher ergonomics
 
-I work across multiple repos and want one place that can tell me:
+- One-click desktop **Launch** shortcut
+- One-click desktop **Stop** shortcut
+- Launcher diagnostics command (`cc:doctor`)
+- Troubleshooting matrix + logs
 
-- what this repo is trying to do
-- what milestone is active
-- what decisions and requirements matter
-- what happened last session
-- what I should do next
-- how this repo compares to other repos without mental translation
+### Version visibility
 
-Mission Control-style orchestration ideas are useful, but Command Center is intentionally narrower and more personal:
+- Footer version is package-driven from `package.json` (`L.W. Hub vX.Y.Z`)
 
-- local-first
-- repo-first
-- docs-first
-- continuity-aware
-- consistency-focused
+---
 
-## Workflow Model
+## 📋 Requirements
 
-Command Center is being shaped around a repeatable workflow loop:
+- Node.js 20+ (tested with Node 24)
+- npm
+- Windows PowerShell (for launcher scripts)
 
-1. **Discuss** — shape the problem and intent
-2. **Research** — retire unknowns and compare options
-3. **Plan** — define milestones, slices, tasks, requirements, and decisions
-4. **Implement** — execute against the plan
-5. **Validate** — prove the work is done and correct
+---
 
-This loop is intended to repeat within a repo over time.
-A project does not go through it only once. Each milestone or major body of work may restart the cycle.
+## ⚙️ Quick Start
 
-## Milestone Roadmap
-
-### M001 — Core planning model + import-first foundation
-
-M001 is focused on building a trustworthy import and cockpit foundation:
-
-- discover repos
-- detect source artifacts
-- import canonical planning entities
-- show imported planning state in the UI
-- track provenance and import runs
-
-M001 now includes working milestone, requirement, and decision imports plus unified import controls.
-
-### M002 — Consistent project cockpit + continuity intelligence
-
-M002 is focused on turning imported planning state into a normalized, resumable, comparable project view across repos.
-
-Key themes:
-
-- workflow-state contract
-- Holistic continuity integration
-- Beads translation layer
-- progress normalization
-- richer cockpit and cross-repo dashboard surfaces
-
-For the full evolving plan, see [ROADMAP.md](./ROADMAP.md).
-
-## Tech Stack
-
-- React 19
-- TypeScript
-- Vite
-- Express
-- SQLite via better-sqlite3
-- Tailwind CSS
-
-## Local Development
-
-Install dependencies:
+### 1) Clone and install
 
 ```bash
+git clone <your-repo-url>
+cd command-center
 npm install
 ```
 
-Run the frontend dev server:
-
-```bash
-npm run dev
-```
-
-Run the backend bridge:
-
-```bash
-node server.js
-```
-
-### Windows one-click launcher
-
-Create/update desktop shortcuts (Launch + Stop):
+### 2) Create desktop shortcuts (Windows)
 
 ```bash
 npm run cc:shortcut
 ```
 
-Launch Command Center from terminal:
+Creates/updates:
 
+- `Command Center.lnk` (Launch)
+- `Command Center (Stop).lnk` (Stop)
+
+### 3) Run preflight diagnostics
+
+```bash
+npm run cc:doctor
+```
+
+You’ll get PASS/WARN/FAIL checks for host tooling, ports, shortcuts, and logs.
+
+### 4) Launch
+
+Desktop:
+- Double-click **Command Center**
+
+Terminal:
 ```bash
 npm run cc:launch
 ```
 
-Stop Command Center services (ports 3001 and 5173):
+### 5) Verify app is running
 
+- Frontend: `http://localhost:5173` (or the next port Vite reports)
+- Backend API: `http://localhost:3001/api/projects`
+
+### 6) Stop services
+
+Desktop:
+- Double-click **Command Center (Stop)**
+
+Terminal:
 ```bash
 npm run cc:stop
 ```
 
-#### Launcher troubleshooting
+---
+
+## 🔁 Daily Operating Flow
+
+1. Launch (`cc:launch` or desktop shortcut)
+2. Select a project card
+3. Read panels in this order:
+   - Workflow State
+   - Workflow Readiness
+   - Continuity
+   - Next Action
+   - Open Loops
+4. Run the suggested command in Next Action when blocked
+5. Stop services when done (`cc:stop`)
+
+---
+
+## 🧰 Command Reference
+
+| Command | What it does |
+|---|---|
+| `npm run cc:shortcut` | Create/update Launch + Stop desktop shortcuts |
+| `npm run cc:doctor` | Run launcher preflight diagnostics |
+| `npm run cc:launch` | Start backend + frontend and open browser |
+| `npm run cc:launch -- -NoBrowser` | Start backend + frontend without opening browser |
+| `npm run cc:stop` | Stop backend/frontend listeners on ports 3001/5173 |
+| `npm run dev` | Start Vite frontend only |
+| `node server.js` | Start backend only |
+| `npm run build` | Type-check + production build |
+
+---
+
+## 🧯 Troubleshooting Quick Matrix
 
 | Symptom | Command to run | Where to inspect |
 |---|---|---|
-| Launch shortcut does nothing or opens wrong script | `npm run cc:shortcut` | Desktop shortcuts: `Command Center.lnk`, `Command Center (Stop).lnk` |
-| Launch fails or hangs waiting for readiness | `npm run cc:doctor` then `npm run cc:launch -- -NoBrowser` | `.logs/command-center-backend.log`, `.logs/command-center-frontend.log` |
-| Ports 3001/5173 already in use and launch is blocked | `npm run cc:stop` | Re-run `npm run cc:doctor` to confirm ports are clear |
-| Need clean lifecycle reset | `npm run cc:stop` then `npm run cc:launch -- -NoBrowser` | Launcher console output + `.logs/*` |
+| Launch shortcut does nothing | `npm run cc:shortcut` | Desktop shortcuts (`Command Center*.lnk`) |
+| Launch hangs/fails readiness | `npm run cc:doctor` then `npm run cc:launch -- -NoBrowser` | `.logs/command-center-backend.log`, `.logs/command-center-frontend.log` |
+| Ports already in use | `npm run cc:stop` | Re-run `npm run cc:doctor` |
+| Need a clean reset | `npm run cc:stop` then `npm run cc:launch -- -NoBrowser` | Launcher console + `.logs/*` |
 
-Build the app:
+For full walkthroughs and panel-by-panel guidance, see [docs/USER-GUIDE.md](./docs/USER-GUIDE.md).
 
-```bash
-npm run build
-```
+---
 
-## Repo Memory and Planning Context
+## 🏗️ Tech Stack
 
-This repo now carries its own planning and continuity context, including:
+- React 19
+- TypeScript
+- Vite
+- Express
+- better-sqlite3
+- Tailwind CSS
+
+---
+
+## 🧭 Repo Planning Context
+
+This repo keeps planning + continuity artifacts close to the code:
 
 - [ROADMAP.md](./ROADMAP.md)
 - [HOLISTIC.md](./HOLISTIC.md)
 - [AGENTS.md](./AGENTS.md)
-- `.holistic/` repo memory and continuity artifacts
-
-That is intentional. Command Center is being built to reduce context loss and make interruptions less costly.
-
-## Notes
-
-Command Center should stay small, sharp, and honest.
-
-It should help me understand and advance real repo plans, not drown that work in generic PM ceremony or overbuilt agent orchestration.
+- `.holistic/` continuity artifacts
+- `.gsd/` milestone/slice/task planning and summaries
