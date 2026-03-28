@@ -85,10 +85,11 @@ const USER_GUIDE_URL = 'https://github.com/lweiss01/command-center/blob/main/doc
 
 // ── Color helpers ──────────────────────────────────────────────────────────────
 const C = {
-  ok:     '#4ade80',
-  warn:   '#fb923c',
-  danger: '#f87171',
-  info:   '#60a5fa',
+  ok:     '#6fcf97',
+  warn:   '#e2a35c',
+  danger: '#e07373',
+  info:   '#6fa8e2',
+  accent: '#8b7cf6',
   muted:  'var(--text-muted)',
 }
 function phaseColor(p: string) {
@@ -186,7 +187,6 @@ function App() {
   const [newTask, setNewTask] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [projectsLoading, setProjectsLoading] = useState(true)
-  void setProjectsLoading
   const [projectsError, setProjectsError] = useState<string | null>(null)
   const [scanInFlight, setScanInFlight] = useState(false)
   const [milestonesImportInFlight, setMilestonesImportInFlight] = useState(false)
@@ -206,10 +206,11 @@ function App() {
 
   useEffect(() => {
     setProjectsError(null)
+    setProjectsLoading(true)
     fetch(`${API_BASE_URL}/api/projects`)
       .then(r => r.json()).then((d: Project[]) => { setProjects(d) })
       .catch(() => setProjectsError("Bridge offline — run 'node server.js'"))
-      .finally(() => {})
+      .finally(() => setProjectsLoading(false))
   }, [])
 
   useEffect(() => {
@@ -374,7 +375,7 @@ function App() {
                   padding: '9px 18px 9px 16px',
                   background: isSelected ? 'var(--bg-row-active)' : 'transparent',
                   border: 'none',
-                  borderLeft: `2px solid ${isSelected ? phaseColor(phase) : 'transparent'}`,
+                  borderLeft: `2px solid ${isSelected ? 'var(--accent)' : 'transparent'}`,
                   cursor: 'pointer', fontFamily: 'var(--font)', transition: 'background 0.1s',
                 }}
                 onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-row-hover)' }}

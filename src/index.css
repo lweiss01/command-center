@@ -1,36 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --bg:             #0c0c0c;
-  --bg-panel:       #111111;
-  --bg-row:         #141414;
-  --bg-row-hover:   #181818;
-  --bg-row-active:  #1c1c1c;
-  --border:         #222222;
-  --border-subtle:  #1a1a1a;
-  --text-primary:   #f5f5f5;
-  --text-secondary: #888888;
-  --text-muted:     #444444;
-  --selection:      rgba(99,102,241,0.12);
-  --selection-bar:  #6366f1;
-  --ok:             #4ade80;
-  --ok-muted:       rgba(74,222,128,0.08);
-  --warn:           #fb923c;
-  --warn-muted:     rgba(251,146,60,0.08);
-  --danger:         #f87171;
-  --danger-muted:   rgba(248,113,113,0.08);
-  --info:           #60a5fa;
-  --info-muted:     rgba(96,165,250,0.08);
-  --font: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Berkeley Mono', 'IBM Plex Mono', 'Fira Code', ui-monospace, monospace;
+  /* Surfaces — warm off-black, not pure black */
+  --bg:             #111110;
+  --bg-panel:       #161614;
+  --bg-elevated:    #1c1c1a;
+  --bg-row:         #191917;
+  --bg-row-hover:   #1e1e1c;
+  --bg-row-active:  #222220;
+  --border:         #2a2a27;
+  --border-subtle:  #1e1e1c;
+  --border-hover:   #3a3a36;
+
+  /* Text — warm whites and grays, never pure #fff */
+  --text-primary:   #eeede8;
+  --text-secondary: #8c8b84;
+  --text-muted:     #4a4a46;
+  --text-faint:     #2e2e2a;
+
+  /* Accent — a single signature color: warm indigo */
+  --accent:         #8b7cf6;
+  --accent-muted:   rgba(139,124,246,0.1);
+  --accent-border:  rgba(139,124,246,0.22);
+
+  /* Status — desaturated enough to feel considered, not garish */
+  --ok:      #6fcf97;
+  --warn:    #e2a35c;
+  --danger:  #e07373;
+  --info:    #6fa8e2;
+
+  /* Typography */
+  --font:      'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Fira Code', ui-monospace, monospace;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body, #root {
-  height: 100%;
-  width: 100%;
-}
+html, body, #root { height: 100%; width: 100%; }
 
 html {
   background: var(--bg);
@@ -46,6 +52,6 @@ body { overflow: hidden; }
 
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 99px; }
 
-::selection { background: rgba(99,102,241,0.2); }
+::selection { background: var(--accent-muted); color: var(--text-primary); }
