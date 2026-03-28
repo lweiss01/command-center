@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: sync roadmap with planned M008 UX redesign milestone
+Committed: docs/ui: align README and guide with current app behavior
 
 ## Before ending this session
 

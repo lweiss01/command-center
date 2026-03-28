@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: docs: sync roadmap with planned M008 UX redesign milestone
+Committed: docs/ui: align README and guide with current app behavior
 
 ## What Was Tried
 
@@ -100,6 +100,6 @@ Committed: docs: sync roadmap with planned M008 UX redesign milestone
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T21:31:48.508Z
+- Last updated: 2026-03-28T21:41:11.095Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
