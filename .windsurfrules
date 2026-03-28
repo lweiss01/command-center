@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat(m008/s03): establish header action hierarchy, demote dead-end New Project CTA
+Committed: feat(m008/s04): focus-visible system, clean transitions, neutral sidebar logo
 
 ## Before ending this session
 
