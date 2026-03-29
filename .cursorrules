@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: fix: label project-row phase and continuity signals explicitly
+Committed: docs: update holistic handoff state and session context
 
 ## Before ending this session
 

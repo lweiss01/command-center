@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: fix: label project-row phase and continuity signals explicitly
+Committed: docs: update holistic handoff state and session context
 
 ## What Was Tried
 
@@ -68,7 +68,6 @@ Committed: fix: label project-row phase and continuity signals explicitly
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- mission_control.db-wal
 
 ## Pending Work Queue
 
@@ -100,6 +99,6 @@ Committed: fix: label project-row phase and continuity signals explicitly
 
 ## Historical Memory
 
-- Last updated: 2026-03-29T19:19:53.872Z
+- Last updated: 2026-03-29T19:21:19.524Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
