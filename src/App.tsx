@@ -195,6 +195,30 @@ function App() {
   const [decisionsImportInFlight, setDecisionsImportInFlight] = useState(false)
   const [portfolioData, setPortfolioData] = useState<Map<number, PortfolioEntry>>(new Map())
   const [projectSortMode, setProjectSortMode] = useState<'urgency' | 'name'>('urgency')
+  const [_backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking') // UI wiring pending next session
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    const check = () => {
+      fetch(`${API_BASE_URL}/api/projects`)
+        .then(r => { if (!r.ok) throw new Error(); return r.json() })
+        .then((d: Project[]) => {
+          setBackendStatus('online')
+          setProjects(d)
+          setProjectsError(null)
+          setProjectsLoading(false)
+          timer = setTimeout(check, 30_000)
+        })
+        .catch(() => {
+          setBackendStatus('offline')
+          setProjectsLoading(false)
+          timer = setTimeout(check, 5_000)
+        })
+    }
+    check()
+    return () => clearTimeout(timer)
+  }, [])
+
   const loadProjectPlan = async (id: number) => {
     setProjectPlanLoading(true); setProjectPlanError(null)
     try {
