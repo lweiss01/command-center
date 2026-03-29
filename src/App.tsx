@@ -18,7 +18,8 @@ interface Milestone {
 interface Requirement {
   id: number; projectId: number; externalKey: string | null; title: string; description: string
   status: string; validation: string | null; notes: string | null; primaryOwner: string | null
-  supportingSlices: string | null; sourceArtifactId: number | null; createdAt: string; updatedAt: string
+  supportingSlices: string | null; mayBeProven: boolean; sourceArtifactId: number | null
+  createdAt: string; updatedAt: string
 }
 interface Decision {
   id: number; projectId: number; externalKey: string | null; scope: string | null
@@ -661,6 +662,12 @@ function App() {
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                       {r.externalKey && <span style={{ ...S.mono, fontSize: '10px', color: C.info }}>{r.externalKey}</span>}
                       <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{r.title}</span>
+                      {r.mayBeProven && (
+                        <span title={`Owning slice (${r.primaryOwner}) has a SUMMARY on disk — this requirement may already be proven. Update REQUIREMENTS.md to mark it validated.`}
+                          style={{ fontSize: '10px', ...S.mono, color: C.warn, background: `color-mix(in srgb, ${C.warn} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${C.warn} 25%, transparent)`, borderRadius: '4px', padding: '1px 6px', cursor: 'default' }}>
+                          ⚠ slice done
+                        </span>
+                      )}
                     </div>
                     <Pill label={r.status} color={rqColor(r.status)} />
                   </div>

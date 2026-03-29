@@ -394,6 +394,13 @@ const getMilestoneByProjectArtifactAndKey = db.prepare(`
     AND external_key = @external_key
   LIMIT 1
 `);
+const getMilestoneByProjectAndKey = db.prepare(`
+  SELECT *
+  FROM milestones
+  WHERE project_id = @project_id
+    AND external_key = @external_key
+  LIMIT 1
+`);
 const insertMilestone = db.prepare(`
   INSERT INTO milestones (
     project_id, external_key, title, description, status, origin, confidence,
@@ -635,6 +642,22 @@ function detectArtifacts(projectRoot) {
     }
   }
 
+  // Register .gsd/milestones/ dir as a structured artifact when present —
+  // milestone directories are ground truth even when PROJECT.md is stale.
+  const gsdMilestonesDir = path.join(projectRoot, '.gsd', 'milestones');
+  if (exists(gsdMilestonesDir)) {
+    artifacts.push({
+      artifact_type: 'gsd_milestones_dir',
+      path: gsdMilestonesDir,
+      title: '.gsd/milestones',
+      confidence: 1.0,
+      parse_status: 'detected',
+      last_seen_at: now,
+      created_at: now,
+      updated_at: now,
+    });
+  }
+
   return artifacts;
 }
 
@@ -644,7 +667,8 @@ function derivePlanningStatus(artifacts) {
     types.has('gsd_project') ||
     types.has('gsd_requirements') ||
     types.has('roadmap_md') ||
-    types.has('milestones_md')
+    types.has('milestones_md') ||
+    types.has('gsd_milestones_dir')
   ) {
     return 'structured';
   }
@@ -758,6 +782,7 @@ function serializeRequirementRow(requirement) {
     notes: requirement.notes,
     primaryOwner: requirement.primary_owner,
     supportingSlices: requirement.supporting_slices,
+    mayBeProven: false, // overridden at plan route time via filesystem check
     sourceArtifactId: requirement.source_artifact_id,
     createdAt: requirement.created_at,
     updatedAt: requirement.updated_at,
@@ -1423,6 +1448,64 @@ function parseGsdProjectMilestones(markdown) {
   };
 }
 
+// Walk .gsd/milestones/M*/ directories to discover milestones not listed in PROJECT.md.
+// Returns an array of { externalKey, title, description, status, source } objects.
+function parseGsdMilestonesDir(projectRoot) {
+  const milestonesDir = path.join(projectRoot, '.gsd', 'milestones');
+  if (!exists(milestonesDir)) return [];
+
+  const results = [];
+  let entries;
+  try { entries = fs.readdirSync(milestonesDir, { withFileTypes: true }); }
+  catch (_) { return []; }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const keyMatch = entry.name.match(/^(M\d{3,})/);
+    if (!keyMatch) continue;
+
+    const externalKey = keyMatch[1];
+    const milestoneDir = path.join(milestonesDir, entry.name);
+
+    // Status: SUMMARY present = done, VALIDATION present = done, otherwise planned
+    const hasSummary = exists(path.join(milestoneDir, `${externalKey}-SUMMARY.md`));
+    const hasValidation = exists(path.join(milestoneDir, `${externalKey}-VALIDATION.md`));
+    const status = (hasSummary || hasValidation) ? 'done' : 'planned';
+
+    // Title: read from ROADMAP.md first line h1, fall back to key
+    let title = externalKey;
+    let description = null;
+    const roadmapPath = path.join(milestoneDir, `${externalKey}-ROADMAP.md`);
+    if (exists(roadmapPath)) {
+      try {
+        const lines = fs.readFileSync(roadmapPath, 'utf8').split(/\r?\n/);
+        const h1 = lines.find(l => /^#\s+/.test(l));
+        if (h1) {
+          const h1title = h1.replace(/^#\s+/, '').trim();
+          if (h1title) title = h1title;
+        }
+        // Vision line
+        const visionIdx = lines.findIndex(l => /^##\s+Vision/i.test(l));
+        if (visionIdx !== -1) {
+          const visionLine = lines.slice(visionIdx + 1).find(l => l.trim().length > 0);
+          if (visionLine) description = visionLine.trim();
+        }
+      } catch (_) { /* skip */ }
+    }
+
+    results.push({ externalKey, title, description, status, dirName: entry.name });
+  }
+
+  // Sort by key numerically so M007 < M008 etc.
+  results.sort((a, b) => {
+    const na = parseInt(a.externalKey.slice(1), 10);
+    const nb = parseInt(b.externalKey.slice(1), 10);
+    return na - nb;
+  });
+
+  return results;
+}
+
 function importGsdProjectMilestones(projectId) {
   const project = getProjectById.get(projectId);
   if (!project) {
@@ -1482,6 +1565,7 @@ function importGsdProjectMilestones(projectId) {
     let importedCount = 0;
     const now = new Date().toISOString();
 
+    // --- Phase 1: PROJECT.md milestones ---
     for (const milestone of parsed.milestones) {
       const existingMilestone = getMilestoneByProjectArtifactAndKey.get({
         project_id: projectId,
@@ -1545,6 +1629,7 @@ function importGsdProjectMilestones(projectId) {
       importedCount += 1;
     }
 
+    // Stale cleanup: remove PROJECT.md-sourced milestones no longer in the doc
     const parsedKeys = new Set(parsed.milestones.map((milestone) => milestone.externalKey));
     const existingMilestones = listMilestonesBySourceArtifactId.all({
       project_id: projectId,
@@ -1562,13 +1647,81 @@ function importGsdProjectMilestones(projectId) {
       }
     }
 
-    const finalStatus = parsed.warnings.length > 0 ? 'partial' : 'success';
+    // --- Phase 2: filesystem discovery from .gsd/milestones/M*/ ---
+    const fsMilestones = parseGsdMilestonesDir(project.root_path);
+    const fsWarnings = [];
+
+    for (const fsMilestone of fsMilestones) {
+      // Skip keys already handled from PROJECT.md — doc status wins for those
+      if (parsedKeys.has(fsMilestone.externalKey)) {
+        // But if filesystem says done and doc says planned, upgrade status
+        const existing = getMilestoneByProjectAndKey.get({
+          project_id: projectId,
+          external_key: fsMilestone.externalKey,
+        });
+        if (existing && existing.status !== 'done' && fsMilestone.status === 'done') {
+          updateMilestone.run({
+            id: existing.id,
+            title: existing.title,
+            description: existing.description,
+            status: 'done',
+            origin: 'imported',
+            confidence: 0.9,
+            needs_review: 1,
+            sort_order: existing.sort_order,
+            updated_at: now,
+          });
+          fsWarnings.push(`${fsMilestone.externalKey}: PROJECT.md marks incomplete but SUMMARY found on disk — status upgraded to done (needs review)`);
+        }
+        continue;
+      }
+
+      // New milestone only known from filesystem
+      const existing = getMilestoneByProjectAndKey.get({
+        project_id: projectId,
+        external_key: fsMilestone.externalKey,
+      });
+
+      if (existing) {
+        updateMilestone.run({
+          id: existing.id,
+          title: fsMilestone.title,
+          description: fsMilestone.description,
+          status: fsMilestone.status,
+          origin: 'filesystem',
+          confidence: 0.95,
+          needs_review: 0,
+          sort_order: existing.sort_order,
+          updated_at: now,
+        });
+      } else {
+        insertMilestone.run({
+          project_id: projectId,
+          external_key: fsMilestone.externalKey,
+          title: fsMilestone.title,
+          description: fsMilestone.description,
+          status: fsMilestone.status,
+          origin: 'filesystem',
+          confidence: 0.95,
+          needs_review: 0,
+          sort_order: 1000 + importedCount, // append after doc milestones
+          source_artifact_id: null,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+
+      importedCount += 1;
+    }
+
+    const allWarnings = [...parsed.warnings, ...fsWarnings];
+    const finalStatus = allWarnings.length > 0 ? 'partial' : 'success';
     updateImportRun.run({
       id: importRunId,
       status: finalStatus,
       completed_at: new Date().toISOString(),
-      summary: `Imported ${importedCount} milestones from .gsd/PROJECT.md.`,
-      warnings_json: JSON.stringify(parsed.warnings),
+      summary: `Imported ${importedCount} milestones (${parsed.milestones.length} from PROJECT.md, ${fsMilestones.length - parsed.milestones.filter(m => fsMilestones.some(f => f.externalKey === m.externalKey)).length} from filesystem).`,
+      warnings_json: JSON.stringify(allWarnings),
     });
 
     return {
@@ -1577,7 +1730,7 @@ function importGsdProjectMilestones(projectId) {
       artifactPath: artifact.path,
       importRunId,
       milestonesImported: importedCount,
-      warnings: parsed.warnings,
+      warnings: allWarnings,
     };
   } catch (error) {
     updateImportRun.run({
@@ -2400,6 +2553,21 @@ app.get('/api/projects/:id/plan', (req, res) => {
     const requirements = listRequirementsByProjectId.all(validation.projectId).map(serializeRequirementRow);
     const decisions = listDecisionsByProjectId.all(validation.projectId).map(serializeDecisionRow);
     const importRuns = listImportRunsByProjectId.all(validation.projectId).map(serializeImportRunRow);
+
+    // Annotate active requirements with mayBeProven: true if the primary owning slice
+    // has a SUMMARY on disk — the doc is likely stale for those.
+    const projectRoot = validation.project.root_path;
+    for (const req of requirements) {
+      if (req.status === 'active' && req.primaryOwner) {
+        // primaryOwner format: "M002/S01" or "M002/S01, M003/S02" — check the first one
+        const ownerMatch = req.primaryOwner.match(/^(M\d{3,})[/\\](S\d{2,})/);
+        if (ownerMatch) {
+          const [, mid, sid] = ownerMatch;
+          const summaryPath = path.join(projectRoot, '.gsd', 'milestones', mid, 'slices', sid, `${sid}-SUMMARY.md`);
+          if (exists(summaryPath)) req.mayBeProven = true;
+        }
+      }
+    }
     const latestImportRunsByArtifact = {
       milestones: importRuns.find((run) => run.artifactType === 'gsd_project') ?? null,
       requirements: importRuns.find((run) => run.artifactType === 'gsd_requirements') ?? null,
