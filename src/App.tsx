@@ -85,11 +85,11 @@ const USER_GUIDE_URL = 'https://github.com/lweiss01/command-center/blob/main/doc
 
 // ── Color helpers ──────────────────────────────────────────────────────────────
 const C = {
-  ok:     '#028391',
-  warn:   '#FAA968',
-  danger: '#F85525',
-  info:   '#F6DCAC',
-  accent: '#028391',
+  ok:     '#4BBFC9',   // retro-teal-lt
+  warn:   '#FAA968',   // retro-peach
+  danger: '#F85525',   // retro-orange
+  info:   '#C8A96A',   // retro-cream-md (for pills + small UI text)
+  accent: '#028391',   // retro-teal
   muted:  'var(--text-muted)',
 }
 function phaseColor(p: string) {
@@ -106,7 +106,7 @@ void planColor
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 const S: Record<string, React.CSSProperties> = {
-  mono: { fontFamily: 'var(--font-mono)' },
+  mono: { fontFamily: 'var(--font-mono)', letterSpacing: '0.01em' },
 }
 
 function Pill({ label, color, dim }: { label: string; color: string; dim?: boolean }) {
@@ -147,7 +147,8 @@ function Section({ title, sub, children }: { title: string; sub?: string; childr
   return (
     <div style={{ marginBottom: '44px' }}>
       <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid var(--border)' }}>
-        <h3 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '0.01em' }}>{title}</h3>
+        <div style={{ width: '22px', height: '2px', background: 'var(--accent)', borderRadius: '2px', marginBottom: '8px' }} />
+        <h3 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-title)', margin: 0, letterSpacing: '0.01em' }}>{title}</h3>
         {sub && <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '3px 0 0', ...S.mono }}>{sub}</p>}
       </div>
       {children}
@@ -315,7 +316,7 @@ function App() {
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'var(--font)' }}>
 
       {/* ── Left column: project list ──────────────────────────────────────── */}
-      <div style={{ width: '260px', flexShrink: 0, height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
+      <div style={{ width: '280px', flexShrink: 0, height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
 
         {/* Wordmark */}
         <div style={{ padding: '18px 20px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
@@ -366,48 +367,38 @@ function App() {
             const entry = portfolioData.get(project.id)
             const phase = entry?.workflowPhase ?? 'no-data'
             const isSelected = selectedProject?.id === project.id
-            const gaps = entry?.readinessGaps.length ?? 0
-            const unresolved = entry?.unresolvedCount ?? 0
-            const continuityLabel = entry
-              ? (entry.continuityStatus === 'fresh' && entry.continuityAgeHours !== null
-                ? `Fresh (${Math.round(entry.continuityAgeHours)}h)`
-                : entry.continuityStatus === 'stale'
-                  ? 'Stale'
-                  : entry.continuityStatus === 'missing'
-                    ? 'Missing'
-                    : 'Fresh')
-              : 'Unknown'
             const phaseLabel =
               phase === 'no-data' ? 'No data' :
               phase === 'import-only' ? 'Import-only' :
               phase.charAt(0).toUpperCase() + phase.slice(1)
-            const attentionText = gaps > 0 || unresolved > 0
-              ? ` · Attention: ${gaps} gap${gaps === 1 ? '' : 's'} / ${unresolved} unresolved`
-              : ''
+            const continuityLabel = entry
+              ? (entry.continuityStatus === 'fresh' && entry.continuityAgeHours !== null
+                ? `Fresh (${Math.round(entry.continuityAgeHours)}h)`
+                : entry.continuityStatus === 'stale' ? 'Stale' : entry.continuityStatus === 'missing' ? 'Missing' : 'Fresh')
+              : 'Unknown'
 
             return (
               <button key={project.id} type="button" onClick={() => setSelectedProject(project)}
                 style={{
                   display: 'block', width: '100%', textAlign: 'left',
-                  padding: '10px 18px 10px 16px',
+                  padding: '10px 14px',
                   background: isSelected ? 'var(--bg-row-active)' : 'transparent',
                   border: 'none',
                   borderLeft: `2px solid ${isSelected ? 'var(--accent)' : 'transparent'}`,
-                  cursor: 'pointer', fontFamily: 'var(--font)', transition: 'background 0.1s',
+                  cursor: 'pointer', fontFamily: 'var(--font)',
+                  transition: 'background 100ms, border-color 100ms',
                 }}
                 onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-row-hover)' }}
                 onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: isSelected ? 500 : 400, color: isSelected ? 'var(--text-secondary)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                    {project.name}
-                  </span>
+                <div style={{ fontSize: '13px', fontWeight: isSelected ? 500 : 400, color: isSelected ? 'var(--text-title)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
+                  {project.name}
                 </div>
-                <div style={{ marginTop: '3px', fontSize: '10px', color: 'var(--text-faint)', ...S.mono, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  Phase: <span style={{ color: phaseColor(phase) }}>{phaseLabel}</span>
-                  {' · '}
-                  Continuity: <span style={{ color: 'var(--text-muted)' }}>{continuityLabel}</span>
-                  <span style={{ color: 'var(--warn)' }}>{attentionText}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', ...S.mono, overflow: 'hidden' }}>
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: phaseColor(phase), flexShrink: 0, display: 'inline-block' }} />
+                  <span style={{ color: phaseColor(phase) }}>{phaseLabel}</span>
+                  <span style={{ color: 'var(--text-faint)' }}>·</span>
+                  <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{continuityLabel}</span>
                 </div>
               </button>
             )
@@ -474,39 +465,32 @@ function App() {
               </div>
             </div>
 
-            {/* Import controls */}
-            <Section title="Import" sub="Re-sync planning artifacts from repo docs">
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                <ImportBtn onClick={handleImportMilestones} loading={milestonesImportInFlight} disabled={projectPlanLoading}>Milestones</ImportBtn>
-                <ImportBtn onClick={handleImportRequirements} loading={requirementsImportInFlight} disabled={projectPlanLoading}>Requirements</ImportBtn>
-                <ImportBtn onClick={handleImportDecisions} loading={decisionsImportInFlight} disabled={projectPlanLoading}>Decisions</ImportBtn>
+            {/* Next Action — hero, first */}
+            <Section title="Next Action" sub="Interpreted from workflow, readiness, continuity, and blockers">
+              <div style={{ marginBottom: '12px' }}>
+                <Pill label={hasBlockers ? 'Blocked' : 'Clear'} color={hasBlockers ? C.danger : C.ok} />
               </div>
-              {projectPlan?.latestImportRun && (
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', ...S.mono }}>
-                  Last: <span style={{ color: runColor(projectPlan.latestImportRun.status) }}>{projectPlan.latestImportRun.status}</span>
-                  {latestImportWarnings.length > 0 && <span style={{ color: C.warn, marginLeft: '14px' }}>{latestImportWarnings.length} warning{latestImportWarnings.length !== 1 ? 's' : ''}</span>}
+              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderLeft: `3px solid ${hasBlockers ? C.danger : C.accent}`, borderRadius: '8px', padding: '16px 18px', marginBottom: '12px' }}>
+                <div style={{ fontSize: '10px', ...S.mono, color: hasBlockers ? C.danger : C.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '9px' }}>
+                  {hasBlockers ? `${blockers.length} blocker${blockers.length !== 1 ? 's' : ''}` : 'Clear to execute'}
                 </div>
+                <div style={{ fontSize: '18px', fontWeight: 500, letterSpacing: '-0.015em', color: 'var(--text-primary)', lineHeight: 1.35, marginBottom: '9px' }}>
+                  {projectPlan?.nextAction.action ?? 'No recommendation available'}
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: '620px', margin: 0 }}>
+                  {projectPlan?.nextAction.rationale ?? 'Insufficient evidence to recommend a next step.'}
+                </p>
+              </div>
+              {suggestedCommand && (
+                <code style={{ display: 'block', fontSize: '12px', ...S.mono, color: C.info, background: 'color-mix(in srgb, var(--info) 8%, transparent)', border: `1px solid color-mix(in srgb, var(--info) 18%, transparent)`, borderRadius: '5px', padding: '8px 12px', marginBottom: '12px' }}>
+                  {suggestedCommand}
+                </code>
               )}
-              {latestImportWarnings.length > 0 && (
-                <Note variant="warn">
-                  {latestImportWarnings.map((w, i) => <div key={i}>{w}</div>)}
+              {hasBlockers && (
+                <Note variant="danger" label={`${blockers.length} blocker${blockers.length !== 1 ? 's' : ''}`}>
+                  {blockers.map(b => <div key={b} style={{ ...S.mono, fontSize: '12px', lineHeight: 1.7 }}>{b}</div>)}
                 </Note>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '12px' }}>
-                {[
-                  { label: 'Milestones', run: milestoneImportRun, warn: milestoneWarnings },
-                  { label: 'Requirements', run: requirementsImportRun, warn: requirementWarnings },
-                  { label: 'Decisions', run: decisionsImportRun, warn: decisionWarnings },
-                ].map(({ label, run, warn }) => (
-                  <div key={label} style={{ padding: '10px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', ...S.mono, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
-                      <Pill label={run?.status ?? 'none'} color={runColor(run?.status ?? '')} dim={!run} />
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', ...S.mono }}>{warn.length > 0 ? `${warn.length} warning${warn.length !== 1 ? 's' : ''}` : run?.summary ?? 'No import yet.'}</div>
-                  </div>
-                ))}
-              </div>
             </Section>
 
             {/* Workflow State */}
@@ -583,29 +567,6 @@ function App() {
                   )}
                 </Note>
               ) : null}
-            </Section>
-
-            {/* Next Action */}
-            <Section title="Next Action" sub="Interpreted from workflow, readiness, continuity, and blockers">
-              <div style={{ marginBottom: '12px' }}>
-                <Pill label={hasBlockers ? 'Blocked' : 'Clear'} color={hasBlockers ? C.danger : C.ok} />
-              </div>
-              <div style={{ fontSize: '15px', fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--text-primary)', lineHeight: 1.4, marginBottom: '8px' }}>
-                {projectPlan?.nextAction.action ?? 'No recommendation available'}
-              </div>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: '540px', margin: '0 0 12px' }}>
-                {projectPlan?.nextAction.rationale ?? 'Insufficient evidence to recommend a next step.'}
-              </p>
-              {suggestedCommand && (
-                <code style={{ display: 'block', fontSize: '12px', ...S.mono, color: C.info, background: 'color-mix(in srgb, var(--info) 8%, transparent)', border: `1px solid color-mix(in srgb, var(--info) 18%, transparent)`, borderRadius: '5px', padding: '8px 12px', marginBottom: '12px' }}>
-                  {suggestedCommand}
-                </code>
-              )}
-              {hasBlockers && (
-                <Note variant="danger" label={`${blockers.length} blocker${blockers.length !== 1 ? 's' : ''}`}>
-                  {blockers.map(b => <div key={b} style={{ ...S.mono, fontSize: '12px', lineHeight: 1.7 }}>{b}</div>)}
-                </Note>
-              )}
             </Section>
 
             {/* Open Loops */}
@@ -696,6 +657,41 @@ function App() {
               )) : <Empty text="No decisions imported yet." />}
             </Section>
 
+            {/* Import — operator action, secondary */}
+            <Section title="Import" sub="Re-sync planning artifacts from repo docs">
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                <ImportBtn onClick={handleImportMilestones} loading={milestonesImportInFlight} disabled={projectPlanLoading}>Milestones</ImportBtn>
+                <ImportBtn onClick={handleImportRequirements} loading={requirementsImportInFlight} disabled={projectPlanLoading}>Requirements</ImportBtn>
+                <ImportBtn onClick={handleImportDecisions} loading={decisionsImportInFlight} disabled={projectPlanLoading}>Decisions</ImportBtn>
+              </div>
+              {projectPlan?.latestImportRun && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', ...S.mono }}>
+                  Last: <span style={{ color: runColor(projectPlan.latestImportRun.status) }}>{projectPlan.latestImportRun.status}</span>
+                  {latestImportWarnings.length > 0 && <span style={{ color: C.warn, marginLeft: '14px' }}>{latestImportWarnings.length} warning{latestImportWarnings.length !== 1 ? 's' : ''}</span>}
+                </div>
+              )}
+              {latestImportWarnings.length > 0 && (
+                <Note variant="warn">
+                  {latestImportWarnings.map((w, i) => <div key={i}>{w}</div>)}
+                </Note>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '12px' }}>
+                {[
+                  { label: 'Milestones', run: milestoneImportRun, warn: milestoneWarnings },
+                  { label: 'Requirements', run: requirementsImportRun, warn: requirementWarnings },
+                  { label: 'Decisions', run: decisionsImportRun, warn: decisionWarnings },
+                ].map(({ label, run, warn }) => (
+                  <div key={label} style={{ padding: '10px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', ...S.mono, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
+                      <Pill label={run?.status ?? 'none'} color={runColor(run?.status ?? '')} dim={!run} />
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', ...S.mono }}>{warn.length > 0 ? `${warn.length} warning${warn.length !== 1 ? 's' : ''}` : run?.summary ?? 'No import yet.'}</div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+
             {/* Tasks */}
             <Section title="Tasks" sub="Legacy SQLite tasks">
               <form onSubmit={handleAddTask} style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
@@ -719,8 +715,8 @@ function App() {
             <div style={{ height: '80px' }} />
           </div>
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ textAlign: 'center' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: '520px', padding: '0 24px', pointerEvents: 'none' }}>
               <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '6px' }}>Select a project</div>
               <div style={{ fontSize: '11px', color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>Choose from the list to open its command view</div>
             </div>
