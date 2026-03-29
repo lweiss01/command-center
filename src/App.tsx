@@ -195,7 +195,7 @@ function App() {
   const [decisionsImportInFlight, setDecisionsImportInFlight] = useState(false)
   const [portfolioData, setPortfolioData] = useState<Map<number, PortfolioEntry>>(new Map())
   const [projectSortMode, setProjectSortMode] = useState<'urgency' | 'name'>('urgency')
-  const [_backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking') // UI wiring pending next session
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking')
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
@@ -344,9 +344,23 @@ function App() {
 
         {/* Wordmark */}
         <div style={{ padding: '18px 20px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>Command Center</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+              background: backendStatus === 'online' ? C.ok : backendStatus === 'offline' ? C.danger : 'var(--text-muted)',
+              animation: backendStatus === 'checking' || backendStatus === 'offline' ? 'pulse 1.4s ease-in-out infinite' : 'none',
+            }} />
+            <span style={{ fontSize: '13px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>Command Center</span>
+          </div>
           <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', ...S.mono }}>v{APP_VERSION}</div>
         </div>
+
+        {/* Offline callout */}
+        {backendStatus === 'offline' && (
+          <div style={{ margin: '8px 10px 0', padding: '8px 10px', background: `color-mix(in srgb, ${C.danger} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${C.danger} 20%, transparent)`, borderRadius: '5px', fontSize: '11px', color: C.danger, ...S.mono, lineHeight: 1.5 }}>
+            Bridge offline — retrying…
+          </div>
+        )}
 
         {/* Search + sort */}
         <div style={{ padding: '10px 12px 6px', flexShrink: 0 }}>

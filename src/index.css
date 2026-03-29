@@ -153,3 +153,10 @@ body { overflow: hidden; }
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
+
+/* ── STATUS DOT ──────────────────────────────────────────────────── */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
