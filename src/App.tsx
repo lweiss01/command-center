@@ -230,15 +230,6 @@ function App() {
   }
 
   useEffect(() => {
-    setProjectsError(null)
-    setProjectsLoading(true)
-    fetch(`${API_BASE_URL}/api/projects`)
-      .then(r => r.json()).then((d: Project[]) => { setProjects(d) })
-      .catch(() => setProjectsError("Bridge offline — run 'node server.js'"))
-      .finally(() => setProjectsLoading(false))
-  }, [])
-
-  useEffect(() => {
     if (projects.length === 0) return
     fetch(`${API_BASE_URL}/api/portfolio`)
       .then(r => r.json()).then((d: PortfolioEntry[]) => {
@@ -386,14 +377,12 @@ function App() {
           </div>
         </div>
 
-        {/* Error banner */}
-        {projectsError && (
-          <div style={{ margin: '0 10px 6px', padding: '8px 10px', background: 'color-mix(in srgb, var(--danger) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--danger) 20%, transparent)', borderRadius: '5px', fontSize: '11px', color: 'var(--danger)', ...S.mono, lineHeight: 1.5 }}>
+        {/* Project rows */}
+        {projectsError && backendStatus === 'online' && (
+          <div style={{ margin: '0 10px 6px', padding: '8px 10px', background: `color-mix(in srgb, ${C.warn} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${C.warn} 20%, transparent)`, borderRadius: '5px', fontSize: '11px', color: C.warn, ...S.mono, lineHeight: 1.5 }}>
             {projectsError}
           </div>
         )}
-
-        {/* Project rows */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {projectsLoading ? (
             <div style={{ padding: '24px 20px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>Loading…</div>
