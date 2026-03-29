@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: label interpreted badges and import provenance in cockpit
+Committed: fix: label project-row phase and continuity signals explicitly
 
 ## What Was Tried
 
@@ -68,7 +68,7 @@ Committed: feat: label interpreted badges and import provenance in cockpit
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- src/App.tsx
+- mission_control.db-wal
 
 ## Pending Work Queue
 
@@ -100,6 +100,6 @@ Committed: feat: label interpreted badges and import provenance in cockpit
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T17:28:40.995Z
+- Last updated: 2026-03-29T19:19:53.872Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

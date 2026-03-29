@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-28T17:48:21.659Z
+- When: 2026-03-29T19:20:15.336Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: feat: label interpreted badges and import provenance in cockpit
+- Summary: Committed: fix: label project-row phase and continuity signals explicitly
 - Work done:
 - No completed work recorded.
 - Why it mattered:

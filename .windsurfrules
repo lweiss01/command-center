@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: chore: auto-commit after execute-task
+Committed: fix: label project-row phase and continuity signals explicitly
 
 ## Before ending this session
 
