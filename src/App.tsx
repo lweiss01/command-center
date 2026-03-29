@@ -221,13 +221,31 @@ function App() {
   }, [])
 
   const loadProjectPlan = async (id: number) => {
-    setProjectPlanLoading(true); setProjectPlanError(null)
+    setProjectPlanLoading(true)
+    setProjectPlanError(null)
+    const planUrl = `${API_BASE_URL}/api/projects/${id}/plan`
+
     try {
-      const res = await fetch(`${API_BASE_URL}/api/projects/${id}/plan`)
-      if (!res.ok) throw new Error()
-      setProjectPlan(await res.json())
-    } catch { setProjectPlan(null); setProjectPlanError('Unable to load project plan.') }
-    finally { setProjectPlanLoading(false) }
+      const res = await fetch(planUrl)
+      if (!res.ok) {
+        setProjectPlan(null)
+        setProjectPlanError(`Project data unavailable (server ${res.status}) from ${planUrl}.`)
+        return
+      }
+
+      try {
+        setProjectPlan(await res.json())
+      } catch {
+        setProjectPlan(null)
+        setProjectPlanError(`Project data unavailable (invalid response) from ${planUrl}.`)
+      }
+    } catch (error) {
+      const errorType = error instanceof TypeError ? 'network' : 'unexpected'
+      setProjectPlan(null)
+      setProjectPlanError(`Project data unavailable (${errorType} error) from ${planUrl}.`)
+    } finally {
+      setProjectPlanLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -481,6 +499,13 @@ function App() {
                 </div>
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', ...S.mono, marginBottom: '14px' }}>{selectedProject.rootPath}</div>
+              {projectPlanError && (
+                <div style={{ marginBottom: '14px' }}>
+                  <Note variant="danger" label="Project data unavailable">
+                    {projectPlanError}
+                  </Note>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 {[
                   ['Plan', planLabel(selectedProject.planningStatus)],
@@ -640,7 +665,7 @@ function App() {
 
             {/* Milestones */}
             <Section title="Milestones" sub={provenance(milestoneImportRun, '.gsd/PROJECT.md')}>
-              {projectPlanLoading ? <Empty text="Loading…" /> : projectPlanError ? <Note variant="danger">{projectPlanError}</Note> : importedMilestones.length > 0 ? (
+              {projectPlanLoading ? <Empty text="Loading…" /> : importedMilestones.length > 0 ? (
                 importedMilestones.map(m => (
                   <Row key={m.id}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
