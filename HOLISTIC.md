@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: docs: update holistic handoff state and session context
+Committed: docs: add regression guard for backend status/data visibility
 
 ## What Was Tried
 
@@ -99,6 +99,6 @@ Committed: docs: update holistic handoff state and session context
 
 ## Historical Memory
 
-- Last updated: 2026-03-29T19:21:19.524Z
+- Last updated: 2026-03-29T21:03:21.290Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

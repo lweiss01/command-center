@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-29T19:21:29.747Z
+- When: 2026-03-29T21:04:30.871Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: docs: update holistic handoff state and session context
+- Summary: Committed: docs: add regression guard for backend status/data visibility
 - Work done:
 - No completed work recorded.
 - Why it mattered:

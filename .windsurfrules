@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: update holistic handoff state and session context
+Committed: docs: add regression guard for backend status/data visibility
 
 ## Before ending this session
 
