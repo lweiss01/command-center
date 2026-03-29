@@ -423,9 +423,11 @@ function App() {
                   {project.name}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', ...S.mono, overflow: 'hidden' }}>
+                  <span style={{ color: 'var(--text-faint)' }}>Phase</span>
                   <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: phaseColor(phase), flexShrink: 0, display: 'inline-block' }} />
                   <span style={{ color: phaseColor(phase) }}>{phaseLabel}</span>
                   <span style={{ color: 'var(--text-faint)' }}>·</span>
+                  <span style={{ color: 'var(--text-faint)' }}>Continuity</span>
                   <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{continuityLabel}</span>
                 </div>
               </button>
