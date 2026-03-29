@@ -28,7 +28,7 @@
   --surface-3:       #1D1B12;
   --surface-4:       #222016;
   --surface-border:  #2A2720;
-  --surface-border+: #3D392E;
+  --surface-border-strong: #3D392E;
 
   /* Ink scale — warm whites, not clinical zinc */
   --ink-0:           #F5F0E8;
@@ -85,7 +85,7 @@
   /* Borders */
   --border:          var(--surface-border);
   --border-subtle:   color-mix(in srgb, var(--surface-border) 55%, transparent);
-  --border-hover:    var(--surface-border+);
+  --border-hover:    var(--surface-border-strong);
 
   /* Text */
   --text-primary:    var(--ink-0);
