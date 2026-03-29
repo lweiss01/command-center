@@ -1295,6 +1295,85 @@ function computeNextAction({ milestones, requirements, decisions, workflowState,
   };
 }
 
+function computeBootstrapPlan({ workflowState, readiness, continuity }) {
+  const steps = [];
+
+  const addStep = ({ stage, sourceGap, title, rationale, risk, requiresApproval }) => {
+    steps.push({
+      id: `bp-${steps.length + 1}`,
+      stage,
+      sourceGap,
+      title,
+      rationale,
+      risk,
+      requiresApproval,
+    });
+  };
+
+  const gaps = readiness?.gaps ?? [];
+
+  for (const gap of gaps) {
+    const isMachineGap = /\(tool\)$/i.test(gap);
+
+    if (isMachineGap) {
+      addStep({
+        stage: 'machine-level',
+        sourceGap: gap,
+        title: `Install and verify ${gap}`,
+        rationale: `${gap} is required for full workflow readiness and cannot be fixed from repo docs alone.`,
+        risk: 'medium',
+        requiresApproval: true,
+      });
+      continue;
+    }
+
+    addStep({
+      stage: 'repo-local',
+      sourceGap: gap,
+      title: `Bootstrap repo artifact: ${gap}`,
+      rationale: `${gap} is missing in the repository and should be restored before machine-level setup.`,
+      risk: 'medium',
+      requiresApproval: true,
+    });
+  }
+
+  const repoLocalSteps = steps.filter((step) => step.stage === 'repo-local');
+  const machineLevelSteps = steps.filter((step) => step.stage === 'machine-level');
+  const orderedSteps = [...repoLocalSteps, ...machineLevelSteps];
+
+  const stages = [
+    {
+      id: 'repo-local',
+      title: 'Repo-local setup',
+      stepCount: repoLocalSteps.length,
+    },
+    {
+      id: 'machine-level',
+      title: 'Machine-level setup',
+      stepCount: machineLevelSteps.length,
+    },
+  ].filter((stage) => stage.stepCount > 0);
+
+  let status = 'needs-bootstrap';
+  if (orderedSteps.length === 0) {
+    status = 'ready';
+  } else if (workflowState?.phase === 'blocked' && continuity?.status === 'missing') {
+    status = 'blocked';
+  }
+
+  return {
+    status,
+    stages,
+    steps: orderedSteps,
+    summary: {
+      totalSteps: orderedSteps.length,
+      repoLocalSteps: repoLocalSteps.length,
+      machineLevelSteps: machineLevelSteps.length,
+      hasBlockers: status === 'blocked',
+    },
+  };
+}
+
 function computeOpenLoops({ milestones, requirements, decisions }) {
   const nextMilestone = milestones.find((m) => m.status !== 'done') ?? null;
 
@@ -2577,6 +2656,7 @@ app.get('/api/projects/:id/plan', (req, res) => {
     const readiness = computeReadiness(validation.project);
     const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact });
     const nextAction = computeNextAction({ milestones, requirements, decisions, workflowState, continuity, readiness });
+    const bootstrapPlan = computeBootstrapPlan({ workflowState, readiness, continuity });
     const openLoops = computeOpenLoops({ milestones, requirements, decisions });
 
     return res.json({
@@ -2593,6 +2673,7 @@ app.get('/api/projects/:id/plan', (req, res) => {
       continuity,
       readiness,
       nextAction,
+      bootstrapPlan,
       openLoops,
     });
   } catch (error) {
