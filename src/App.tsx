@@ -228,6 +228,7 @@ function App() {
     try {
       const res = await fetch(planUrl)
       if (!res.ok) {
+        setBackendStatus('offline')
         setProjectPlan(null)
         setProjectPlanError(`Project data unavailable (server ${res.status}) from ${planUrl}.`)
         return
@@ -235,11 +236,14 @@ function App() {
 
       try {
         setProjectPlan(await res.json())
+        setBackendStatus('online')
       } catch {
+        setBackendStatus('offline')
         setProjectPlan(null)
         setProjectPlanError(`Project data unavailable (invalid response) from ${planUrl}.`)
       }
     } catch (error) {
+      setBackendStatus('offline')
       const errorType = error instanceof TypeError ? 'network' : 'unexpected'
       setProjectPlan(null)
       setProjectPlanError(`Project data unavailable (${errorType} error) from ${planUrl}.`)
