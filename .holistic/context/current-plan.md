@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: fix: darken left pane and replace ambiguous project row signals with explicit labels
+Committed: fix: label project-row phase and continuity signals explicitly
 
 ## Planned Next Steps
 

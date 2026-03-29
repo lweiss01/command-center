@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: fix: darken left pane and replace ambiguous project row signals with explicit labels
+Committed: fix: label project-row phase and continuity signals explicitly
 
 ## What Was Tried
 
@@ -68,7 +68,7 @@ Committed: fix: darken left pane and replace ambiguous project row signals with 
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- .logs/command-center-frontend.log
+- mission_control.db-wal
 
 ## Pending Work Queue
 
@@ -100,6 +100,6 @@ Committed: fix: darken left pane and replace ambiguous project row signals with 
 
 ## Historical Memory
 
-- Last updated: 2026-03-28T23:29:21.939Z
+- Last updated: 2026-03-29T19:19:53.872Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0
