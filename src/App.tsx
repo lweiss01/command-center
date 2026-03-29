@@ -350,6 +350,13 @@ function App() {
     return null
   })()
 
+  const backendUiState: 'checking' | 'online' | 'online-empty' | 'offline' =
+    backendStatus === 'offline'
+      ? 'offline'
+      : backendStatus === 'online' && !projectsLoading && projects.length === 0
+        ? 'online-empty'
+        : backendStatus
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)', color: 'var(--text-primary)', fontFamily: 'var(--font)' }}>
 
@@ -361,18 +368,30 @@ function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{
               width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-              background: backendStatus === 'online' ? C.ok : backendStatus === 'offline' ? C.danger : 'var(--text-muted)',
-              animation: backendStatus === 'checking' || backendStatus === 'offline' ? 'pulse 1.4s ease-in-out infinite' : 'none',
+              background:
+                backendUiState === 'online'
+                  ? C.ok
+                  : backendUiState === 'online-empty'
+                    ? C.warn
+                    : backendUiState === 'offline'
+                      ? C.danger
+                      : 'var(--text-muted)',
+              animation: backendUiState === 'checking' || backendUiState === 'offline' ? 'pulse 1.4s ease-in-out infinite' : 'none',
             }} />
             <span style={{ fontSize: '13px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>Command Center</span>
           </div>
           <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', ...S.mono }}>v{APP_VERSION}</div>
         </div>
 
-        {/* Offline callout */}
-        {backendStatus === 'offline' && (
+        {/* Backend state callouts */}
+        {backendUiState === 'offline' && (
           <div style={{ margin: '8px 10px 0', padding: '8px 10px', background: `color-mix(in srgb, ${C.danger} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${C.danger} 20%, transparent)`, borderRadius: '5px', fontSize: '11px', color: C.danger, ...S.mono, lineHeight: 1.5 }}>
             Bridge offline — retrying…
+          </div>
+        )}
+        {backendUiState === 'online-empty' && (
+          <div style={{ margin: '8px 10px 0', padding: '8px 10px', background: `color-mix(in srgb, ${C.warn} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${C.warn} 24%, transparent)`, borderRadius: '5px', fontSize: '11px', color: C.warn, ...S.mono, lineHeight: 1.5 }}>
+            Bridge connected — no project data indexed yet. Run Scan Workspace.
           </div>
         )}
 
