@@ -1295,7 +1295,7 @@ function computeNextAction({ milestones, requirements, decisions, workflowState,
   };
 }
 
-function computeBootstrapPlan({ workflowState, readiness, continuity }) {
+function computeBootstrapPlan({ workflowState, readiness, continuity, templateId = 'minimal', projectName = '' }) {
   const steps = [];
 
   const addStep = ({ stage, componentId, sourceGap, title, rationale, risk, requiresApproval, instructions }) => {
@@ -1309,6 +1309,8 @@ function computeBootstrapPlan({ workflowState, readiness, continuity }) {
       risk,
       requiresApproval,
       instructions: instructions ?? null,
+      previewContent: getStepPreviewContent(componentId, projectName, templateId),
+      templateId,
     });
   };
 
@@ -2644,20 +2646,113 @@ app.post('/api/projects/:id/import-gsd-decisions', (req, res) => {
 });
 
 // Stub file content for repo-local doc bootstrapping
-const BOOTSTRAP_STUBS = {
-  'gsd-doc-project': (name) => `# ${name}\n\n<!-- Describe what this project is, its current state, and its goals. -->\n`,
-  'gsd-doc-requirements': () => `# Requirements\n\n<!-- Track active, validated, deferred, and out-of-scope requirements here. -->\n`,
-  'gsd-doc-decisions': () => `# Decisions\n\n<!-- Append-only register of architectural and pattern decisions. -->\n`,
-  'gsd-doc-knowledge': () => `# Knowledge\n\n<!-- Append-only register of project-specific rules, patterns, and lessons learned. -->\n`,
-  'gsd-doc-preferences': () => `# Preferences\n\n<!-- GSD v2 workflow preferences for this repo. -->\n`,
+// 'minimal' — single placeholder per section, zero assumptions
+const BOOTSTRAP_STUBS_MINIMAL = {
+  'gsd-doc-project':      (name) => `# ${name}\n\n<!-- Describe what this project is, its current state, and its goals. -->\n`,
+  'gsd-doc-requirements': ()     => `# Requirements\n\n<!-- Track active, validated, deferred, and out-of-scope requirements here. -->\n`,
+  'gsd-doc-decisions':    ()     => `# Decisions\n\n<!-- Append-only register of architectural and pattern decisions. -->\n`,
+  'gsd-doc-knowledge':    ()     => `# Knowledge\n\n<!-- Append-only register of project-specific rules, patterns, and lessons learned. -->\n`,
+  'gsd-doc-preferences':  ()     => `# Preferences\n\n<!-- GSD v2 workflow preferences for this repo. -->\n`,
 };
+
+// 'starter' — populated with example sections to guide initial authoring
+const BOOTSTRAP_STUBS_STARTER = {
+  'gsd-doc-project': (name) => [
+    `# ${name}`,
+    ``,
+    `## What this project is`,
+    `<!-- One paragraph: what does this project do and who is it for? -->`,
+    ``,
+    `## Current state`,
+    `<!-- Active milestone, recent changes, and what is working right now. -->`,
+    ``,
+    `## Goals`,
+    `<!-- What does a successful outcome look like? What are the constraints? -->`,
+    ``,
+  ].join('\n'),
+  'gsd-doc-requirements': () => [
+    `# Requirements`,
+    ``,
+    `<!-- Requirement contract. Move rows between sections as evidence accumulates. -->`,
+    ``,
+    `## Active`,
+    `<!-- Requirements that are in scope and not yet validated. -->`,
+    ``,
+    `## Validated`,
+    `<!-- Requirements proven by a completed slice or test. -->`,
+    ``,
+    `## Deferred`,
+    `<!-- Requirements parked for a future milestone. -->`,
+    ``,
+    `## Out of Scope`,
+    `<!-- Explicitly excluded. -->`,
+    ``,
+  ].join('\n'),
+  'gsd-doc-decisions': () => [
+    `# Decisions`,
+    ``,
+    `<!-- Append-only. Add rows as architectural or pattern decisions are made. -->`,
+    `<!-- Format: ## D001: <title> | **Decided:** <date> | **Choice:** ... | **Rationale:** ... -->`,
+    ``,
+  ].join('\n'),
+  'gsd-doc-knowledge': () => [
+    `# Knowledge`,
+    ``,
+    `<!-- Append-only. Add entries when you discover a recurring issue, a non-obvious pattern,`,
+    `     or a rule that future agents should follow. -->`,
+    ``,
+    `## Entry template`,
+    `<!-- ## <Topic>`,
+    `### <Specific finding>`,
+    `<What to know and why it matters.> -->`,
+    ``,
+  ].join('\n'),
+  'gsd-doc-preferences': () => [
+    `# Preferences`,
+    ``,
+    `## GSD v2 workflow`,
+    ``,
+    `\`\`\`yaml`,
+    `# unique_milestone_ids: false`,
+    `# default_isolation: none`,
+    `\`\`\``,
+    ``,
+  ].join('\n'),
+};
+
+// Keep backward-compat alias
+const BOOTSTRAP_STUBS = BOOTSTRAP_STUBS_MINIMAL;
+
+/** Returns the stub map for a given templateId ('minimal' | 'starter'). */
+function getBootstrapStubs(templateId) {
+  return templateId === 'starter' ? BOOTSTRAP_STUBS_STARTER : BOOTSTRAP_STUBS_MINIMAL;
+}
+
+/** Returns the preview content for a step given its componentId and template. */
+function getStepPreviewContent(componentId, projectName, templateId) {
+  const stubs = getBootstrapStubs(templateId);
+  switch (componentId) {
+    case 'gsd-doc-project':
+    case 'gsd-doc-requirements':
+    case 'gsd-doc-decisions':
+    case 'gsd-doc-knowledge':
+    case 'gsd-doc-preferences':
+      return stubs[componentId] ? stubs[componentId](projectName) : null;
+    case 'gsd-dir':
+      return 'Creates the .gsd/ directory — the root of all GSD planning artifacts.';
+    case 'holistic-dir':
+      return 'Runs `holistic init` to create the .holistic/ directory with session continuity state.';
+    default:
+      return null;
+  }
+}
 
 app.post('/api/projects/:id/bootstrap/apply', (req, res) => {
   try {
     const validation = getValidatedProjectOrSend(req.params.id, res);
     if (!validation) return;
 
-    const { componentId } = req.body ?? {};
+    const { componentId, templateId } = req.body ?? {};
     if (!componentId || typeof componentId !== 'string') {
       return res.status(400).json({ ok: false, error: 'componentId is required' });
     }
@@ -2725,7 +2820,7 @@ app.post('/api/projects/:id/bootstrap/apply', (req, res) => {
           fs.mkdirSync(gsdDir, { recursive: true });
         }
 
-        const stubFn = BOOTSTRAP_STUBS[componentId];
+        const stubFn = getBootstrapStubs(templateId)[componentId];
         fs.writeFileSync(docPath, stubFn(name), 'utf8');
         action = 'created-stub-file';
         resultPath = docPath;
@@ -2783,7 +2878,8 @@ app.get('/api/projects/:id/plan', (req, res) => {
     const readiness = computeReadiness(validation.project);
     const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact });
     const nextAction = computeNextAction({ milestones, requirements, decisions, workflowState, continuity, readiness });
-    const bootstrapPlan = computeBootstrapPlan({ workflowState, readiness, continuity });
+    const bootstrapTemplateId = req.query.templateId === 'starter' ? 'starter' : 'minimal';
+    const bootstrapPlan = computeBootstrapPlan({ workflowState, readiness, continuity, templateId: bootstrapTemplateId, projectName: validation.project.name });
     const openLoops = computeOpenLoops({ milestones, requirements, decisions });
 
     return res.json({

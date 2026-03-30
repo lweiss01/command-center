@@ -52,6 +52,8 @@ interface BootstrapPlanStep {
   risk: 'low' | 'medium' | 'high'
   requiresApproval: boolean
   instructions: string | null
+  previewContent: string | null
+  templateId: string
 }
 type StepStatus = 'pending' | 'confirming' | 'applying' | 'done' | 'failed' | 'instructions'
 interface BootstrapPlanStage {
@@ -229,6 +231,7 @@ function App() {
 
   const [bootstrapStepStatus, setBootstrapStepStatus] = useState<Map<string, StepStatus>>(new Map())
   const [bootstrapStepError, setBootstrapStepError] = useState<Map<string, string>>(new Map())
+  const [bootstrapTemplateId, setBootstrapTemplateId] = useState<'minimal' | 'starter'>('minimal')
 
   // Clear bootstrap step state when the selected project changes
   useEffect(() => {
@@ -258,10 +261,10 @@ function App() {
     return () => clearTimeout(timer)
   }, [])
 
-  const loadProjectPlan = async (id: number) => {
+  const loadProjectPlan = async (id: number, templateId = 'minimal') => {
     setProjectPlanLoading(true)
     setProjectPlanError(null)
-    const planUrl = `${API_BASE_URL}/api/projects/${id}/plan`
+    const planUrl = `${API_BASE_URL}/api/projects/${id}/plan?templateId=${templateId}`
 
     try {
       const res = await fetch(planUrl)
@@ -304,8 +307,17 @@ function App() {
     if (!selectedProject) { setTasks([]); setProjectPlan(null); return }
     fetch(`${API_BASE_URL}/api/tasks/${selectedProject.name.toLowerCase()}`)
       .then(r => r.json()).then(setTasks).catch(() => setTasks([]))
-    loadProjectPlan(selectedProject.id)
+    loadProjectPlan(selectedProject.id, bootstrapTemplateId)
   }, [selectedProject])
+
+  // Re-fetch plan when template changes (to get updated previewContent)
+  useEffect(() => {
+    if (selectedProject) {
+      setBootstrapStepStatus(new Map())
+      setBootstrapStepError(new Map())
+      loadProjectPlan(selectedProject.id, bootstrapTemplateId)
+    }
+  }, [bootstrapTemplateId])
 
   const importArtifact = async (
     url: string,
@@ -317,7 +329,7 @@ function App() {
       const res = await fetch(url, { method: 'POST' })
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error ?? 'Import failed')
-      await loadProjectPlan(selectedProject.id)
+      await loadProjectPlan(selectedProject.id, bootstrapTemplateId)
     } catch (e) {
       setProjectPlanError(e instanceof Error ? e.message : 'Import failed.')
     } finally { setInFlight(false) }
@@ -339,14 +351,14 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/bootstrap/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ componentId: step.componentId }),
+        body: JSON.stringify({ componentId: step.componentId, templateId: bootstrapTemplateId }),
       })
       const data = await res.json()
       if (res.ok && data.ok) {
         // Clear all step state before re-fetching so stale IDs don't bleed into the new plan
         setBootstrapStepStatus(new Map())
         setBootstrapStepError(new Map())
-        await loadProjectPlan(selectedProject.id)
+        await loadProjectPlan(selectedProject.id, bootstrapTemplateId)
       } else {
         setStepStatus(step.id, 'failed')
         setStepError(step.id, data.error ?? 'Apply failed')
@@ -662,11 +674,24 @@ function App() {
             {/* Bootstrap Plan */}
             {projectPlan?.bootstrapPlan && (
               <Section title="Bootstrap Plan" sub="Staged repo-first setup plan derived from readiness gaps">
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' }}>
                   <Pill label={projectPlan.bootstrapPlan.status} color={bootstrapColor(projectPlan.bootstrapPlan.status)} />
                   <Pill label={`${projectPlan.bootstrapPlan.summary.totalSteps} step${projectPlan.bootstrapPlan.summary.totalSteps !== 1 ? 's' : ''}`} color={C.muted} dim />
                   <Pill label={`${projectPlan.bootstrapPlan.summary.repoLocalSteps} repo-local`} color={C.info} dim />
                   <Pill label={`${projectPlan.bootstrapPlan.summary.machineLevelSteps} machine-level`} color={C.warn} dim />
+                  {/* Template selector */}
+                  <span style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>template:</span>
+                    {(['minimal', 'starter'] as const).map(tid => (
+                      <button key={tid} onClick={() => setBootstrapTemplateId(tid)} style={{
+                        fontSize: '11px', padding: '2px 8px', fontFamily: 'var(--font-mono)',
+                        background: bootstrapTemplateId === tid ? C.info : 'transparent',
+                        color: bootstrapTemplateId === tid ? '#000' : 'var(--text-muted)',
+                        border: `1px solid ${bootstrapTemplateId === tid ? C.info : 'var(--border)'}`,
+                        borderRadius: '3px', cursor: 'pointer',
+                      }}>{tid}</button>
+                    ))}
+                  </span>
                 </div>
 
                 {projectPlan.bootstrapPlan.steps.length === 0 ? (
@@ -746,6 +771,25 @@ function App() {
                                     <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg-base)', border: `1px solid ${C.warn}`, borderRadius: '6px' }}>
                                       <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 600, marginBottom: '6px' }}>Confirm: {step.title}</div>
                                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '6px' }}>{step.rationale}</div>
+                                      {/* File preview */}
+                                      {step.previewContent && step.previewContent.includes('\n') ? (
+                                        <div style={{ marginBottom: '10px' }}>
+                                          <div style={{ fontSize: '10px', ...S.mono, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
+                                            file preview · template: {step.templateId}
+                                          </div>
+                                          <pre style={{
+                                            fontSize: '11px', ...S.mono, padding: '8px 10px', margin: 0,
+                                            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                                            borderRadius: '4px', color: 'var(--text-secondary)',
+                                            maxHeight: '160px', overflowY: 'auto', whiteSpace: 'pre-wrap',
+                                            lineHeight: 1.5,
+                                          }}>{step.previewContent}</pre>
+                                        </div>
+                                      ) : step.previewContent ? (
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '8px', ...S.mono }}>
+                                          {step.previewContent}
+                                        </div>
+                                      ) : null}
                                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '11px', color: 'var(--text-muted)', ...S.mono, marginBottom: '10px' }}>
                                         <Pill label={`risk: ${step.risk}`} color={step.risk === 'high' ? C.danger : step.risk === 'medium' ? C.warn : C.ok} dim />
                                         <span>This will create or modify files in your repo.</span>
