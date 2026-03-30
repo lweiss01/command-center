@@ -1106,7 +1106,7 @@ function computeReadiness(project, toolOverrides) {
   // Helper: call a tool binary and return 'present' if it exits 0, else 'missing'
   function toolStatus(cmd) {
     try {
-      execFileSync(cmd, ['--version'], { timeout: 2000, stdio: 'pipe' });
+      execFileSync(cmd, ['--version'], { timeout: 2000, stdio: 'pipe', shell: true });
       return 'present';
     } catch (_err) {
       return 'missing';
@@ -1298,42 +1298,64 @@ function computeNextAction({ milestones, requirements, decisions, workflowState,
 function computeBootstrapPlan({ workflowState, readiness, continuity }) {
   const steps = [];
 
-  const addStep = ({ stage, sourceGap, title, rationale, risk, requiresApproval }) => {
+  const addStep = ({ stage, componentId, sourceGap, title, rationale, risk, requiresApproval, instructions }) => {
     steps.push({
       id: `bp-${steps.length + 1}`,
       stage,
+      componentId,
       sourceGap,
       title,
       rationale,
       risk,
       requiresApproval,
+      instructions: instructions ?? null,
     });
   };
 
-  const gaps = readiness?.gaps ?? [];
+  const COMPONENT_META = {
+    'gsd-dir':              { title: 'Initialize GSD directory',         rationale: 'The .gsd/ directory is the root of all GSD planning artifacts. Without it, no milestones, requirements, or decisions can be tracked.',          risk: 'low' },
+    'holistic-dir':         { title: 'Initialize Holistic',              rationale: 'The .holistic/ directory stores session continuity, checkpoint history, and passive capture state. Without it, context is lost between sessions.', risk: 'low', instructions: 'holistic init' },
+    'gsd-doc-project':      { title: 'Create PROJECT.md stub',           rationale: 'PROJECT.md is the living document describing what this project is right now. It is the first artifact agents read at session start.',             risk: 'low' },
+    'gsd-doc-requirements': { title: 'Create REQUIREMENTS.md stub',      rationale: 'REQUIREMENTS.md tracks the requirement contract. Without it, there is no authoritative record of what the project must deliver.',               risk: 'low' },
+    'gsd-doc-decisions':    { title: 'Create DECISIONS.md stub',         rationale: 'DECISIONS.md is an append-only register of architectural decisions. It prevents repeated debates about resolved choices.',                       risk: 'low' },
+    'gsd-doc-knowledge':    { title: 'Create KNOWLEDGE.md stub',         rationale: 'KNOWLEDGE.md captures project-specific rules and lessons learned. It is the primary defence against agents repeating past mistakes.',            risk: 'low' },
+    'gsd-doc-preferences':  { title: 'Create GSD preferences stub',      rationale: 'preferences.md signals a fully initialized GSD v2 setup and stores workflow preferences for this repo.',                                        risk: 'low' },
+    'holistic-tool':        { title: 'Install Holistic CLI',             rationale: 'The holistic CLI is required for checkpoint, handoff, and passive capture commands. Without it, session continuity is unavailable.',             risk: 'medium', instructions: 'npm install -g @holistic-ai/holistic' },
+    'gsd-tool':             { title: 'Install GSD CLI',                  rationale: 'The gsd CLI is required for planning, auto-mode, and milestone execution. Without it, the full workflow stack is unavailable.',                  risk: 'medium', instructions: 'npm install -g @anthropic/gsd' },
+    'beads-dir':            { title: 'Initialize Beads',                 rationale: 'The .beads/ directory stores bead-based context for supported agents.',                                                                         risk: 'low' },
+  };
 
-  for (const gap of gaps) {
-    const isMachineGap = /\(tool\)$/i.test(gap);
+  const components = readiness?.components ?? [];
 
-    if (isMachineGap) {
-      addStep({
-        stage: 'machine-level',
-        sourceGap: gap,
-        title: `Install and verify ${gap}`,
-        rationale: `${gap} is required for full workflow readiness and cannot be fixed from repo docs alone.`,
-        risk: 'medium',
-        requiresApproval: true,
-      });
-      continue;
-    }
+  // Repo-local gaps first, machine-tool gaps second
+  const repoLocalMissing = components.filter((c) => c.required && c.status === 'missing' && c.kind !== 'machine-tool');
+  const machineMissing   = components.filter((c) => c.required && c.status === 'missing' && c.kind === 'machine-tool');
 
+  for (const c of repoLocalMissing) {
+    const meta = COMPONENT_META[c.id] ?? {};
     addStep({
       stage: 'repo-local',
-      sourceGap: gap,
-      title: `Bootstrap repo artifact: ${gap}`,
-      rationale: `${gap} is missing in the repository and should be restored before machine-level setup.`,
-      risk: 'medium',
+      componentId: c.id,
+      sourceGap: c.label,
+      title: meta.title ?? `Bootstrap: ${c.label}`,
+      rationale: meta.rationale ?? `${c.label} is missing and should be restored before machine-level setup.`,
+      risk: meta.risk ?? 'medium',
       requiresApproval: true,
+      instructions: meta.instructions ?? null,
+    });
+  }
+
+  for (const c of machineMissing) {
+    const meta = COMPONENT_META[c.id] ?? {};
+    addStep({
+      stage: 'machine-level',
+      componentId: c.id,
+      sourceGap: c.label,
+      title: meta.title ?? `Install: ${c.label}`,
+      rationale: meta.rationale ?? `${c.label} is required for full workflow readiness and cannot be fixed from repo docs alone.`,
+      risk: meta.risk ?? 'medium',
+      requiresApproval: true,
+      instructions: meta.instructions ?? null,
     });
   }
 
@@ -2621,6 +2643,111 @@ app.post('/api/projects/:id/import-gsd-decisions', (req, res) => {
   }
 });
 
+// Stub file content for repo-local doc bootstrapping
+const BOOTSTRAP_STUBS = {
+  'gsd-doc-project': (name) => `# ${name}\n\n<!-- Describe what this project is, its current state, and its goals. -->\n`,
+  'gsd-doc-requirements': () => `# Requirements\n\n<!-- Track active, validated, deferred, and out-of-scope requirements here. -->\n`,
+  'gsd-doc-decisions': () => `# Decisions\n\n<!-- Append-only register of architectural and pattern decisions. -->\n`,
+  'gsd-doc-knowledge': () => `# Knowledge\n\n<!-- Append-only register of project-specific rules, patterns, and lessons learned. -->\n`,
+  'gsd-doc-preferences': () => `# Preferences\n\n<!-- GSD v2 workflow preferences for this repo. -->\n`,
+};
+
+app.post('/api/projects/:id/bootstrap/apply', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const { componentId } = req.body ?? {};
+    if (!componentId || typeof componentId !== 'string') {
+      return res.status(400).json({ ok: false, error: 'componentId is required' });
+    }
+
+    const root = validation.project.root_path;
+    const name = validation.project.name;
+
+    // Resolve the component from readiness to validate it exists and get its kind
+    const readiness = computeReadiness(validation.project);
+    const component = readiness.components.find((c) => c.id === componentId);
+
+    if (!component) {
+      return res.status(404).json({ ok: false, error: `Unknown component: ${componentId}` });
+    }
+
+    // Machine-tool components cannot be auto-applied — return instructions instead
+    if (component.kind === 'machine-tool') {
+      return res.status(400).json({
+        ok: false,
+        error: 'Machine-level tool installation cannot be applied automatically. Use the instructions panel.',
+      });
+    }
+
+    // Already present — idempotent OK
+    if (component.status === 'present') {
+      return res.json({ ok: true, componentId, action: 'already-present', path: null });
+    }
+
+    let action;
+    let resultPath;
+
+    switch (componentId) {
+      case 'gsd-dir': {
+        const dir = path.join(root, '.gsd');
+        fs.mkdirSync(dir, { recursive: true });
+        action = 'created-directory';
+        resultPath = dir;
+        break;
+      }
+
+      case 'holistic-dir': {
+        const holisticCmd = process.platform === 'win32' ? 'holistic.cmd' : 'holistic';
+        execFileSync(holisticCmd, ['init'], { cwd: root, timeout: 30000, stdio: 'pipe', shell: true });
+        action = 'ran-holistic-init';
+        resultPath = path.join(root, '.holistic');
+        break;
+      }
+
+      case 'gsd-doc-project':
+      case 'gsd-doc-requirements':
+      case 'gsd-doc-decisions':
+      case 'gsd-doc-knowledge':
+      case 'gsd-doc-preferences': {
+        const docPaths = {
+          'gsd-doc-project':      path.join(root, '.gsd', 'PROJECT.md'),
+          'gsd-doc-requirements': path.join(root, '.gsd', 'REQUIREMENTS.md'),
+          'gsd-doc-decisions':    path.join(root, '.gsd', 'DECISIONS.md'),
+          'gsd-doc-knowledge':    path.join(root, '.gsd', 'KNOWLEDGE.md'),
+          'gsd-doc-preferences':  path.join(root, '.gsd', 'preferences.md'),
+        };
+        const docPath = docPaths[componentId];
+        const gsdDir = path.join(root, '.gsd');
+
+        if (!fs.existsSync(gsdDir)) {
+          fs.mkdirSync(gsdDir, { recursive: true });
+        }
+
+        const stubFn = BOOTSTRAP_STUBS[componentId];
+        fs.writeFileSync(docPath, stubFn(name), 'utf8');
+        action = 'created-stub-file';
+        resultPath = docPath;
+        break;
+      }
+
+      default:
+        return res.status(400).json({ ok: false, error: `No apply action defined for component: ${componentId}` });
+    }
+
+    console.log(`[bootstrap/apply] project=${name} component=${componentId} action=${action} path=${resultPath}`);
+    return res.json({ ok: true, componentId, action, path: resultPath });
+
+  } catch (error) {
+    console.error('[bootstrap/apply] Failed:', error);
+    return res.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Apply failed',
+    });
+  }
+});
+
 app.get('/api/projects/:id/plan', (req, res) => {
   try {
     const validation = getValidatedProjectOrSend(req.params.id, res);
@@ -2690,7 +2817,7 @@ app.get('/api/portfolio', (_req, res) => {
 
     function probeToolStatus(cmd) {
       try {
-        execFileSync(cmd, ['--version'], { timeout: 2000, stdio: 'pipe' });
+        execFileSync(cmd, ['--version'], { timeout: 2000, stdio: 'pipe', shell: true });
         return 'present';
       } catch (_err) {
         return 'missing';

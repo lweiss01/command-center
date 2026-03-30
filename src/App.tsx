@@ -42,6 +42,34 @@ interface ContinuityState {
   lastCheckpointReason?: string | null; handoffCommand?: string | null
 }
 interface NextAction { action: string; rationale: string; blockers: string[] }
+interface BootstrapPlanStep {
+  id: string
+  stage: 'repo-local' | 'machine-level'
+  componentId: string
+  sourceGap: string
+  title: string
+  rationale: string
+  risk: 'low' | 'medium' | 'high'
+  requiresApproval: boolean
+  instructions: string | null
+}
+type StepStatus = 'pending' | 'confirming' | 'applying' | 'done' | 'failed' | 'instructions'
+interface BootstrapPlanStage {
+  id: 'repo-local' | 'machine-level'
+  title: string
+  stepCount: number
+}
+interface BootstrapPlan {
+  status: 'ready' | 'needs-bootstrap' | 'blocked'
+  stages: BootstrapPlanStage[]
+  steps: BootstrapPlanStep[]
+  summary: {
+    totalSteps: number
+    repoLocalSteps: number
+    machineLevelSteps: number
+    hasBlockers: boolean
+  }
+}
 interface StackComponent {
   id: string; label: string; kind: 'repo-doc' | 'machine-tool' | 'repo-dir'
   status: 'present' | 'missing'; note: string | null; required: boolean
@@ -69,7 +97,7 @@ interface ProjectPlan {
   latestImportRun: ImportRun | null
   latestImportRunsByArtifact: { milestones: ImportRun | null; requirements: ImportRun | null; decisions: ImportRun | null }
   workflowState: WorkflowState; continuity: ContinuityState
-  nextAction: NextAction; readiness: ReadinessReport; openLoops: OpenLoops
+  nextAction: NextAction; bootstrapPlan: BootstrapPlan; readiness: ReadinessReport; openLoops: OpenLoops
 }
 interface PortfolioEntry {
   project: Project; workflowPhase: string; workflowConfidence: number
@@ -99,6 +127,7 @@ function phaseColor(p: string) {
 function contColor(s: string)  { return s === 'fresh' ? C.ok : s === 'stale' ? C.warn : C.muted }
 function hygColor(s: string)   { return s === 'ok' ? C.ok : s === 'stale' ? C.warn : C.muted }
 function readyColor(s: string) { return s === 'ready' ? C.ok : s === 'partial' ? C.warn : C.muted }
+function bootstrapColor(s: string) { return s === 'ready' ? C.ok : s === 'blocked' ? C.danger : C.warn }
 function msColor(s: string)    { return s === 'done' ? C.ok : s === 'active' ? C.warn : s === 'blocked' ? C.danger : s === 'draft' ? C.muted : C.info }
 function rqColor(s: string)    { return s === 'validated' ? C.ok : (s === 'deferred' || s === 'out-of-scope') ? C.warn : C.info }
 function runColor(s: string)   { return s === 'success' ? C.ok : s === 'partial' ? C.warn : s === 'failed' ? C.danger : C.muted }
@@ -198,6 +227,15 @@ function App() {
   const [projectSortMode, setProjectSortMode] = useState<'urgency' | 'name'>('urgency')
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking')
 
+  const [bootstrapStepStatus, setBootstrapStepStatus] = useState<Map<string, StepStatus>>(new Map())
+  const [bootstrapStepError, setBootstrapStepError] = useState<Map<string, string>>(new Map())
+
+  // Clear bootstrap step state when the selected project changes
+  useEffect(() => {
+    setBootstrapStepStatus(new Map())
+    setBootstrapStepError(new Map())
+  }, [selectedProject?.id])
+
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
     const check = () => {
@@ -228,7 +266,7 @@ function App() {
     try {
       const res = await fetch(planUrl)
       if (!res.ok) {
-        setBackendStatus('offline')
+        // Server responded — bridge is up. Only show a project-level error.
         setProjectPlan(null)
         setProjectPlanError(`Project data unavailable (server ${res.status}) from ${planUrl}.`)
         return
@@ -236,13 +274,13 @@ function App() {
 
       try {
         setProjectPlan(await res.json())
-        setBackendStatus('online')
       } catch {
-        setBackendStatus('offline')
+        // Server responded with unparseable body — still up, project-level error only.
         setProjectPlan(null)
         setProjectPlanError(`Project data unavailable (invalid response) from ${planUrl}.`)
       }
     } catch (error) {
+      // fetch() threw — server is genuinely unreachable.
       setBackendStatus('offline')
       const errorType = error instanceof TypeError ? 'network' : 'unexpected'
       setProjectPlan(null)
@@ -288,6 +326,36 @@ function App() {
   const handleImportMilestones    = () => importArtifact(`${API_BASE_URL}/api/projects/${selectedProject!.id}/import-gsd-project`, setMilestonesImportInFlight)
   const handleImportRequirements  = () => importArtifact(`${API_BASE_URL}/api/projects/${selectedProject!.id}/import-gsd-requirements`, setRequirementsImportInFlight)
   const handleImportDecisions     = () => importArtifact(`${API_BASE_URL}/api/projects/${selectedProject!.id}/import-gsd-decisions`, setDecisionsImportInFlight)
+
+  const setStepStatus = (stepId: string, status: StepStatus) =>
+    setBootstrapStepStatus(prev => new Map(prev).set(stepId, status))
+  const setStepError = (stepId: string, err: string) =>
+    setBootstrapStepError(prev => new Map(prev).set(stepId, err))
+
+  const handleBootstrapConfirm = async (step: BootstrapPlanStep) => {
+    if (!selectedProject) return
+    setStepStatus(step.id, 'applying')
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/bootstrap/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ componentId: step.componentId }),
+      })
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        // Clear all step state before re-fetching so stale IDs don't bleed into the new plan
+        setBootstrapStepStatus(new Map())
+        setBootstrapStepError(new Map())
+        await loadProjectPlan(selectedProject.id)
+      } else {
+        setStepStatus(step.id, 'failed')
+        setStepError(step.id, data.error ?? 'Apply failed')
+      }
+    } catch (e) {
+      setStepStatus(step.id, 'failed')
+      setStepError(step.id, e instanceof Error ? e.message : 'Network error')
+    }
+  }
 
   const handleScanWorkspace = async () => {
     setScanInFlight(true); setProjectsError(null)
@@ -590,6 +658,142 @@ function App() {
               {confidenceDowngraded && <Note variant="warn">Confidence reduced — continuity is stale.</Note>}
               {confidenceSupported && <Note variant="ok">Confidence supported by fresh continuity.</Note>}
             </Section>
+
+            {/* Bootstrap Plan */}
+            {projectPlan?.bootstrapPlan && (
+              <Section title="Bootstrap Plan" sub="Staged repo-first setup plan derived from readiness gaps">
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  <Pill label={projectPlan.bootstrapPlan.status} color={bootstrapColor(projectPlan.bootstrapPlan.status)} />
+                  <Pill label={`${projectPlan.bootstrapPlan.summary.totalSteps} step${projectPlan.bootstrapPlan.summary.totalSteps !== 1 ? 's' : ''}`} color={C.muted} dim />
+                  <Pill label={`${projectPlan.bootstrapPlan.summary.repoLocalSteps} repo-local`} color={C.info} dim />
+                  <Pill label={`${projectPlan.bootstrapPlan.summary.machineLevelSteps} machine-level`} color={C.warn} dim />
+                </div>
+
+                {projectPlan.bootstrapPlan.steps.length === 0 ? (
+                  <Note variant="ok">No bootstrap actions required for this repo.</Note>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {projectPlan.bootstrapPlan.stages.map(stage => {
+                      const stageSteps = projectPlan.bootstrapPlan.steps.filter(step => step.stage === stage.id)
+                      if (stageSteps.length === 0) return null
+                      return (
+                        <div key={stage.id} style={{ border: '1px solid var(--border)', borderRadius: '6px', padding: '10px 12px', background: 'var(--bg-elevated)' }}>
+                          <div style={{ fontSize: '10px', ...S.mono, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                            {stage.title} · {stage.stepCount} step{stage.stepCount !== 1 ? 's' : ''}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {stageSteps.map(step => {
+                              const status = bootstrapStepStatus.get(step.id) ?? 'pending'
+                              const errMsg = bootstrapStepError.get(step.id)
+                              const isMachine = step.stage === 'machine-level'
+                              const accentColor = isMachine ? C.warn : C.info
+                              const isDone = status === 'done'
+
+                              return (
+                                <div key={step.id} style={{ borderLeft: `2px solid ${isDone ? C.ok : accentColor}`, paddingLeft: '10px' }}>
+                                  {/* Step header */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
+                                    {isDone && <span style={{ color: C.ok, fontSize: '13px' }}>✓</span>}
+                                    <span style={{ fontSize: '12px', color: isDone ? 'var(--text-muted)' : 'var(--text-primary)', fontWeight: 500, textDecoration: isDone ? 'line-through' : 'none' }}>{step.title}</span>
+                                    <Pill label={step.risk} color={step.risk === 'high' ? C.danger : step.risk === 'medium' ? C.warn : C.ok} dim />
+                                    {step.requiresApproval && status === 'pending' && <Pill label="approval required" color={C.danger} dim />}
+                                    {status === 'applying' && <Pill label="applying…" color={C.warn} />}
+                                    {status === 'done' && <Pill label="done" color={C.ok} />}
+                                    {status === 'failed' && <Pill label="failed" color={C.danger} />}
+                                  </div>
+
+                                  {/* Rationale + source */}
+                                  {!isDone && (
+                                    <>
+                                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{step.rationale}</div>
+                                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', ...S.mono, marginTop: '4px' }}>source gap: {step.sourceGap}</div>
+                                    </>
+                                  )}
+
+                                  {/* Error message */}
+                                  {status === 'failed' && errMsg && (
+                                    <div style={{ fontSize: '11px', color: C.danger, ...S.mono, marginTop: '6px' }}>{errMsg}</div>
+                                  )}
+
+                                  {/* Action buttons */}
+                                  {status === 'pending' && !isMachine && (
+                                    <button
+                                      onClick={() => setStepStatus(step.id, 'confirming')}
+                                      style={{ marginTop: '8px', fontSize: '11px', padding: '3px 10px', background: C.info, color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                                    >
+                                      Apply
+                                    </button>
+                                  )}
+                                  {status === 'pending' && isMachine && (
+                                    <button
+                                      onClick={() => setStepStatus(step.id, 'instructions')}
+                                      style={{ marginTop: '8px', fontSize: '11px', padding: '3px 10px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                                    >
+                                      View Instructions
+                                    </button>
+                                  )}
+                                  {status === 'failed' && (
+                                    <button
+                                      onClick={() => { setStepStatus(step.id, 'pending'); setBootstrapStepError(prev => { const m = new Map(prev); m.delete(step.id); return m }) }}
+                                      style={{ marginTop: '8px', fontSize: '11px', padding: '3px 10px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                                    >
+                                      Retry
+                                    </button>
+                                  )}
+
+                                  {/* Confirmation panel (repo-local) */}
+                                  {status === 'confirming' && (
+                                    <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg-base)', border: `1px solid ${C.warn}`, borderRadius: '6px' }}>
+                                      <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 600, marginBottom: '6px' }}>Confirm: {step.title}</div>
+                                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '6px' }}>{step.rationale}</div>
+                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '11px', color: 'var(--text-muted)', ...S.mono, marginBottom: '10px' }}>
+                                        <Pill label={`risk: ${step.risk}`} color={step.risk === 'high' ? C.danger : step.risk === 'medium' ? C.warn : C.ok} dim />
+                                        <span>This will create or modify files in your repo.</span>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button
+                                          onClick={() => handleBootstrapConfirm(step)}
+                                          style={{ fontSize: '11px', padding: '3px 12px', background: C.ok, color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                                        >
+                                          Confirm
+                                        </button>
+                                        <button
+                                          onClick={() => setStepStatus(step.id, 'pending')}
+                                          style={{ fontSize: '11px', padding: '3px 10px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Instructions panel (machine-level) */}
+                                  {status === 'instructions' && step.instructions && (
+                                    <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg-base)', border: `1px solid ${C.warn}`, borderRadius: '6px' }}>
+                                      <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 600, marginBottom: '6px' }}>Install instructions</div>
+                                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '8px' }}>Run this command in your terminal to install the required tool. This cannot be applied automatically.</div>
+                                      <div style={{ fontSize: '12px', ...S.mono, padding: '6px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '4px', color: C.ok, userSelect: 'all' }}>
+                                        {step.instructions}
+                                      </div>
+                                      <button
+                                        onClick={() => setStepStatus(step.id, 'pending')}
+                                        style={{ marginTop: '8px', fontSize: '11px', padding: '3px 10px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                                      >
+                                        Dismiss
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </Section>
+            )}
 
             {/* Readiness */}
             {projectPlan?.readiness && (
