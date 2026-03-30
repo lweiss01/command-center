@@ -1,0 +1,36 @@
+{
+  "id": "session-2026-03-27T22-46-50-602Z",
+  "agent": "unknown",
+  "branch": "main",
+  "startedAt": "2026-03-27T22:46:50.602Z",
+  "updatedAt": "2026-03-30T04:57:13.213Z",
+  "endedAt": "2026-03-30T04:57:13.229Z",
+  "status": "handed_off",
+  "title": "Capture work and prepare a clean handoff.",
+  "currentGoal": "Capture work and prepare a clean handoff.",
+  "currentPlan": [
+    "Read HOLISTIC.md",
+    "Confirm next step with the user"
+  ],
+  "latestStatus": "Committed: docs: update project and holistic state",
+  "workDone": [],
+  "triedItems": [],
+  "nextSteps": [
+    "start with M003-S03"
+  ],
+  "assumptions": [],
+  "blockers": [],
+  "references": [],
+  "impactNotes": [],
+  "regressionRisks": [],
+  "changedFiles": [
+    ".bg-shell/manifest.json"
+  ],
+  "checkpointCount": 103,
+  "lastCheckpointReason": "post-commit",
+  "resumeRecap": [
+    "Current objective: Capture work and prepare a clean handoff.",
+    "Latest status: Committed: docs: update project and holistic state",
+    "Try next: start with M003-S03"
+  ]
+}
