@@ -32,8 +32,16 @@ mission_control.db-wal
 *.sln
 *.sw?
 
-# ── GSD baseline (auto-generated) ──
-.gsd
+# ── GSD State (Portability) ──
+.gsd/gsd.db*
+.gsd/activity/
+.gsd/journal/
+.gsd/runtime/
+.gsd/worktrees/
+.gsd/metrics.json
+.gsd/state-manifest.json
+.gsd/repo-meta.json
+
 Thumbs.db
 *.swp
 *.swo
@@ -57,3 +65,7 @@ vendor/
 coverage/
 .cache/
 tmp/
+
+# Command Center launcher artifacts
+.browser-profile/
+.logs/

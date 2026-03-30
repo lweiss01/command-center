@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T03",
+  "unitId": "M002/S02/T03",
+  "timestamp": 1774714675738,
+  "passed": false,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "npx tsc --noEmit",
+      "exitCode": 127,
+      "durationMs": 3,
+      "verdict": "fail"
+    }
+  ],
+  "retryAttempt": 1,
+  "maxRetries": 2,
+  "runtimeErrors": [
+    {
+      "source": "bg-shell",
+      "severity": "crash",
+      "message": "[dev-server-3] signal=SIGTERM",
+      "blocking": true
+    }
+  ]
+}

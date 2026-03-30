@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T02",
+  "unitId": "M002/S05/T02",
+  "timestamp": 1774717490091,
+  "passed": false,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "npx tsc --noEmit",
+      "exitCode": 127,
+      "durationMs": 4,
+      "verdict": "fail"
+    },
+    {
+      "command": "echo TS_OK",
+      "exitCode": 127,
+      "durationMs": 2,
+      "verdict": "fail"
+    }
+  ],
+  "retryAttempt": 1,
+  "maxRetries": 2,
+  "runtimeErrors": [
+    {
+      "source": "bg-shell",
+      "severity": "crash",
+      "message": "[command-center-server] signal=SIGTERM",
+      "blocking": true
+    }
+  ]
+}

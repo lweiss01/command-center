@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T02",
+  "unitId": "M002/S04/T02",
+  "timestamp": 1774716546967,
+  "passed": false,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "npx tsc --noEmit",
+      "exitCode": 127,
+      "durationMs": 3,
+      "verdict": "fail"
+    },
+    {
+      "command": "echo 'TypeScript OK'",
+      "exitCode": 127,
+      "durationMs": 2,
+      "verdict": "fail"
+    }
+  ],
+  "retryAttempt": 1,
+  "maxRetries": 2,
+  "runtimeErrors": [
+    {
+      "source": "bg-shell",
+      "severity": "crash",
+      "message": "[server-fresh] signal=SIGTERM",
+      "blocking": true
+    }
+  ]
+}

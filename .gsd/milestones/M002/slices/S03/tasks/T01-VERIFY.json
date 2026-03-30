@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T01",
+  "unitId": "M002/S03/T01",
+  "timestamp": 1774715478729,
+  "passed": false,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "curl -s http://localhost:3001/api/projects/1/plan > check.json",
+      "exitCode": 127,
+      "durationMs": 1,
+      "verdict": "fail"
+    },
+    {
+      "command": "del check.json",
+      "exitCode": 127,
+      "durationMs": 1,
+      "verdict": "fail"
+    }
+  ],
+  "retryAttempt": 1,
+  "maxRetries": 2
+}

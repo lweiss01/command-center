@@ -2747,6 +2747,101 @@ function getStepPreviewContent(componentId, projectName, templateId) {
   }
 }
 
+// ── Bootstrap preflight: safety check before apply ────────────────────────────
+
+const BOOTSTRAP_TARGET_PATHS = (root) => ({
+  'gsd-dir':              { path: path.join(root, '.gsd'),                       kind: 'dir'  },
+  'holistic-dir':         { path: path.join(root, '.holistic'),                   kind: 'dir'  },
+  'gsd-doc-project':      { path: path.join(root, '.gsd', 'PROJECT.md'),          kind: 'file' },
+  'gsd-doc-requirements': { path: path.join(root, '.gsd', 'REQUIREMENTS.md'),     kind: 'file' },
+  'gsd-doc-decisions':    { path: path.join(root, '.gsd', 'DECISIONS.md'),        kind: 'file' },
+  'gsd-doc-knowledge':    { path: path.join(root, '.gsd', 'KNOWLEDGE.md'),        kind: 'file' },
+  'gsd-doc-preferences':  { path: path.join(root, '.gsd', 'preferences.md'),      kind: 'file' },
+});
+
+app.get('/api/projects/:id/bootstrap/preflight', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const componentId = req.query.componentId;
+    if (!componentId || typeof componentId !== 'string') {
+      return res.status(400).json({ ok: false, error: 'componentId query param is required' });
+    }
+
+    const root = validation.project.root_path;
+    const name = validation.project.name;
+
+    // Resolve component
+    const readiness = computeReadiness(validation.project);
+    const component = readiness.components.find((c) => c.id === componentId);
+    if (!component) {
+      return res.status(404).json({ ok: false, error: `Unknown component: ${componentId}` });
+    }
+
+    // Machine-tool components cannot be preflight-checked
+    if (component.kind === 'machine-tool') {
+      return res.json({
+        ok: true, componentId,
+        wouldCreate: null, conflict: false,
+        conflictDetail: 'Machine-level tools cannot be preflight-checked — use the instructions panel.',
+        parentWritable: false, safe: false,
+      });
+    }
+
+    const targets = BOOTSTRAP_TARGET_PATHS(root);
+    const target = targets[componentId];
+
+    if (!target) {
+      return res.status(400).json({ ok: false, error: `No target path defined for component: ${componentId}` });
+    }
+
+    const targetExists = fs.existsSync(target.path);
+    let conflict = false;
+    let conflictDetail = null;
+
+    if (targetExists) {
+      conflict = true;
+      const rel = path.relative(root, target.path).replace(/\\/g, '/');
+      conflictDetail = target.kind === 'file'
+        ? `File already exists at ${rel} — applying will overwrite it.`
+        : `Directory already exists at ${rel} — applying will be a no-op (recursive mkdir).`;
+    }
+
+    // Check parent dir is writable
+    const parentDir = path.dirname(target.path);
+    let parentWritable = false;
+    try {
+      fs.accessSync(parentDir, fs.constants.W_OK);
+      parentWritable = true;
+    } catch {
+      // Parent dir not writable or doesn't exist yet — that's ok for gsd-dir (root must be writable)
+      // Try the root itself
+      try {
+        fs.accessSync(root, fs.constants.W_OK);
+        parentWritable = true;
+      } catch {
+        parentWritable = false;
+      }
+    }
+
+    const safe = !conflict && parentWritable;
+
+    console.log(`[bootstrap/preflight] project=${name} component=${componentId} conflict=${conflict} parentWritable=${parentWritable}`);
+
+    return res.json({
+      ok: true, componentId,
+      wouldCreate: target.path,
+      conflict, conflictDetail,
+      parentWritable, safe,
+    });
+
+  } catch (error) {
+    console.error('[bootstrap/preflight] Failed:', error);
+    return res.status(500).json({ ok: false, error: error instanceof Error ? error.message : 'Preflight failed' });
+  }
+});
+
 app.post('/api/projects/:id/bootstrap/apply', (req, res) => {
   try {
     const validation = getValidatedProjectOrSend(req.params.id, res);

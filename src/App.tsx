@@ -80,6 +80,15 @@ interface ReadinessReport {
   overallReadiness: 'ready' | 'partial' | 'missing'
   components: StackComponent[]; gaps: string[]
 }
+interface PreflightResult {
+  ok: boolean;
+  componentId: string;
+  wouldCreate: string | null;
+  conflict: boolean;
+  conflictDetail: string | null;
+  parentWritable: boolean;
+  safe: boolean;
+}
 interface OpenLoopItem {
   key: string | null; title?: string; status?: string
   owner?: string | null; scope?: string | null; decision?: string
@@ -231,12 +240,16 @@ function App() {
 
   const [bootstrapStepStatus, setBootstrapStepStatus] = useState<Map<string, StepStatus>>(new Map())
   const [bootstrapStepError, setBootstrapStepError] = useState<Map<string, string>>(new Map())
+  const [bootstrapPreflightResult, setBootstrapPreflightResult] = useState<Map<string, PreflightResult | null>>(new Map())
+  const [lastApplyUndo, setLastApplyUndo] = useState<string | null>(null)
   const [bootstrapTemplateId, setBootstrapTemplateId] = useState<'minimal' | 'starter'>('minimal')
 
   // Clear bootstrap step state when the selected project changes
   useEffect(() => {
     setBootstrapStepStatus(new Map())
     setBootstrapStepError(new Map())
+    setBootstrapPreflightResult(new Map())
+    setLastApplyUndo(null)
   }, [selectedProject?.id])
 
   useEffect(() => {
@@ -344,8 +357,29 @@ function App() {
   const setStepError = (stepId: string, err: string) =>
     setBootstrapStepError(prev => new Map(prev).set(stepId, err))
 
+  const handleBootstrapApplyClick = async (step: BootstrapPlanStep) => {
+    if (!selectedProject) return
+    setStepStatus(step.id, 'applying')
+    setBootstrapStepError(prev => { const m = new Map(prev); m.delete(step.id); return m })
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/bootstrap/preflight?componentId=${step.componentId}`)
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        setBootstrapPreflightResult(prev => new Map(prev).set(step.id, data))
+        setStepStatus(step.id, 'confirming')
+      } else {
+        setStepStatus(step.id, 'failed')
+        setStepError(step.id, data.error ?? 'Preflight check failed')
+      }
+    } catch (e) {
+      setStepStatus(step.id, 'failed')
+      setStepError(step.id, e instanceof Error ? e.message : 'Network error during preflight')
+    }
+  }
+
   const handleBootstrapConfirm = async (step: BootstrapPlanStep) => {
     if (!selectedProject) return
+    const preflight = bootstrapPreflightResult.get(step.id)
     setStepStatus(step.id, 'applying')
     try {
       const res = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/bootstrap/apply`, {
@@ -355,9 +389,15 @@ function App() {
       })
       const data = await res.json()
       if (res.ok && data.ok) {
+        // Show undo hint if we have a path
+        if (preflight?.wouldCreate) {
+          const path = preflight.wouldCreate
+          setLastApplyUndo(`To undo: delete ${path}`)
+        }
         // Clear all step state before re-fetching so stale IDs don't bleed into the new plan
         setBootstrapStepStatus(new Map())
         setBootstrapStepError(new Map())
+        setBootstrapPreflightResult(new Map())
         await loadProjectPlan(selectedProject.id, bootstrapTemplateId)
       } else {
         setStepStatus(step.id, 'failed')
@@ -694,6 +734,13 @@ function App() {
                   </span>
                 </div>
 
+                {lastApplyUndo && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', padding: '6px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', ...S.mono, flex: 1 }}>{lastApplyUndo}</span>
+                    <button onClick={() => setLastApplyUndo(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px' }}>×</button>
+                  </div>
+                )}
+
                 {projectPlan.bootstrapPlan.steps.length === 0 ? (
                   <Note variant="ok">No bootstrap actions required for this repo.</Note>
                 ) : (
@@ -743,7 +790,7 @@ function App() {
                                   {/* Action buttons */}
                                   {status === 'pending' && !isMachine && (
                                     <button
-                                      onClick={() => setStepStatus(step.id, 'confirming')}
+                                      onClick={() => handleBootstrapApplyClick(step)}
                                       style={{ marginTop: '8px', fontSize: '11px', padding: '3px 10px', background: C.info, color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
                                     >
                                       Apply
@@ -771,6 +818,17 @@ function App() {
                                     <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg-base)', border: `1px solid ${C.warn}`, borderRadius: '6px' }}>
                                       <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 600, marginBottom: '6px' }}>Confirm: {step.title}</div>
                                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '6px' }}>{step.rationale}</div>
+                                      
+                                      {/* Conflict warning */}
+                                      {bootstrapPreflightResult.get(step.id)?.conflict && (
+                                        <div style={{ marginBottom: '10px', padding: '8px 10px', background: `color-mix(in srgb, ${C.warn} 10%, transparent)`, border: `1px solid ${C.warn}`, borderRadius: '4px' }}>
+                                          <div style={{ fontSize: '11px', fontWeight: 600, color: C.warn, marginBottom: '2px' }}>Conflict detected</div>
+                                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                            {bootstrapPreflightResult.get(step.id)?.conflictDetail}. You can still proceed — the existing file will be overwritten.
+                                          </div>
+                                        </div>
+                                      )}
+
                                       {/* File preview */}
                                       {step.previewContent && step.previewContent.includes('\n') ? (
                                         <div style={{ marginBottom: '10px' }}>
