@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: fix: label project-row phase and continuity signals explicitly
+Committed: feat: implement safe apply engine with preflight checks and conflict warnings (M003-S03)
 
 ## Planned Next Steps
 

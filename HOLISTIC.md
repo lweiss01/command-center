@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: fix: label project-row phase and continuity signals explicitly
+Committed: feat: implement safe apply engine with preflight checks and conflict warnings (M003-S03)
 
 ## What Was Tried
 
@@ -68,7 +68,11 @@ Committed: fix: label project-row phase and continuity signals explicitly
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
+- .gitignore
+- mission_control.db-shm
 - mission_control.db-wal
+- server.js
+- src/App.tsx
 
 ## Pending Work Queue
 
@@ -100,6 +104,6 @@ Committed: fix: label project-row phase and continuity signals explicitly
 
 ## Historical Memory
 
-- Last updated: 2026-03-29T19:19:53.872Z
+- Last updated: 2026-03-30T01:38:27.850Z
 - Last handoff: None yet.
 - Pending sessions remembered: 0

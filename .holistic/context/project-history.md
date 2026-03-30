@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-27T22-46-50-602Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-29T19:20:15.336Z
+- When: 2026-03-30T04:46:57.965Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: fix: label project-row phase and continuity signals explicitly
+- Summary: Committed: feat: implement safe apply engine with preflight checks and conflict warnings (M003-S03)
 - Work done:
 - No completed work recorded.
 - Why it mattered:

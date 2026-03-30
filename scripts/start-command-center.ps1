@@ -131,21 +131,21 @@ $Command 2>&1 | Tee-Object -FilePath '$escapedLogPath' -Append
 }
 
 function Resolve-AppBrowserPath {
-  $edgeCommand = Get-Command msedge.exe -ErrorAction SilentlyContinue
-  if ($edgeCommand) {
-    return $edgeCommand.Source
-  }
-
   $chromeCommand = Get-Command chrome.exe -ErrorAction SilentlyContinue
   if ($chromeCommand) {
     return $chromeCommand.Source
   }
 
+  $edgeCommand = Get-Command msedge.exe -ErrorAction SilentlyContinue
+  if ($edgeCommand) {
+    return $edgeCommand.Source
+  }
+
   $fallbackCandidates = @(
-    'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
-    'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
     'C:\Program Files\Google\Chrome\Application\chrome.exe',
-    'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
+    'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+    'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+    'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
   )
 
   foreach ($candidate in $fallbackCandidates) {
@@ -199,22 +199,12 @@ try {
     $browserPath = Resolve-AppBrowserPath
     if ($browserPath) {
       Write-Status "Opening dedicated app window at $url"
-      $browserProcess = Start-Process -FilePath $browserPath -ArgumentList @('--new-window', "--app=$url") -PassThru
-
-      $stopScriptPath = Join-Path $PSScriptRoot 'stop-command-center.ps1'
-      $escapedStopScriptPath = $stopScriptPath -replace "'", "''"
-      $watcherCommand = @"
-`$ErrorActionPreference = 'SilentlyContinue'
-try { Wait-Process -Id $($browserProcess.Id) } catch {}
-& '$escapedStopScriptPath' -Ports @($BackendPort, $FrontendPort) | Out-Null
-"@
-
-      Start-Process -FilePath $powerShellHost -ArgumentList @('-ExecutionPolicy', 'Bypass', '-Command', $watcherCommand) -WorkingDirectory $repoRoot -WindowStyle Hidden | Out-Null
-      Write-Status "Auto-stop watcher armed (browser PID $($browserProcess.Id)). Services will stop when the app window closes."
+      Start-Process -FilePath $browserPath -ArgumentList @('--new-window', "--app=$url") | Out-Null
+      Write-Status "Use the 'Command Center (Stop)' desktop shortcut to stop the services when done."
     }
     else {
-      Write-Status "No supported browser executable (msedge/chrome) found for auto-stop mode; opening default browser at $url"
-      Write-Status 'Auto-stop is unavailable in this shell. Use npm run cc:stop or the Stop shortcut when done.'
+      Write-Status "No supported browser executable (chrome/msedge) found; opening default browser at $url"
+      Write-Status "Use the 'Command Center (Stop)' desktop shortcut to stop the services when done."
       Start-Process $url | Out-Null
     }
   }
