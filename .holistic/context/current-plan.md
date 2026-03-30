@@ -2,7 +2,7 @@
 
 ## Goal
 
-start with M003-S03
+Proceed with M003-S04: Machine-level setup assistant
 
 ## Latest Status
 
@@ -10,7 +10,7 @@ Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portabil
 
 ## Planned Next Steps
 
-- start with M003-S03
+- Proceed with M003-S04: Machine-level setup assistant
 
 ## Project Impact
 

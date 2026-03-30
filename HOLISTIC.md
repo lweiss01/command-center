@@ -30,7 +30,7 @@ That is the intended end state for this project. Prefer changes that reduce cere
 
 **Resume from last handoff**
 
-start with M003-S03
+Proceed with M003-S04: Machine-level setup assistant
 
 ## Latest Work Status
 
@@ -42,7 +42,7 @@ Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portabil
 
 ## What To Try Next
 
-- start with M003-S03
+- Proceed with M003-S04: Machine-level setup assistant
 
 ## Active Plan
 
@@ -70,6 +70,7 @@ Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portabil
 
 ## Pending Work Queue
 
+- Capture work and prepare a clean handoff.: Proceed with M003-S04: Machine-level setup assistant
 - Capture work and prepare a clean handoff.: start with M003-S03
 
 ## Long-Term Memory
@@ -98,6 +99,6 @@ Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portabil
 
 ## Historical Memory
 
-- Last updated: 2026-03-30T04:49:30.381Z
+- Last updated: 2026-03-30T04:57:18.405Z
 - Last handoff: Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portability. All changes pushed to GitHub.
-- Pending sessions remembered: 1
+- Pending sessions remembered: 2
