@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: add regression guard for backend status/data visibility
+Committed: docs: update project and holistic state
 
 ## Planned Next Steps
 
