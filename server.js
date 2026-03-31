@@ -1550,6 +1550,223 @@ function computeUrgencyScore({ continuity, readiness, openLoops, workflowState }
   return Math.min(1.0, Math.round(score * 100) / 100);
 }
 
+// ── Repo Health Score ─────────────────────────────────────────────────────────
+// Distinct from workflowState.confidence: confidence measures interpretation
+// trustworthiness; health measures whether the repo is in good operating shape.
+// All inputs are already-computed signals — no new probes.
+
+function computeRepoHealth({ continuity, readiness, proofSummary, latestImportRunsByArtifact }) {
+  const breakdown = [];
+
+  // 1. Continuity status (+0 / +0.10 / +0.25)
+  const contribContinuity = continuity.status === 'fresh' ? 0.25
+    : continuity.status === 'stale' ? 0.10 : 0;
+  breakdown.push({
+    signal: 'continuity_status',
+    label: 'Continuity',
+    contribution: contribContinuity,
+    maxContribution: 0.25,
+    status: continuity.status === 'fresh' ? 'ok' : continuity.status === 'stale' ? 'warn' : 'missing',
+    note: continuity.status === 'fresh' ? 'Fresh continuity'
+      : continuity.status === 'stale' ? `Stale${continuity.ageHours != null ? ` (${Math.round(continuity.ageHours)}h ago)` : ''}`
+      : 'No Holistic state found',
+  });
+
+  // 2. Checkpoint hygiene (+0 / +0.05 / +0.15)
+  const hygieneVal = continuity.checkpointHygiene;
+  const contribHygiene = hygieneVal === 'ok' ? 0.15 : hygieneVal === 'stale' ? 0.05 : 0;
+  breakdown.push({
+    signal: 'checkpoint_hygiene',
+    label: 'Checkpoint hygiene',
+    contribution: contribHygiene,
+    maxContribution: 0.15,
+    status: hygieneVal === 'ok' ? 'ok' : hygieneVal === 'stale' ? 'warn' : 'missing',
+    note: hygieneVal === 'ok' ? 'Checkpoint recorded'
+      : hygieneVal === 'stale' ? 'Checkpoint is stale'
+      : 'No checkpoint recorded',
+  });
+
+  // 3. Readiness (+0 / +0.10 / +0.20)
+  const contribReadiness = readiness.overallReadiness === 'ready' ? 0.20
+    : readiness.overallReadiness === 'partial' ? 0.10 : 0;
+  breakdown.push({
+    signal: 'readiness',
+    label: 'Readiness',
+    contribution: contribReadiness,
+    maxContribution: 0.20,
+    status: readiness.overallReadiness === 'ready' ? 'ok'
+      : readiness.overallReadiness === 'partial' ? 'warn' : 'danger',
+    note: readiness.overallReadiness === 'ready' ? 'All required components present'
+      : readiness.overallReadiness === 'partial' ? `${readiness.gaps.length} gap(s): ${readiness.gaps.slice(0, 2).join(', ')}${readiness.gaps.length > 2 ? ` +${readiness.gaps.length - 2} more` : ''}`
+      : 'Required components missing',
+  });
+
+  // 4. Import recency (+0 / +0.10 / +0.20)
+  const now = Date.now();
+  const msPerDay = 24 * 60 * 60 * 1000;
+  let mostRecentImportMs = null;
+  if (latestImportRunsByArtifact) {
+    const runs = [
+      latestImportRunsByArtifact.milestones,
+      latestImportRunsByArtifact.requirements,
+      latestImportRunsByArtifact.decisions,
+    ].filter(Boolean);
+    for (const run of runs) {
+      const ts = run.completedAt ? Date.parse(run.completedAt) : Number.NaN;
+      if (!Number.isNaN(ts)) {
+        if (mostRecentImportMs === null || ts > mostRecentImportMs) mostRecentImportMs = ts;
+      }
+    }
+  }
+  const importAgeDays = mostRecentImportMs != null ? (now - mostRecentImportMs) / msPerDay : null;
+  const contribImport = importAgeDays == null ? 0
+    : importAgeDays <= 7 ? 0.20
+    : importAgeDays <= 30 ? 0.10 : 0;
+  breakdown.push({
+    signal: 'import_recency',
+    label: 'Import recency',
+    contribution: contribImport,
+    maxContribution: 0.20,
+    status: importAgeDays == null ? 'missing'
+      : importAgeDays <= 7 ? 'ok'
+      : importAgeDays <= 30 ? 'warn' : 'danger',
+    note: importAgeDays == null ? 'Never imported'
+      : importAgeDays <= 1 ? 'Imported today'
+      : `${Math.round(importAgeDays)} days since last import`,
+  });
+
+  // 5. Proof coverage (+0.00–+0.20)
+  const provenCount = proofSummary?.proven ?? 0;
+  const totalCount = proofSummary?.total ?? 0;
+  const proofRatio = totalCount > 0 ? provenCount / totalCount : 0;
+  const contribProof = Math.round(proofRatio * 0.20 * 100) / 100;
+  breakdown.push({
+    signal: 'proof_coverage',
+    label: 'Proof coverage',
+    contribution: contribProof,
+    maxContribution: 0.20,
+    status: proofRatio >= 0.5 ? 'ok' : proofRatio > 0 ? 'warn' : totalCount === 0 ? 'missing' : 'danger',
+    note: totalCount === 0 ? 'No milestones'
+      : `${provenCount}/${totalCount} milestones proven`,
+  });
+
+  const rawScore = breakdown.reduce((sum, c) => sum + c.contribution, 0);
+  const score = Math.min(1.0, Math.round(rawScore * 100) / 100);
+  const grade = score >= 0.80 ? 'A' : score >= 0.60 ? 'B' : score >= 0.35 ? 'C' : 'D';
+
+  return { score, grade, breakdown };
+}
+
+// ── Repair Queue ──────────────────────────────────────────────────────────────
+// Returns a prioritized list of concrete fixes. Priority 1 = fix this first.
+// Consumes already-computed signals — pure function, no side effects.
+
+function computeRepairQueue({ continuity, readiness, proofSummary, latestImportRunsByArtifact, milestones }) {
+  const queue = [];
+
+  const now = Date.now();
+  const msPerDay = 24 * 60 * 60 * 1000;
+
+  // Determine import age
+  let mostRecentImportMs = null;
+  if (latestImportRunsByArtifact) {
+    const runs = [
+      latestImportRunsByArtifact.milestones,
+      latestImportRunsByArtifact.requirements,
+      latestImportRunsByArtifact.decisions,
+    ].filter(Boolean);
+    for (const run of runs) {
+      const ts = run.completedAt ? Date.parse(run.completedAt) : Number.NaN;
+      if (!Number.isNaN(ts)) {
+        if (mostRecentImportMs === null || ts > mostRecentImportMs) mostRecentImportMs = ts;
+      }
+    }
+  }
+  const importAgeDays = mostRecentImportMs != null ? Math.round((now - mostRecentImportMs) / msPerDay) : null;
+
+  // 1. Critical: missing continuity
+  if (continuity.status === 'missing') {
+    queue.push({
+      priority: 1, severity: 'critical',
+      action: 'Initialize continuity',
+      rationale: 'No Holistic state found — resuming blind risks duplicating work or missing known blockers.',
+      targetPanel: 'continuity',
+    });
+  }
+
+  // 2. Critical: readiness missing
+  if (readiness.overallReadiness === 'missing') {
+    queue.push({
+      priority: 2, severity: 'critical',
+      action: 'Bootstrap workflow stack',
+      rationale: 'Required workflow components are missing — cockpit recommendations are unreliable without them.',
+      targetPanel: 'bootstrap',
+    });
+  }
+
+  // 3. High: stale continuity + missing checkpoint
+  if (continuity.status === 'stale' && continuity.checkpointHygiene === 'missing') {
+    queue.push({
+      priority: 3, severity: 'high',
+      action: 'Run handoff to record session context',
+      rationale: 'Continuity exists but no checkpoint has been recorded — context will be lost on next session.',
+      targetPanel: 'continuity',
+    });
+  }
+
+  // 4. High: readiness partial with required gaps
+  if (readiness.overallReadiness === 'partial' && readiness.gaps.length > 0) {
+    queue.push({
+      priority: 4, severity: 'high',
+      action: `Apply repo-local bootstrap steps (${readiness.gaps.length} gap${readiness.gaps.length !== 1 ? 's' : ''})`,
+      rationale: `Required components missing: ${readiness.gaps.slice(0, 2).join(', ')}${readiness.gaps.length > 2 ? ` +${readiness.gaps.length - 2} more` : ''}.`,
+      targetPanel: 'bootstrap',
+    });
+  }
+
+  // 5. Medium: never imported
+  if (importAgeDays === null) {
+    queue.push({
+      priority: 5, severity: 'medium',
+      action: 'Import planning artifacts',
+      rationale: 'No milestones, requirements, or decisions have been imported yet — cockpit interpretation is blind.',
+      targetPanel: 'import',
+    });
+  }
+
+  // 6. Medium: imports older than 14 days
+  if (importAgeDays != null && importAgeDays > 14) {
+    queue.push({
+      priority: 6, severity: 'medium',
+      action: 'Re-import planning artifacts',
+      rationale: `Imports are ${importAgeDays} days old — cockpit interpretation may not reflect current repo state.`,
+      targetPanel: 'import',
+    });
+  }
+
+  // 7. Medium: milestones exist but none proven
+  if (milestones.length > 0 && (proofSummary == null || proofSummary.proven === 0)) {
+    queue.push({
+      priority: 7, severity: 'medium',
+      action: 'Run Import Summaries',
+      rationale: `${milestones.length} milestone${milestones.length !== 1 ? 's' : ''} imported but none proven — run Import Summaries after completing work.`,
+      targetPanel: 'proof',
+    });
+  }
+
+  // 8. Low: stale continuity (hygiene ok or stale — not missing)
+  if (continuity.status === 'stale' && continuity.checkpointHygiene !== 'missing') {
+    queue.push({
+      priority: 8, severity: 'low',
+      action: 'Run a handoff before switching context',
+      rationale: `Continuity is ${Math.round(continuity.ageHours ?? 0)}h old — a fresh handoff improves resume quality next session.`,
+      targetPanel: 'continuity',
+    });
+  }
+
+  return queue.sort((a, b) => a.priority - b.priority);
+}
+
 function getValidatedProjectOrSend(projectIdParam, res) {
   const projectId = parseProjectId(projectIdParam);
   if (projectId === null) {
