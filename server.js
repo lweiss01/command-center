@@ -875,7 +875,7 @@ function serializeImportRunRow(importRun) {
   };
 }
 
-function computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact }) {
+function computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact, proofSummary }) {
   // evidence: explicit signals that produced the phase and confidence — never empty if confidence < 1
   const evidence = [];
   // reasons: human-readable explanations for the phase choice
@@ -1010,6 +1010,13 @@ function computeWorkflowState({ milestones, requirements, decisions, continuity,
     confidence += 0.15;
   }
   // missing continuity: +0
+
+  // Proof signal: +0.10 when at least one milestone has verified completion evidence
+  if (proofSummary && proofSummary.proven > 0) {
+    confidence += 0.10;
+    evidence.push({ label: 'Proof', value: `${proofSummary.proven}/${proofSummary.total} milestones proven` });
+    reasons.push(`${proofSummary.proven} milestone(s) have verified completion evidence.`);
+  }
 
   // Cap and round to 2 decimal places
   confidence = Math.min(1, Math.round(confidence * 100) / 100);
@@ -3298,7 +3305,15 @@ app.get('/api/projects/:id/plan', (req, res) => {
     };
     const continuity = computeContinuity(validation.project);
     const readiness = computeReadiness(validation.project);
-    const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact });
+
+    // Proof summary: count proven vs claimed milestones for confidence signal
+    const proofSummary = milestones.length > 0 ? {
+      proven: milestones.filter(m => m.proofLevel === 'proven').length,
+      claimed: milestones.filter(m => m.status === 'done' && m.proofLevel !== 'proven').length,
+      total: milestones.length,
+    } : null;
+
+    const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact, proofSummary });
     const nextAction = computeNextAction({ milestones, requirements, decisions, workflowState, continuity, readiness });
     const bootstrapTemplateId = req.query.templateId === 'starter' ? 'starter' : 'minimal';
     const bootstrapPlan = computeBootstrapPlan({ workflowState, readiness, continuity, templateId: bootstrapTemplateId, projectName: validation.project.name });
@@ -3326,6 +3341,7 @@ app.get('/api/projects/:id/plan', (req, res) => {
       nextAction,
       bootstrapPlan: { ...bootstrapPlan, driftCount: bootstrapDriftCount },
       openLoops,
+      proofSummary,
       platform: process.platform,
     });
   } catch (error) {

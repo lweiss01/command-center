@@ -12,7 +12,8 @@ interface Project {
 interface Milestone {
   id: number; projectId: number; externalKey: string | null; title: string
   description: string | null; status: 'planned' | 'active' | 'blocked' | 'done' | 'draft'
-  origin: string; confidence: number; needsReview: boolean; sortOrder: number
+  proofLevel: 'claimed' | 'proven'; origin: string; confidence: number
+  needsReview: boolean; sortOrder: number
   sourceArtifactId: number | null; createdAt: string; updatedAt: string
 }
 interface Requirement {
@@ -34,6 +35,7 @@ interface ImportRun {
 interface WorkflowState {
   phase: 'no-data' | 'import-only' | 'active' | 'stalled' | 'blocked'
   confidence: number; reasons: string[]; evidence: { label: string; value: string }[]
+  proofSummary?: { proven: number; claimed: number; total: number } | null
 }
 interface ContinuityState {
   status: 'fresh' | 'stale' | 'missing'; freshAt: string | null; ageHours: number | null
@@ -117,6 +119,7 @@ interface ProjectPlan {
   latestImportRunsByArtifact: { milestones: ImportRun | null; requirements: ImportRun | null; decisions: ImportRun | null }
   workflowState: WorkflowState; continuity: ContinuityState
   nextAction: NextAction; bootstrapPlan: BootstrapPlan; readiness: ReadinessReport; openLoops: OpenLoops
+  proofSummary: { proven: number; claimed: number; total: number } | null
   platform: string
 }
 interface PortfolioEntry {
