@@ -258,6 +258,7 @@ function App() {
   const [proofLinks, setProofLinks] = useState<Array<{reqKey:string;proofText:string;sourceTitle:string;appliedAt:string}>>([])
   const [proofReqOpen, setProofReqOpen] = useState(false)
   const [importSummariesInFlight, setImportSummariesInFlight] = useState(false)
+  const [importAllInFlight, setImportAllInFlight] = useState(false)
   const [newTask, setNewTask] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [projectsLoading, setProjectsLoading] = useState(true)
@@ -494,6 +495,16 @@ function App() {
     finally { setImportSummariesInFlight(false) }
   }
 
+  const handleImportAll = async () => {
+    if (!selectedProject) return
+    setImportAllInFlight(true)
+    try {
+      await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/import-all`, { method: 'POST' })
+      await loadProjectPlan(selectedProject.id, bootstrapTemplateId)
+    } catch { /* non-fatal */ }
+    finally { setImportAllInFlight(false) }
+  }
+
   const handleScanWorkspace = async () => {
     setScanInFlight(true); setProjectsError(null)
     try {
@@ -573,6 +584,14 @@ function App() {
 
   const blockers         = projectPlan?.nextAction.blockers ?? []
   const hasBlockers      = blockers.length > 0
+  const needsOnboarding  = (() => {
+    if (!projectPlan) return false
+    const hasNoImports = projectPlan.milestones.length === 0 && projectPlan.requirements.length === 0 && projectPlan.decisions.length === 0
+    const hasDocs = projectPlan.readiness.components.some(c =>
+      (c.id === 'gsd-doc-project' || c.id === 'gsd-doc-requirements' || c.id === 'gsd-doc-decisions') && c.status === 'present'
+    )
+    return hasNoImports && hasDocs
+  })()
   const suggestedCommand = (() => {
     if (!projectPlan?.nextAction) return null
     if (blockers.some(b => /holistic|gsd|tool/i.test(b))) return 'npm run cc:doctor'
@@ -824,6 +843,23 @@ function App() {
                 ))}
               </div>
             </div>
+
+            {/* First-run onboarding card */}
+            {needsOnboarding && (
+              <div style={{ marginBottom: '24px', padding: '20px 24px', background: `color-mix(in srgb, ${C.info} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${C.info} 30%, transparent)`, borderRadius: '8px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-title)', marginBottom: '8px' }}>Planning Docs Detected</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
+                  This repository contains GSD planning documents, but they haven't been imported yet. Import them now to populate the cockpit.
+                </div>
+                <button
+                  disabled={importAllInFlight}
+                  onClick={handleImportAll}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: C.info, color: '#000', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: 500, cursor: importAllInFlight ? 'not-allowed' : 'pointer', opacity: importAllInFlight ? 0.7 : 1, fontFamily: 'var(--font-mono)' }}
+                >
+                  {importAllInFlight ? 'Importing…' : 'Import All'}
+                </button>
+              </div>
+            )}
 
             {/* Next Action — hero, first */}
             <Section title="Next Action" sub="Interpreted from workflow, readiness, continuity, and blockers">

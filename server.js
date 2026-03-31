@@ -3131,6 +3131,50 @@ app.get('/api/projects/:id/import-runs', (req, res) => {
   }
 });
 
+app.post('/api/projects/:id/import-all', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const artifacts = listArtifactsByProjectId.all(validation.projectId);
+    const hasType = (type) => artifacts.some(a => a.artifact_type === type);
+    
+    const results = { imported: [], warnings: [] };
+
+    if (hasType('gsd_project')) {
+      try {
+        importGsdProjectMilestones(validation.projectId);
+        results.imported.push('milestones');
+      } catch (error) {
+        results.warnings.push(`milestones: ${error instanceof Error ? error.message : 'failed'}`);
+      }
+    }
+
+    if (hasType('gsd_requirements')) {
+      try {
+        importGsdRequirements(validation.projectId);
+        results.imported.push('requirements');
+      } catch (error) {
+        results.warnings.push(`requirements: ${error instanceof Error ? error.message : 'failed'}`);
+      }
+    }
+
+    if (hasType('gsd_decisions')) {
+      try {
+        importGsdDecisions(validation.projectId);
+        results.imported.push('decisions');
+      } catch (error) {
+        results.warnings.push(`decisions: ${error instanceof Error ? error.message : 'failed'}`);
+      }
+    }
+
+    return res.json({ ok: true, ...results });
+  } catch (error) {
+    console.error('Failed to import all artifacts:', error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal Server Error' });
+  }
+});
+
 app.post('/api/projects/:id/import-gsd-project', (req, res) => {
   try {
     const validation = getValidatedProjectOrSend(req.params.id, res);
