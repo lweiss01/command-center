@@ -11,7 +11,7 @@ It is intentionally procedural:
 
 If you only need install/start/stop commands, see [README.md](../README.md).
 
-Tip: the app header includes a **User Guide** button that opens this guide in a new tab for side-by-side use.
+Tip: the app header includes a **User Guide** button that opens this guide in a new tab.
 
 ---
 
@@ -19,11 +19,12 @@ Tip: the app header includes a **User Guide** button that opens this guide in a 
 
 Your target is to move a repo into a **clear execution state**:
 
-- Workflow Readiness = `ready`
+- Readiness = `ready`
 - Continuity Status = `fresh` (or at least not missing)
 - Checkpoint Hygiene = `ok` (or at least not missing)
 - Workflow State = `active`
-- Next Action = `Clear` (or blockers fully understood and intentionally accepted)
+- Proof = at least one milestone `proven`
+- Next Action = `Clear`
 
 When any panel is not in that state, Command Center is telling you where risk is.
 
@@ -35,38 +36,41 @@ For each repo you plan to touch today:
 
 1. Open Command Center and select the repo card.
 2. Check panels in this order:
-   1. **Workflow Readiness**
-   2. **Continuity**
-   3. **Workflow State**
-   4. **Next Action**
-   5. **Open Loops**
+   1. **Readiness** — is the workflow stack present?
+   2. **Continuity** — is context safe to resume?
+   3. **Workflow State** — what phase and confidence?
+   4. **Proof** — what is actually proven vs only written down?
+   5. **Next Action** — what should happen right now?
+   6. **Open Loops** — what is still unresolved?
 3. Apply the remediation steps in this guide.
 4. Re-check each panel after each fix.
 5. Start implementation only after Next Action is clear enough.
 
-Why this order: readiness and continuity are foundational; phase interpretation is less trustworthy if either is broken.
+Why this order: readiness and continuity are foundational. Phase and proof are less trustworthy if either is broken.
 
 ---
 
-## 3) Exactly how to “re-check” after a change
+## 3) Exactly how to "re-check" after a change
 
-You’ll see this phrase repeatedly below. Here is the concrete re-check loop:
+You'll see this phrase repeatedly below. Here is the concrete re-check loop:
 
-1. If you changed repo files or tooling outside the app, click **Scan Workspace** (or the header refresh action).
+1. If you changed repo files or tooling outside the app, click **Scan Workspace**.
 2. Re-select the project card.
 3. In the project detail view:
-   - review **Workflow Readiness** badge and gaps,
+   - review **Readiness** badge and gaps,
    - review **Continuity** badge/hygiene note,
    - review **Workflow State** phase + reasons,
+   - review **Proof** claimed/proven counts,
    - review **Next Action** blockers.
-4. If you edited planning docs (`.gsd/PROJECT.md`, `REQUIREMENTS.md`, `DECISIONS.md`), run the relevant **Import** buttons in Import Controls.
-5. Re-check until the target state is reached.
+4. If you edited planning docs (`.gsd/PROJECT.md`, `REQUIREMENTS.md`, `DECISIONS.md`), run the relevant **Import** buttons.
+5. After completing milestone/slice work, click **Import Summaries** in the Proof panel.
+6. Re-check until the target state is reached.
 
 ---
 
-## 4) Workflow Readiness (first gate)
+## 4) Readiness (first gate)
 
-## What you can see
+### What you can see
 
 Readiness badge values:
 
@@ -74,453 +78,357 @@ Readiness badge values:
 - `partial`
 - `missing`
 
-You also see component-level availability and required gaps.
+You also see a per-component checklist of what is present (✓) or absent (✗), with required components marked `(req)`.
 
-## Why this matters
+### Why this matters
 
-Readiness tells you whether the repo + machine has enough workflow infrastructure to trust and act on cockpit recommendations.
+Readiness tells you whether the repo and machine have enough workflow infrastructure to trust cockpit recommendations.
 
-## What Command Center checks (required)
+### What Command Center checks (required)
 
-A repo is considered fully ready only when required checks are present:
+A repo is considered fully ready only when all required components are present:
 
 - `.gsd/` directory
 - `.gsd/PROJECT.md`
-- `.holistic/` directory
-- Holistic tool available on machine
-- GSD tool available on machine
+- `.holistic/` directory (repo-local)
+- Holistic tool callable on machine
+- GSD tool callable on machine
 
-If one or more required components are absent, readiness drops.
+Optional components (shown but not required): GSD v2 workflow file, requirements, decisions, knowledge docs, Beads directory.
 
-## What to do for each value
+### What to do for each value
 
-### A) Readiness = `ready`
+#### A) Readiness = `ready`
 
-Do this:
 1. No readiness remediation needed.
 2. Move to **Continuity**.
 
-Verify:
-- Readiness badge stays `ready` after workspace rescan.
+#### B) Readiness = `partial`
 
-### B) Readiness = `partial`
-
-Do this:
-1. Read the missing required components listed as gaps.
-2. Fix repo-level gaps first:
-   - create missing directories/files if absent.
-3. Fix machine-tool gaps second:
-   - ensure required CLI tools are installed and callable.
+1. Read the missing required components listed in the Gaps section.
+2. Fix repo-level gaps first — use the **Bootstrap Plan** panel (see Section 11) to apply fixes with guided confirmation.
+3. Fix machine-tool gaps second using the **Bootstrap Plan** machine-level assistant.
 4. Re-scan and re-check.
 
-Verify:
-- Gaps list shrinks.
-- Readiness changes to `ready`.
+Verify: gaps list shrinks, readiness moves to `ready`.
 
-### C) Readiness = `missing` (hard blocker)
+#### C) Readiness = `missing` (hard blocker)
 
-Do this in order:
+Use the **Bootstrap Plan** panel — it will detect all gaps and generate a staged repair plan with one-click apply.
 
-1. **Create minimal repo workflow skeleton** (inside the target repo root):
+Alternatively, bootstrap manually:
 
 ```powershell
 mkdir .gsd -ErrorAction SilentlyContinue
 mkdir .holistic -ErrorAction SilentlyContinue
-if (-not (Test-Path .gsd/PROJECT.md)) { "# Project" | Out-File .gsd/PROJECT.md -Encoding utf8 }
+if (-not (Test-Path .gsd/PROJECT.md)) { "# Project`n`n## Milestones`n- [ ] M001: First milestone" | Out-File .gsd/PROJECT.md -Encoding utf8 }
 ```
 
-2. Ensure required tools are callable in your shell.
-
-Try these checks in order (Windows examples):
+Then check tools are callable:
 
 ```powershell
-holistic --version
-holistic.cmd --version
+gsd --version        # or gsd.cmd --version on Windows
+holistic --version   # or holistic.cmd --version on Windows
 ```
 
-```powershell
-gsd --version
-gsd.cmd --version
-```
-
-If both variants fail, treat tooling as missing in this shell and remediate install/PATH before expecting readiness to become `ready`.
-
-3. If your repo includes repo-local holistic helper scripts, run the repo-local resume flow to initialize continuity:
-
-```powershell
-.\.holistic\system\holistic.cmd resume --agent gsd
-```
-
-If that script path does not exist, use your installed holistic command variant from this repo root instead:
-
-```powershell
-holistic resume --agent gsd
-# or
-holistic.cmd resume --agent gsd
-```
-
-4. Return to Command Center and run the re-check loop (Section 3).
-
-Verify:
-- Readiness is no longer `missing`.
-- Required gaps are gone or reduced to `partial` while you finish remediation.
-
-If still failing:
-- confirm you are modifying the same repo path shown on the project card,
-- confirm files are at exact paths (`.gsd/PROJECT.md`, `.holistic/`),
-- rescan workspace again.
+Verify: readiness is no longer `missing`.
 
 ---
 
 ## 5) Continuity (resume safety gate)
 
-## What you can see
+### What you can see
 
-### Status values
-- `fresh`
-- `stale`
-- `missing`
+**Status values:** `fresh` / `stale` / `missing`
 
-### Checkpoint hygiene values
-- `ok`
-- `stale`
-- `missing`
+**Checkpoint hygiene values:** `ok` / `stale` / `missing`
 
-## Why this matters
+Continuity also shows:
+- age in hours since last activity
+- latest work summary from Holistic state
+- handoff command (pre-populated for your OS)
 
-Continuity protects you from resuming blind and duplicating work.
+### Why this matters
 
-- `fresh`: recent continuity activity (good resume signal)
-- `stale`: context exists but old
-- `missing`: no continuity state found
+Continuity protects you from resuming blind and duplicating work or missing known blockers.
 
-Checkpoint hygiene reflects whether a usable checkpoint/handoff record exists.
+### What to do by combination
 
-## What to do by combination
+#### A) `fresh` + `ok` (ideal)
 
-### A) `fresh` + `ok` (best)
+Continue to Workflow State. No remediation needed.
 
-Do this:
-1. Continue to Workflow State.
-2. No continuity remediation required.
+#### B) `fresh` + `stale`
 
-Verify:
-- Continuity note shows recent update/checkpoint.
+Continue work. Add a checkpoint before switching context.
 
-### B) `fresh` + `stale`
+#### C) `stale` + `ok`
 
-Do this:
-1. Continue work.
-2. Add a checkpoint/handoff before context switching.
+Read latest work context before touching code. Review open loops. Add a fresh handoff when done.
 
-Verify:
-- End-of-session handoff updates hygiene toward `ok`.
+#### D) `stale` + `stale`
 
-### C) `stale` + `ok`
+Spend 2–5 minutes reconstructing context from roadmap + summaries. Make your first action a verification step.
 
-Do this:
-1. Continue, but first read latest work context.
-2. Review open loops before touching code.
-3. Add fresh handoff when done.
+#### E) `stale` + `missing` (hard blocker)
 
-Verify:
-- No Next Action hard blocker.
-
-### D) `stale` + `stale`
-
-Do this:
-1. Spend 2–5 minutes reconstructing context from roadmap + summaries.
-2. Make your first action a verification step.
-3. Execute and then handoff.
-
-Verify:
-- Reasoning panel no longer flags stale continuity as primary risk after next session.
-
-### E) `stale` + `missing` (hard blocker)
-
-Do this:
-1. Run repo-local handoff command from the Continuity panel (or use):
+Run the handoff command shown in the Continuity panel, or:
 
 ```powershell
 .\.holistic\system\holistic.cmd handoff
 ```
 
-2. Re-check continuity status/hygiene.
-3. Continue only when blocker clears.
+Re-check until the blocker clears.
 
-Verify:
-- Next Action no longer says “Refresh continuity before continuing.”
+Verify: Next Action no longer says "Refresh continuity before continuing."
 
-### F) `missing` continuity (hard blocker)
+#### F) `missing` (hard blocker)
 
-Do this:
-1. Confirm `.holistic/state.json` exists in the repo.
-2. If absent, initialize continuity using repo-local helper:
+Initialize continuity using the repo-local helper:
 
 ```powershell
 .\.holistic\system\holistic.cmd resume --agent gsd
-```
-
-3. Run handoff once there is active state:
-
-```powershell
 .\.holistic\system\holistic.cmd handoff
 ```
 
-4. Re-check in UI.
-
-Verify:
-- Continuity status is no longer `missing`.
+Verify: continuity status is no longer `missing`.
 
 ---
 
 ## 6) Workflow State (phase + confidence)
 
-## What you can see
+### What you can see
 
-Phase values:
-- `no-data`
-- `import-only`
-- `active`
-- `stalled`
-- `blocked`
+**Phase values:** `no-data` / `import-only` / `active` / `stalled` / `blocked`
 
-Confidence bands:
-- 70–100% (high)
-- 40–69% (medium)
-- 0–39% (low)
+**Confidence:** 0–100%. Higher is more trustworthy.
 
-You also see **Evidence** and **Reasons**. These are your debugging surfaces.
+Confidence is built from additive signals:
+- Milestones imported: +15%
+- Requirements imported: +20%
+- Decisions imported: +10%
+- Recent import (within 3 days): +25%
+- Fresh continuity: +30%
+- Proven milestones (M004+): +10%
+- Capped at 100%
 
-## Why this matters
+You also see **Evidence** (the signals that produced this reading) and **Reasons** (plain-language explanation).
 
-Phase tells current execution posture; confidence tells how trustworthy that interpretation is.
+### Why this matters
 
-## What to do by phase
+Phase tells current execution posture. Confidence tells how trustworthy that interpretation is.
 
-### A) `no-data`
+### What to do by phase
 
-Do this:
-1. Go to Import Controls.
-2. Run all three imports: milestones, requirements, decisions.
-3. Re-check phase/confidence.
+#### A) `no-data`
 
-Verify:
-- Evidence now includes imported artifact counts.
+Run all three imports: milestones, requirements, decisions (Import section at the bottom of the detail panel). Re-check.
 
-### B) `import-only`
+#### B) `import-only`
 
-Do this:
-1. Import whichever artifact classes are missing (usually requirements + decisions).
-2. Resolve import warnings.
-3. Re-check.
+Import whichever artifact classes are missing. Resolve any import warnings. Re-check.
 
-Verify:
-- Phase moves toward `active`.
-- Confidence increases.
+#### C) `active`
 
-### C) `active`
+Move to Next Action. Execute recommended work. Keep continuity healthy.
 
-Do this:
-1. Move directly to Next Action.
-2. Execute recommended work.
-3. Keep continuity healthy during execution.
+#### D) `stalled`
 
-Verify:
-- Next Action remains clear or only shows soft blockers.
+Refresh continuity (handoff/checkpoint). Re-import stale artifacts. Re-check Evidence/Reasons.
 
-### D) `stalled`
+#### E) `blocked`
 
-Do this:
-1. Refresh continuity (handoff/checkpoint).
-2. Re-import stale planning artifacts.
-3. Re-check Evidence/Reasons.
-
-Verify:
-- Stale reasons disappear or are reduced.
-
-### E) `blocked`
-
-Do this:
-1. Read Next Action blockers line-by-line.
-2. Resolve readiness/continuity blockers first.
-3. Re-check.
-
-Verify:
-- Phase leaves `blocked`.
+Read Next Action blockers line by line. Resolve readiness/continuity blockers first. Re-check.
 
 ---
 
-## 7) Next Action (execution trigger)
+## 7) Proof (claimed vs verified)
 
-## What you can see
+### What you can see
 
-- Status badge: `Blocked` or `Clear`
-- Action sentence
-- Rationale sentence
-- Blockers list
-- Suggested command (when available)
+- Summary pills: **N proven** (green) / **N claimed-only** (muted) / total milestones
+- Per-milestone list: ✓ (proven) or ○ (claimed) with title and proof level badge
+- **Import Summaries** button — re-parses SUMMARY.md files to refresh proof state
+- Collapsible **Requirement proof** section — links each validated requirement to the slice that proved it, with the exact proof text
 
-## Why this matters
+### Why this matters
 
-This is the highest-value panel for deciding immediate work.
+Command Center distinguishes between "a milestone is marked done in PROJECT.md" (claimed) and "a SUMMARY.md file exists for that milestone with `verification_result: passed`" (proven). A high-confidence cockpit needs both.
 
-## Action patterns and exact response
+### Proof level definitions
 
-### “Bootstrap the workflow stack before continuing.”
+| Level | Meaning |
+|---|---|
+| `claimed` | Milestone status is `done` in imported planning data, but no passing SUMMARY file has been parsed |
+| `proven` | At least one slice SUMMARY for this milestone has `verification_result: passed` — evidence exists in the repo |
 
-Do this:
-1. Resolve all required readiness gaps (Section 4C).
-2. Re-check.
+### What to do
 
-Verify:
-- Blocker list clears or shrinks.
+**After completing milestone or slice work:**
+1. Click **Import Summaries** in the Proof panel.
+2. Verify the milestone upgrades from `claimed` to `proven`.
+3. Expand Requirement proof to confirm validated requirements have traceability entries.
 
-### “Refresh continuity before continuing.”
+**If a milestone stays `claimed` after Import Summaries:**
+- Confirm the SUMMARY.md file exists under `.gsd/milestones/M###/slices/S##/S##-SUMMARY.md`
+- Confirm the frontmatter contains `verification_result: passed`
+- Run Scan Workspace, then Import Summaries again
 
-Do this:
-1. Run handoff/resume flow (Section 5E/5F).
-2. Re-check continuity and Next Action.
-
-Verify:
-- No continuity blocker remains.
-
-### “Import planning artifacts.”
-
-Do this:
-1. Use Import Controls.
-2. Import missing artifact classes.
-3. Resolve warnings.
-4. Re-check Workflow State.
-
-Verify:
-- Imported counts appear and phase improves.
-
-### “Import requirements for fuller planning coverage.”
-
-Do this:
-1. Run Requirements import.
-2. Confirm requirements now appear in imported list.
-3. Re-check confidence.
-
-Verify:
-- Requirements count > 0 and confidence increases.
-
-### “Review the current plan and continue execution.”
-
-Do this:
-1. Use open loops to choose highest-impact pending item.
-2. Execute that item in your normal workflow toolchain.
-3. Update continuity/handoff before switching context.
-
-Verify:
-- Open loops trend down over sessions.
+**If requirement proof links are missing:**
+- Confirm the relevant slice SUMMARY has a `## Requirements Validated` section
+- Format: `- R001 — <proof text describing what was verified>`
+- Re-run Import Summaries
 
 ---
 
-## 8) Open Loops (work risk map)
+## 8) Bootstrap Plan (workflow stack repair)
 
-## What you can see
+### What you can see
 
-Summary counts:
-- unresolved requirements
-- pending milestones
-- blocked milestones
-- deferred items
+- Overall status badge: `ready` / `needs-bootstrap` / `blocked`
+- Summary counts: N repo-local steps, N machine-level steps
+- Drift badge (if any previously applied component is now missing again)
+- **Template selector**: `minimal` (placeholders only) / `starter` (more complete stubs)
+- Per-step cards with rationale, risk level, and action buttons
+- **Action history** toggle — collapsible audit trail of every applied bootstrap action
+
+### How the staged plan works
+
+Bootstrap steps are always ordered repo-local first, machine-level second:
+
+**Repo-local steps** (can be applied automatically):
+- Create `.gsd/` directory
+- Create GSD planning docs (`PROJECT.md`, `REQUIREMENTS.md`, `DECISIONS.md`, `KNOWLEDGE.md`, `preferences.md`)
+- Initialize Holistic (`.holistic/`)
+
+**Machine-level steps** (instructions only — cannot be applied automatically):
+- Install GSD CLI
+- Install Holistic CLI
+
+### Stage gate
+
+The machine-level section is locked (buttons greyed, warning banner shown) until all repo-local steps are complete. This ensures you have a functioning repo skeleton before touching machine-level configuration.
+
+### Applying a repo-local step
+
+1. Click **Apply** on a step.
+2. A confirmation panel opens showing:
+   - the step's rationale
+   - a conflict warning (if the file/directory already exists)
+   - a file preview of what will be created (for doc stubs)
+   - the risk level
+3. Click **Confirm** to apply, or **Cancel** to abort.
+4. The step marks as done; the plan refreshes.
+
+To undo: delete the path shown in the undo hint (appears after successful apply).
+
+### Machine-level install steps
+
+1. Repo-local steps must all be complete first (stage gate).
+2. Click **View Instructions** on a machine-level step.
+3. An install panel opens showing:
+   - the recommended install command for your OS (npm / brew / winget tab selector)
+   - a **Copy** button (clipboard, 2s feedback)
+4. Run the command in your terminal.
+5. Click **I installed this — verify** to re-probe tool presence.
+   - If found: step marks as done.
+   - If not found: inline error with guidance to retry.
+
+### Drift detection
+
+If you previously applied a step and the created file/directory is later deleted or moved, the action history entry shows a `drift` indicator and a warning appears on the step card. Re-apply the step to clear the drift.
+
+---
+
+## 9) Continuity Panel (detail)
+
+### What you can see
+
+In addition to what is described in Section 5:
+
+- **Handoff command** — the exact command to run for your OS (Windows: `holistic.cmd`, macOS/Linux: `holistic`)
+- **Checkpoint count** and **last checkpoint reason**
+- Hygiene states: `ok` (recent checkpoint), `stale` (checkpoint exists but old), `missing` (no checkpoint recorded)
+
+### When to use the handoff command
+
+- Before switching to a different repo
+- Before ending a session
+- After any significant decision or context shift
+
+---
+
+## 10) Open Loops (work risk map)
+
+### What you can see
+
+Summary counts: unresolved requirements / pending milestones / blocked milestones / deferred items
 
 Detailed lists:
-- blocked milestones
-- unresolved requirements
-- deferred items
-- revisable decisions
+- **Next milestone** — first non-done milestone
+- **Blocked milestones** — milestones in blocked status
+- **Unresolved requirements** — active requirements without validated proof (capped at 5, with overflow count)
+- **Deferred items** — requirements or decisions intentionally deferred
+- **Revisable decisions** — decisions whose `revisable` field starts with "yes"
 
-## Why this matters
+### Why this matters
 
 Open Loops tells you where hidden delivery risk is accumulating.
 
-## What to do
+### What to do
 
-### If blocked milestones > 0
-1. Prioritize unblock before new scope.
-2. Resolve dependency/decision causing block.
-3. Re-check blocked count.
+**If blocked milestones > 0:** Prioritize unblocking over new scope.
 
-### If unresolved requirements > 0
-1. Review each unresolved requirement.
-2. Choose: validate now, defer intentionally, or re-scope.
-3. Re-check unresolved count.
+**If unresolved requirements > 0:** For each: choose validate now, defer intentionally, or re-scope.
 
-### If deferred items > 0
-1. Confirm defer is still intentional.
-2. Promote only when needed for current milestone.
+**If deferred items > 0:** Confirm defer is still intentional. Promote only when needed for current milestone.
 
-### If revisable decisions > 0
-1. Revisit only when it unblocks current work or reduces risk.
-2. Avoid churn on stable decisions without trigger evidence.
+**If revisable decisions > 0:** Revisit only when it unblocks current work or reduces risk. Avoid churn without trigger evidence.
 
 ---
 
-## 9) Import Controls (recency + parser health)
+## 11) Import Controls (recency + parser health)
 
-## What you can see
+### What you can see
 
 Per artifact class (Milestones, Requirements, Decisions):
-- status: `success` / `partial` / `failed` / `none`
-- warning count
-- summary
+- Status: `success` / `partial` / `failed` / `none`
+- Warning count and summary
 
-## Why this matters
+Also: **Import Summaries** (in the Proof panel) for proof signal refresh.
 
-Panel intelligence is only as good as imported source quality and recency.
+### What to do by status
 
-## What to do by status
+**`success`** — No remediation needed.
 
-### `success`
-- No remediation needed.
-- Optional: if Workflow State still says stale/no-data, import the other artifact classes too.
+**`partial`** — Expand warnings. Open the source doc named in the warning. Fix the flagged lines. Re-import.
 
-### `partial`
-1. Expand warnings in Import Controls.
-2. Open the source doc named in the artifact label.
-3. Fix exactly the line(s) mentioned by warning text.
-4. Re-import that artifact.
-5. Re-check warning count.
+**`failed`** — Read the import summary (it usually states the problem). Apply the fix from the failure matrix below. Re-import until `partial` or `success`.
 
-### `failed`
-1. Read the import summary first (it usually states missing file vs parse problem).
-2. Apply the matching fix from the failure matrix below.
-3. Re-import until status becomes `partial` or `success`.
+**`none`** — Run initial import for that artifact class.
 
-### `none`
-1. Run initial import for that artifact class.
-2. Continue until all three classes have at least one successful/partial run.
+### Import failure matrix
 
-## Import failure matrix (what you’ll see → what to do)
+| What you see | What it means | Fix |
+|---|---|---|
+| `No .gsd/PROJECT.md artifact found` | Source file missing or not yet scanned | Create the file, Scan Workspace, re-import |
+| `Artifact file not found on disk` | File was moved/deleted after last scan | Restore file or rescan workspace, re-import |
+| `No milestone section found in .gsd/PROJECT.md` | PROJECT.md exists but lacks a parseable `## Milestones` heading | Add heading + milestone bullet lines, re-import |
+| `No valid milestone lines were parsed` | Heading exists but line format is not parseable | Use format `- [ ] M001: Title`, re-import |
+| `No requirement blocks found` | REQUIREMENTS.md has no `### R001 — Title` blocks | Add requirement headings + descriptions, re-import |
+| `No decision entries found` | DECISIONS.md has no table rows or bullet decisions | Add decision entries in supported format, re-import |
+| `status: partial` with warnings | Parse succeeded but some items were skipped | Fix flagged lines one by one, re-import |
 
-Use this table when an import fails or warns.
+### Minimal valid content examples
 
-| What you see in UI/API | What it means | Recommended next steps | How to verify fix |
-|---|---|---|---|
-| `No .gsd/PROJECT.md artifact found for this project` (or REQUIREMENTS/DECISIONS variant) | The expected source file is missing from the repo (or not discovered yet). | 1) Create the missing file at the exact path under `.gsd/`. 2) Add minimally valid content (examples below). 3) Run workspace scan/reselect project. 4) Re-run import. | Import status for that artifact changes from `failed/none` to `partial/success`; summary no longer says artifact not found. |
-| `Artifact file not found on disk: ...` | Artifact was detected previously, but file path no longer exists (moved/deleted/renamed). | 1) Restore file at expected path or fix the path by rescanning workspace. 2) Re-import. | Import summary stops reporting missing-on-disk path. |
-| Milestones: `No milestone section found in .gsd/PROJECT.md` | PROJECT.md exists but lacks parseable milestone section heading. | 1) Add a milestone section heading like `## Milestones` (or milestone sequence heading). 2) Add bullet milestone lines with IDs. 3) Re-import milestones. | Milestone import status becomes `partial/success`; milestones appear in Imported Milestones list. |
-| Milestones: `Milestone section found, but no valid milestone lines were parsed` | Heading exists, but lines are not parseable milestone entries. | 1) Format lines as bullets including `M###` key and title. 2) Example: `- [ ] M001: Core foundation`. 3) Re-import milestones. | Warnings reduce; imported milestone count > 0. |
-| Requirements: `No requirements were imported from .gsd/REQUIREMENTS.md` and warning `No requirement blocks found...` | REQUIREMENTS.md exists but has no parseable requirement blocks. | 1) Add requirement headings like `### R001 — <title>`. 2) Include at least `- Description: ...` and optional status/validation fields. 3) Re-import requirements. | Requirements import changes to `partial/success`; imported requirements list populates. |
-| Decisions: `No decisions were imported from .gsd/DECISIONS.md` with warning `No supported decision entries found...` | DECISIONS.md exists but has no parseable table rows or supported bullet entries. | 1) Add decision entries in supported format (decision table row or bullet decision lines). 2) Re-import decisions. | Decisions import changes to `partial/success`; imported decisions list populates. |
-| Status is `partial` with warning count > 0 | Import succeeded but parser skipped one or more items due to formatting/content issues. | 1) Work warning-by-warning. 2) Fix source lines. 3) Re-import same artifact. 4) Repeat until warnings are understood or eliminated. | Warning count decreases; summary stabilizes; downstream panel confidence/reasons improve. |
-
-### Minimal valid content examples (quick bootstrap)
-
-Use these only to get unblocked quickly, then replace with your real project content.
-
-**`.gsd/PROJECT.md` milestone example**
+**`.gsd/PROJECT.md`**
 
 ```md
 ## Milestones
 - [ ] M001: Initial milestone
 ```
 
-**`.gsd/REQUIREMENTS.md` requirement example**
+**`.gsd/REQUIREMENTS.md`**
 
 ```md
 ## Active
@@ -528,79 +436,126 @@ Use these only to get unblocked quickly, then replace with your real project con
 - Description: Define the first shippable requirement.
 ```
 
-**`.gsd/DECISIONS.md` simple decision example**
+**`.gsd/DECISIONS.md`**
 
 ```md
-- Use local-first planning artifacts as source of truth.
+| # | When | Scope | Decision | Choice | Rationale | Revisable? | Made By |
+|---|------|-------|----------|--------|-----------|------------|---------|
+| D001 | Initial | architecture | Source of truth | Repo-local docs | Portable and inspectable | Yes | human |
 ```
 
-Verify after any import:
-- status updates,
-- warnings reduce or are understood,
-- imported entity lists populate,
-- Workflow State evidence/reasons update accordingly.
+---
+
+## 12) Cross-repo portfolio view
+
+### What you can see
+
+The left column shows all discovered projects as cards. Each card shows:
+
+- Phase badge (active / stalled / blocked / no-data / import-only)
+- Continuity status and age
+- Readiness status
+
+Cards are sorted by urgency score (default) or name (toggle at top).
+
+### Urgency scoring
+
+Urgency is computed from:
+- Fresh continuity: +40%
+- Unresolved requirements: +25%
+- Stalled/no-data phase with non-missing continuity: +20%
+- Readiness gaps: +15%
+
+Higher urgency = repo deserves attention sooner.
+
+### What to do
+
+**Prioritize repos with:**
+- Readiness `ready` + Continuity not missing + Next Action clear (for active execution)
+- High urgency score (for triage)
+
+**Use blocked repos** only when your goal is to unblock them.
 
 ---
 
-## 10) Concrete operating scenarios
+## 13) Concrete operating scenarios
 
-## Scenario A — “I opened a repo and everything looks broken”
+### Scenario A — "I opened a repo and everything looks broken"
 
-1. Check Readiness.
-2. If `missing`, perform Section 4C bootstrap exactly.
-3. Check Continuity.
-4. If `missing` or `stale+missing hygiene`, perform Section 5E/5F.
-5. Run imports (Section 9).
-6. Re-check until Next Action is no longer hard-blocked.
+1. Check Readiness → if `missing`, use Bootstrap Plan (or Section 4C manual bootstrap).
+2. Check Continuity → if `missing`, run resume/handoff (Section 5F).
+3. Run all three imports (Section 11).
+4. Re-check until Next Action is no longer hard-blocked.
 
-## Scenario B — “I’m active but low confidence”
+### Scenario B — "I'm active but confidence is low"
 
-1. Read Workflow reasons.
-2. Fix whichever is flagged: missing artifacts, stale imports, stale/missing continuity.
-3. Re-check confidence.
-4. Proceed only when confidence is acceptable for risk level.
+1. Read Workflow State reasons.
+2. Fix whichever signal is flagged: missing artifacts, stale imports, stale/missing continuity.
+3. Run Import Summaries in the Proof panel if milestones are showing `claimed` after actual completion.
+4. Re-check confidence.
 
-## Scenario C — “I have 8 repos; what should I touch today?”
+### Scenario C — "I have several repos; what should I touch today?"
 
-1. Prefer repos with:
-   - Readiness `ready`
-   - Continuity not missing
-   - Next Action clear
-   - meaningful open-loop impact
-2. Use blocked repos only if your goal is unblock.
+1. Open the portfolio list (left column).
+2. Sort by urgency (default).
+3. Prioritize: `ready` readiness + non-missing continuity + clear Next Action.
+4. Use blocked repos only if your goal is unblocking.
 
-## Scenario D — “End of day”
+### Scenario D — "I just completed a milestone/slice"
 
-1. Leave repo in explicit continuity state (handoff/checkpoint).
-2. Ensure imports/planning are not mid-broken.
-3. Stop services.
+1. Run `holistic handoff` to record the session.
+2. Click **Import Summaries** in the Proof panel to upgrade proof status.
+3. Verify the milestone now shows ✓ `proven`.
+4. Check Open Loops — unresolved requirement count should decrease.
 
----
+### Scenario E — "End of day"
 
-## 11) FAQ
-
-### Why do milestone IDs skip numbers (for example M001, M002, M007)?
-
-Milestone IDs are durable identifiers. They are not always contiguous in the roadmap snapshot if intermediate planned milestones were superseded/merged/retired.
-
-### Why do I sometimes see weird terminal glyphs around Vite output?
-
-That is usually encoding/font mismatch, not app failure. Launcher service windows are configured to force UTF-8 output to reduce this issue.
+1. Run handoff from the Continuity panel command.
+2. Ensure imports are not mid-broken (no `failed` import runs).
+3. Stop services: `npm run cc:stop`.
 
 ---
 
-## 12) Appendix — command quick reference
+## 14) FAQ
+
+### Why do milestone IDs sometimes skip numbers?
+
+Milestone IDs are durable identifiers. They are not always contiguous — intermediate milestones may have been merged, superseded, or retired without renumbering.
+
+### Why does Proof show milestones as `claimed` when they are clearly done?
+
+Click **Import Summaries** in the Proof panel. Proof requires parsing SUMMARY.md files in `.gsd/milestones/` — it is not inferred from PROJECT.md alone. The Import Summaries button re-scans those files and upgrades proof level.
+
+### Why does the Bootstrap Plan stage gate block my machine-level steps?
+
+The stage gate is intentional: repo-local steps (creating directories and files) should be complete before machine-level tool installs, because the tool install may depend on the repo being properly initialized.
+
+### Why do I see weird terminal glyphs around Vite output?
+
+Usually encoding/font mismatch in the terminal, not an app failure. Launcher scripts force UTF-8 output to reduce this.
+
+### The backend is still running after I killed it — how do I force-kill it?
+
+```powershell
+Get-NetTCPConnection -LocalPort 3001 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+```
+
+---
+
+## 15) Appendix — command quick reference
 
 ```bash
-npm run cc:shortcut
-npm run cc:doctor
-npm run cc:launch
-npm run cc:launch -- -NoBrowser
-npm run cc:stop
-npm run build
+npm run cc:shortcut       # Create/update desktop shortcuts
+npm run cc:doctor         # Preflight diagnostics
+npm run cc:launch         # Start backend + frontend + open browser
+npm run cc:launch -- -NoBrowser   # Start without opening browser
+npm run cc:stop           # Stop services on ports 3001/5173
+npm run build             # Type-check + production build
+npm run dev               # Frontend dev server only
+node server.js            # Backend only
 ```
 
-Planning truth sources:
-- [ROADMAP.md](../ROADMAP.md)
-- `.gsd/`
-- `.holistic/`
+Planning truth sources for this repo:
+- [README.md](../README.md) — overview + quick start
+- [.gsd/](../.gsd/) — milestone, slice, task planning and summaries
+- [.holistic/](../.holistic/) — continuity artifacts

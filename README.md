@@ -1,36 +1,28 @@
-# 🚀 Command Center
+# Command Center
 
 Command Center is a **local-first planning cockpit** for code repositories.
 
-It pulls planning state you already maintain (GSD/GSD2 docs, Holistic context, roadmap artifacts), normalizes it, and helps you answer:
+It pulls planning state you already maintain (GSD docs, Holistic continuity artifacts, roadmap summaries), normalizes it into a canonical SQLite model, and answers:
 
 - Where is this repo in the workflow loop?
-- What is blocked right now?
-- What should happen next?
-- How does this compare across repos?
+- What is actually proven complete vs only written down?
+- What is blocked right now, and what should happen next?
+- How does this compare across all repos?
 
 ---
 
 ## ✨ Current Progress Snapshot
 
-Milestone status (current):
+| Milestone | Status | What it delivered |
+|---|---|---|
+| M001 | ✅ complete | Import-first foundation: discovery, artifact detection, canonical SQLite model, plan API |
+| M002 | ✅ complete | Resume-first cockpit: workflow state, continuity hygiene, readiness detection, cross-repo portfolio view |
+| M003 | ✅ complete | Bootstrap assistant: gap detection → staged plan → template preview → safe apply → machine-level install guidance → audit trail with drift signals |
+| M004 | ✅ complete | Validation and proof model: SUMMARY import, claimed-vs-proven milestone tracking, requirement traceability, Proof panel |
+| M005 | planned | Drift repair and portfolio prioritization |
+| M006 | planned | Sharp ecosystem expansion |
 
-- ✅ **M001 complete** — import-first foundation
-- ✅ **M002 complete** — resume-first cockpit intelligence + trust surfaces
-- ✅ **M007 complete** — launcher hardening + cockpit actionability iteration
-- ▶ **M008 active (planned)** — premium UX redesign + onboarding clarity
-
-For planning detail, see [ROADMAP.md](./ROADMAP.md).
-
-### ✅ Latest launcher verification
-
-The launcher lifecycle is verified in this environment:
-
-- `npm run cc:doctor` ✅
-- `npm run cc:launch -- -NoBrowser` ✅
-- `npm run cc:stop` ✅
-
-Launcher diagnostics and stop now use resilient port probing to avoid earlier PowerShell networking-call hangs in this setup.
+For full planning detail, see [.gsd/milestones/](.gsd/milestones/) or the [GSD roadmap](.gsd/milestones/M004/M004-ROADMAP.md).
 
 ---
 
@@ -38,35 +30,62 @@ Launcher diagnostics and stop now use resilient port probing to avoid earlier Po
 
 ### Planning ingestion + normalization
 
-- Workspace project discovery
-- Source artifact detection
-- Canonical SQLite planning model
-- Plan snapshot API
-- Imports for:
-  - `.gsd/PROJECT.md`
-  - `.gsd/REQUIREMENTS.md`
-  - `.gsd/DECISIONS.md`
-- Import provenance + warning tracking
+- Workspace project discovery (scans a configured root path)
+- Source artifact detection for GSD and Holistic files
+- Canonical SQLite planning model (`mission_control.db`)
+- Plan snapshot API (`GET /api/projects/:id/plan`)
+- Imports from repo-local planning docs:
+  - `.gsd/PROJECT.md` → milestones
+  - `.gsd/REQUIREMENTS.md` → requirements
+  - `.gsd/DECISIONS.md` → decisions
+  - `.gsd/milestones/**/S##-SUMMARY.md` → proof signals (via Import Summaries)
+- Import provenance, recency, and warning tracking
 
-### Cockpit intelligence
+### Workflow intelligence panels
 
-- Workflow State panel (confidence + evidence)
-- Workflow Readiness panel (stack/component gaps)
-- Continuity panel (freshness + checkpoint hygiene)
-- Next Action panel (blocker-aware recommendation)
-- Open Loops panel (next, blocked, unresolved, deferred)
-- Explicit interpreted/provenance labels on trust-sensitive surfaces
+- **Next Action** — blocker-aware recommendation with suggested command
+- **Workflow State** — phase + additive confidence model with evidence and reasons
+- **Proof** — claimed vs proven milestone status, requirement traceability, Import Summaries trigger
+- **Bootstrap Plan** — staged repo-first setup derived from readiness gaps
+- **Readiness** — per-component stack audit (GSD, Holistic, Beads)
+- **Continuity** — Holistic freshness, checkpoint hygiene, handoff command
+- **Open Loops** — next milestone, blocked milestones, unresolved requirements, deferred items, revisable decisions
+- **Milestones / Requirements / Decisions** — imported planning entities with provenance labels
+- **Import** — per-artifact import controls with status, warnings, and re-sync buttons
+
+### Bootstrap assistant (M003)
+
+- Detects workflow stack gaps (missing GSD dirs, docs, Holistic, CLI tools)
+- Generates a staged plan: repo-local steps first, machine-level second
+- Template presets (`minimal` / `starter`) with file preview before apply
+- Preflight checks + conflict detection before every apply
+- Safe apply engine with explicit confirmation gates
+- Machine-level install assistant: OS-aware commands (npm/brew/winget), clipboard copy, verify round-trip
+- Stage gate — blocks machine-level steps until all repo-local steps are complete
+- Audit trail: every applied action persisted in SQLite with drift detection
+- Drift signals: alerts when a previously-applied component goes missing again
+
+### Proof model (M004)
+
+- Scans `.gsd/milestones/**/S##-SUMMARY.md` for `verification_result` and `## Requirements Validated` sections
+- Upgrades milestone `proof_level` from `claimed` → `proven` when slice summaries show passing verification
+- Writes requirement proof links (which slice validated which requirement, with proof text)
+- +0.10 confidence increment in workflowState when proven milestones exist
+- **Proof panel** in cockpit: ✓/○ per milestone, summary counts, expandable requirement traceability
+- One-click **Import Summaries** button refreshes proof data on demand
+
+### Cross-repo portfolio view
+
+- `GET /api/portfolio` — urgency-scored portfolio across all discovered projects
+- Cards show phase, continuity status, readiness, and urgency at a glance
+- Sort by urgency (default) or name
 
 ### Windows launcher ergonomics
 
 - One-click desktop **Launch** shortcut
 - One-click desktop **Stop** shortcut
-- Launcher diagnostics command (`cc:doctor`)
-- Troubleshooting matrix + logs
-
-### Version visibility
-
-- Footer version is package-driven from `package.json` (`Command Center vX.Y.Z`)
+- `cc:doctor` preflight diagnostics
+- Logs to `.logs/command-center-backend.log` and `.logs/command-center-frontend.log`
 
 ---
 
@@ -75,6 +94,7 @@ Launcher diagnostics and stop now use resilient port probing to avoid earlier Po
 - Node.js 20+ (tested with Node 24)
 - npm
 - Windows PowerShell (for launcher scripts)
+- GSD and Holistic CLIs (optional — readiness detection will show them as missing if absent)
 
 ---
 
@@ -88,18 +108,15 @@ cd command-center
 npm install
 ```
 
-If you are using your own fork, replace the clone URL with your fork URL.
-
 ### 2) Create desktop shortcuts (Windows)
 
 ```bash
 npm run cc:shortcut
 ```
 
-Creates/updates:
-
-- `Command Center.lnk` (Launch)
-- `Command Center (Stop).lnk` (Stop)
+Creates:
+- `Command Center.lnk` — Launch
+- `Command Center (Stop).lnk` — Stop
 
 ### 3) Run preflight diagnostics
 
@@ -107,27 +124,25 @@ Creates/updates:
 npm run cc:doctor
 ```
 
-You’ll get PASS/WARN/FAIL checks for host tooling, ports, shortcuts, and logs.
+PASS/WARN/FAIL checks for host tooling, ports, shortcuts, and logs.
 
 ### 4) Launch
 
-Desktop:
-- Double-click **Command Center**
+Desktop: double-click **Command Center**
 
 Terminal:
 ```bash
 npm run cc:launch
 ```
 
-### 5) Verify app is running
+### 5) Verify the app is running
 
-- Frontend: `http://localhost:5173` (launcher uses strict port 5173)
+- Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:3001/api/projects`
 
 ### 6) Stop services
 
-Desktop:
-- Double-click **Command Center (Stop)**
+Desktop: double-click **Command Center (Stop)**
 
 Terminal:
 ```bash
@@ -139,15 +154,18 @@ npm run cc:stop
 ## 🔁 Daily Operating Flow
 
 1. Launch (`cc:launch` or desktop shortcut)
-2. Select a project card
+2. Select a project card from the portfolio list
 3. Read panels in this order:
-   - Workflow Readiness
-   - Continuity
-   - Workflow State
-   - Next Action
-   - Open Loops
-4. Run the suggested command in Next Action when blocked
-5. Stop services when done (`cc:stop`)
+   1. **Readiness** — is the workflow stack present?
+   2. **Continuity** — is context safe to resume?
+   3. **Workflow State** — what phase and confidence?
+   4. **Proof** — what is actually proven vs claimed?
+   5. **Next Action** — what should happen now?
+   6. **Open Loops** — what is still unresolved?
+4. Run the suggested command from Next Action when blocked
+5. Use **Bootstrap Plan** to repair any missing workflow stack components
+6. Use **Import Summaries** (in the Proof panel) after completing work to update proof status
+7. Stop services when done (`cc:stop`)
 
 ---
 
@@ -159,10 +177,30 @@ npm run cc:stop
 | `npm run cc:doctor` | Run launcher preflight diagnostics |
 | `npm run cc:launch` | Start backend + frontend and open browser |
 | `npm run cc:launch -- -NoBrowser` | Start backend + frontend without opening browser |
-| `npm run cc:stop` | Stop backend/frontend listeners on ports 3001/5173 |
-| `npm run dev` | Start Vite frontend only |
+| `npm run cc:stop` | Stop backend/frontend on ports 3001/5173 |
+| `npm run dev` | Start Vite frontend only (dev mode) |
 | `node server.js` | Start backend only |
 | `npm run build` | Type-check + production build |
+
+---
+
+## 🌐 API Surface
+
+| Endpoint | What it does |
+|---|---|
+| `GET /api/projects` | List all discovered projects |
+| `POST /api/scan` | Trigger workspace scan |
+| `GET /api/projects/:id/plan` | Full plan snapshot (workflow state, proof, bootstrap, open loops, etc.) |
+| `GET /api/portfolio` | Cross-repo urgency-scored portfolio |
+| `POST /api/projects/:id/import-gsd-project` | Import milestones from PROJECT.md |
+| `POST /api/projects/:id/import-gsd-requirements` | Import requirements from REQUIREMENTS.md |
+| `POST /api/projects/:id/import-gsd-decisions` | Import decisions from DECISIONS.md |
+| `POST /api/projects/:id/import/summaries` | Import proof signals from SUMMARY.md files |
+| `GET /api/projects/:id/bootstrap/preflight` | Pre-flight check before applying a bootstrap step |
+| `POST /api/projects/:id/bootstrap/apply` | Apply a bootstrap step (repo-local only) |
+| `GET /api/projects/:id/bootstrap/verify-tool` | Re-probe a machine tool after install |
+| `GET /api/projects/:id/bootstrap/audit` | Bootstrap action history + drift detection |
+| `GET /api/projects/:id/proof` | Requirement proof traceability |
 
 ---
 
@@ -170,33 +208,30 @@ npm run cc:stop
 
 | Symptom | Command to run | Where to inspect |
 |---|---|---|
-| Launch shortcut does nothing | `npm run cc:shortcut` | Desktop shortcuts (`Command Center*.lnk`) |
-| Launch hangs/fails readiness | `npm run cc:doctor` then `npm run cc:launch -- -NoBrowser` | `.logs/command-center-backend.log`, `.logs/command-center-frontend.log` |
+| Launch shortcut does nothing | `npm run cc:shortcut` | Desktop (`Command Center*.lnk`) |
+| Launch hangs / fails | `npm run cc:doctor` then `npm run cc:launch -- -NoBrowser` | `.logs/command-center-backend.log`, `.logs/command-center-frontend.log` |
 | Ports already in use | `npm run cc:stop` | Re-run `npm run cc:doctor` |
-| Need a clean reset | `npm run cc:stop` then `npm run cc:launch -- -NoBrowser` | Launcher console + `.logs/*` |
+| Old server still running (stale code) | Kill by PID: `powershell -c "Get-NetTCPConnection -LocalPort 3001 \| ForEach-Object { Stop-Process -Id \$_.OwningProcess -Force }"` | Re-run `npm run cc:launch` |
+| Clean reset | `npm run cc:stop` then `npm run cc:launch -- -NoBrowser` | Launcher console + `.logs/*` |
 
-For full walkthroughs and panel-by-panel guidance, see [docs/USER-GUIDE.md](./docs/USER-GUIDE.md).
+For full panel-by-panel guidance, see [docs/USER-GUIDE.md](./docs/USER-GUIDE.md).
 
 ---
 
 ## 🏗️ Tech Stack
 
-- React 19
-- TypeScript
+- React 19 + TypeScript
 - Vite
-- Express
+- Express 5
 - better-sqlite3
-- Tailwind CSS
+- Tailwind CSS v4
 
 ---
 
 ## 🧭 Repo Planning Context
 
-This repo keeps planning + continuity artifacts close to the code:
-
-- [ROADMAP.md](./ROADMAP.md)
-- [HOLISTIC.md](./HOLISTIC.md)
-- [AGENTS.md](./AGENTS.md)
-- `.holistic/` continuity artifacts
-- `.gsd/` milestone/slice/task planning and summaries
-
+- [docs/USER-GUIDE.md](./docs/USER-GUIDE.md) — panel-by-panel operator playbook
+- [HOLISTIC.md](./HOLISTIC.md) — continuity and handoff state
+- [AGENTS.md](./AGENTS.md) — agent startup instructions
+- `.gsd/` — milestone/slice/task planning, summaries, and proof artifacts
+- `.holistic/` — Holistic continuity artifacts
