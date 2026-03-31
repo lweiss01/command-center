@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs(gsd): close M005 - drift repair and portfolio prioritization complete
+Committed: plan: M006 sharp ecosystem expansion
 
 ## Planned Next Steps
 
