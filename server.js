@@ -478,6 +478,18 @@ const getRequirementByProjectArtifactAndKey = db.prepare(`
     AND external_key = @external_key
   LIMIT 1
 `);
+const getRequirementByProjectAndKey = db.prepare(`
+  SELECT *
+  FROM requirements
+  WHERE project_id = @project_id
+    AND external_key = @external_key
+  LIMIT 1
+`);
+const updateMilestoneProofLevel = db.prepare(`
+  UPDATE milestones
+  SET proof_level = @proof_level
+  WHERE id = @id
+`);
 const insertRequirement = db.prepare(`
   INSERT INTO requirements (
     project_id, external_key, title, description, status, validation, notes,
@@ -762,6 +774,7 @@ function serializeMilestoneRow(milestone) {
     title: milestone.title,
     description: milestone.description,
     status: milestone.status,
+    proofLevel: milestone.proof_level ?? 'claimed',
     origin: milestone.origin,
     confidence: milestone.confidence,
     needsReview: Boolean(milestone.needs_review),
@@ -1682,6 +1695,47 @@ function parseGsdMilestonesDir(projectRoot) {
   return results;
 }
 
+// ── SUMMARY file parsers ──────────────────────────────────────────────────────
+
+/**
+ * Parse frontmatter from a SUMMARY.md file.
+ * Returns { id, milestone, verificationResult, completedAt } — null for missing fields.
+ */
+function parseSummaryFrontmatter(content) {
+  if (!content.startsWith('---')) return { id: null, milestone: null, verificationResult: null, completedAt: null };
+  const end = content.indexOf('---', 3);
+  if (end < 0) return { id: null, milestone: null, verificationResult: null, completedAt: null };
+  const fm = content.slice(3, end);
+
+  const get = (key) => {
+    const m = fm.match(new RegExp(`^${key}:\\s*(.+)$`, 'm'));
+    return m ? m[1].trim().replace(/^["']|["']$/g, '') : null;
+  };
+
+  return {
+    id: get('id'),
+    milestone: get('milestone'),
+    verificationResult: get('verification_result'),
+    completedAt: get('completed_at'),
+  };
+}
+
+/**
+ * Parse the "## Requirements Validated" body section from a SUMMARY.md file.
+ * Returns Array<{ reqKey: string, proofText: string }>.
+ */
+function parseSummaryRequirementsValidated(content) {
+  const sectionMatch = content.match(/##\s+Requirements\s+Validated\s*\n([\s\S]*?)(?=\n##\s|\n---\s*$|$)/i);
+  if (!sectionMatch) return [];
+  const section = sectionMatch[1];
+  const results = [];
+  for (const line of section.split('\n')) {
+    const m = line.match(/^-\s+(R\d+)\s+[—\-]+\s+(.+)$/);
+    if (m) results.push({ reqKey: m[1], proofText: m[2].trim() });
+  }
+  return results;
+}
+
 function importGsdProjectMilestones(projectId) {
   const project = getProjectById.get(projectId);
   if (!project) {
@@ -2450,6 +2504,105 @@ function importGsdDecisions(projectId) {
   }
 }
 
+function importGsdSummaries(projectId) {
+  const project = getProjectById.get(projectId);
+  if (!project) throw new Error('Project not found');
+
+  const artifacts = listArtifactsByProjectId.all(projectId).filter(a => a.artifact_type === 'gsd_summary');
+  if (artifacts.length === 0) {
+    return { ok: true, projectId, milestonesUpdated: 0, proofLinksWritten: 0, warnings: [] };
+  }
+
+  const startedAt = new Date().toISOString();
+  const importRunResult = insertImportRun.run({
+    project_id: projectId,
+    status: 'running',
+    strategy: 'gsd_summary',
+    started_at: startedAt,
+    completed_at: null,
+    summary: null,
+    warnings_json: null,
+  });
+  const importRunId = Number(importRunResult.lastInsertRowid);
+
+  const warnings = [];
+  let milestonesUpdated = 0;
+  let proofLinksWritten = 0;
+
+  try {
+    for (const artifact of artifacts) {
+      if (!exists(artifact.path)) {
+        warnings.push(`File missing: ${artifact.path}`);
+        continue;
+      }
+      const content = fs.readFileSync(artifact.path, 'utf8');
+      const fm = parseSummaryFrontmatter(content);
+      if (!fm.id) {
+        warnings.push(`No id in frontmatter: ${artifact.title}`);
+        continue;
+      }
+
+      const isSlice = /^S\d+$/.test(fm.id);
+      const isMilestone = /^M\d+$/.test(fm.id);
+
+      if (isSlice && fm.verificationResult === 'passed' && fm.milestone) {
+        const mRow = getMilestoneByProjectAndKey.get({ project_id: projectId, external_key: fm.milestone });
+        if (mRow && mRow.proof_level !== 'proven') {
+           updateMilestoneProofLevel.run({ proof_level: 'proven', id: mRow.id });
+           milestonesUpdated++;
+        }
+
+        const reqs = parseSummaryRequirementsValidated(content);
+        for (const r of reqs) {
+          const reqRow = getRequirementByProjectAndKey.get({ project_id: projectId, external_key: r.reqKey });
+          if (reqRow) {
+            deleteEvidenceLinksForEntityAndSource.run({ entity_type: 'requirement', entity_id: reqRow.id, source_artifact_id: artifact.id });
+            insertEvidenceLink.run({
+              entity_type: 'requirement',
+              entity_id: reqRow.id,
+              source_artifact_id: artifact.id,
+              excerpt: r.proofText,
+              line_start: null,
+              line_end: null,
+              confidence: 1.0,
+              reason: 'requirements_validated',
+              created_at: new Date().toISOString()
+            });
+            proofLinksWritten++;
+          } else {
+            warnings.push(`Requirement ${r.reqKey} validated in ${artifact.title} but not found in DB`);
+          }
+        }
+      } else if (isMilestone) {
+        const mRow = getMilestoneByProjectAndKey.get({ project_id: projectId, external_key: fm.id });
+        if (mRow && mRow.proof_level !== 'proven') {
+           updateMilestoneProofLevel.run({ proof_level: 'proven', id: mRow.id });
+           milestonesUpdated++;
+        }
+      }
+    }
+
+    updateImportRun.run({
+      id: importRunId,
+      status: warnings.length > 0 ? 'completed_with_warnings' : 'completed',
+      completed_at: new Date().toISOString(),
+      summary: `Imported ${proofLinksWritten} proof links across ${milestonesUpdated} milestones.`,
+      warnings_json: JSON.stringify(warnings),
+    });
+
+    return { ok: true, projectId, milestonesUpdated, proofLinksWritten, warnings };
+  } catch (error) {
+    updateImportRun.run({
+      id: importRunId,
+      status: 'failed',
+      completed_at: new Date().toISOString(),
+      summary: error instanceof Error ? error.message : 'Unknown import failure',
+      warnings_json: JSON.stringify([]),
+    });
+    throw error;
+  }
+}
+
 function upsertProjectWithArtifacts(projectRoot) {
   const now = new Date().toISOString();
   const name = path.basename(projectRoot);
@@ -2715,6 +2868,19 @@ app.post('/api/projects/:id/import-gsd-decisions', (req, res) => {
     return res.status(500).json({
       error: error instanceof Error ? error.message : 'Internal Server Error',
     });
+  }
+});
+
+app.post('/api/projects/:id/import/summaries', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+    const result = importGsdSummaries(validation.projectId);
+    console.log(`[import/summaries] project=${validation.project.name} milestones=${result.milestonesUpdated} proof_links=${result.proofLinksWritten} warnings=${result.warnings.length}`);
+    return res.json(result);
+  } catch (error) {
+    console.error('[import/summaries] Failed:', error);
+    return res.status(500).json({ ok: false, error: error instanceof Error ? error.message : 'Internal Server Error' });
   }
 });
 
