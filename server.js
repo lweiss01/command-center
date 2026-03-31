@@ -3567,6 +3567,8 @@ app.get('/api/projects/:id/plan', (req, res) => {
     const bootstrapTemplateId = req.query.templateId === 'starter' ? 'starter' : 'minimal';
     const bootstrapPlan = computeBootstrapPlan({ workflowState, readiness, continuity, templateId: bootstrapTemplateId, projectName: validation.project.name });
     const openLoops = computeOpenLoops({ milestones, requirements, decisions });
+    const repoHealth = computeRepoHealth({ continuity, readiness, proofSummary, latestImportRunsByArtifact });
+    const repairQueue = computeRepairQueue({ continuity, readiness, proofSummary, latestImportRunsByArtifact, milestones });
 
     // Lightweight drift count from audit log (no re-probe — just count missing components from last apply)
     const auditRows = db.prepare(`SELECT component_id FROM bootstrap_actions WHERE project_id = ? ORDER BY applied_at DESC`).all(validation.project.id);
@@ -3591,6 +3593,8 @@ app.get('/api/projects/:id/plan', (req, res) => {
       bootstrapPlan: { ...bootstrapPlan, driftCount: bootstrapDriftCount },
       openLoops,
       proofSummary,
+      repoHealth,
+      repairQueue,
       platform: process.platform,
     });
   } catch (error) {

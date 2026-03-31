@@ -112,6 +112,15 @@ interface OpenLoops {
   unresolvedRequirements: OpenLoopItem[]; deferredItems: OpenLoopItem[]
   revisableDecisions: OpenLoopItem[]; summary: OpenLoopsSummary
 }
+interface HealthBreakdownItem {
+  signal: string; label: string; contribution: number; maxContribution: number
+  status: 'ok' | 'warn' | 'danger' | 'missing'; note: string
+}
+interface RepoHealth { score: number; grade: 'A' | 'B' | 'C' | 'D'; breakdown: HealthBreakdownItem[] }
+interface RepairItem {
+  priority: number; severity: 'critical' | 'high' | 'medium' | 'low'
+  action: string; rationale: string; targetPanel: string
+}
 interface ProjectPlan {
   project: Project; milestones: Milestone[]; slices: unknown[]; tasks: unknown[]
   requirements: Requirement[]; decisions: Decision[]; importRuns: ImportRun[]
@@ -120,6 +129,8 @@ interface ProjectPlan {
   workflowState: WorkflowState; continuity: ContinuityState
   nextAction: NextAction; bootstrapPlan: BootstrapPlan; readiness: ReadinessReport; openLoops: OpenLoops
   proofSummary: { proven: number; claimed: number; total: number } | null
+  repoHealth: RepoHealth | null
+  repairQueue: RepairItem[]
   platform: string
 }
 interface PortfolioEntry {
@@ -865,6 +876,47 @@ function App() {
                 {proofLinks.length === 0 && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', ...S.mono }}>No requirement proof links yet — run Import Summaries to populate.</div>
                 )}
+              </Section>
+            )}
+
+            {/* Health */}
+            {projectPlan?.repoHealth && (
+              <Section title="Health" sub="Overall repo operating health">
+                {/* Score header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                  <span style={{ fontSize: '28px', fontWeight: 700, color: healthGradeColor(projectPlan.repoHealth.grade), fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
+                    {projectPlan.repoHealth.grade}
+                  </span>
+                  <div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>
+                      {Math.round(projectPlan.repoHealth.score * 100)}% health score
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', ...S.mono }}>
+                      {projectPlan.repoHealth.breakdown.filter(b => b.status === 'danger' || b.status === 'missing').length > 0
+                        ? `${projectPlan.repoHealth.breakdown.filter(b => b.status === 'danger' || b.status === 'missing').length} signal(s) need attention`
+                        : 'All signals healthy'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contributor breakdown */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {projectPlan.repoHealth.breakdown.map(item => {
+                    const statusColor = item.status === 'ok' ? C.ok : item.status === 'warn' ? C.warn : item.status === 'danger' ? C.danger : C.muted
+                    const fillPct = item.maxContribution > 0 ? Math.round((item.contribution / item.maxContribution) * 100) : 0
+                    return (
+                      <div key={item.signal} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: statusColor, flexShrink: 0, display: 'inline-block' }} />
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', ...S.mono, minWidth: '130px' }}>{item.label}</span>
+                        {/* Progress bar */}
+                        <div style={{ flex: 1, height: '4px', background: 'var(--bg-elevated)', borderRadius: '2px', overflow: 'hidden', minWidth: '40px' }}>
+                          <div style={{ height: '100%', width: `${fillPct}%`, background: statusColor, borderRadius: '2px', transition: 'width 300ms' }} />
+                        </div>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', ...S.mono, minWidth: '80px', textAlign: 'right' }}>{item.note}</span>
+                      </div>
+                    )
+                  })}
+                </div>
               </Section>
             )}
 
