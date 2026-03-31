@@ -3791,6 +3791,45 @@ app.get('/api/scan-runs', (req, res) => {
   }
 });
 
+app.post('/api/projects/add', (req, res) => {
+  try {
+    const rawPath = req.body?.path;
+    if (!rawPath || typeof rawPath !== 'string') {
+      return res.status(400).json({ ok: false, error: 'path is required' });
+    }
+
+    const resolvedPath = path.resolve(rawPath.trim());
+
+    if (!fs.existsSync(resolvedPath)) {
+      return res.status(400).json({ ok: false, error: `Directory not found: ${resolvedPath}` });
+    }
+
+    const stat = fs.statSync(resolvedPath);
+    if (!stat.isDirectory()) {
+      return res.status(400).json({ ok: false, error: `Path is not a directory: ${resolvedPath}` });
+    }
+
+    if (!isProjectCandidate(resolvedPath) && !fs.existsSync(path.join(resolvedPath, '.git'))) {
+      return res.status(400).json({ ok: false, error: `Not a recognizable project (no .git, package.json, pyproject.toml, or planning artifacts found): ${resolvedPath}` });
+    }
+
+    const result = upsertProjectWithArtifacts(resolvedPath);
+    const autoImport = autoImportForProject(result.projectId);
+    const project = getProjectById.get(result.projectId);
+
+    console.log(`[project/add] path=${resolvedPath} projectId=${result.projectId} imported=[${autoImport.imported.join(',')}]`);
+
+    return res.json({
+      ok: true,
+      project: serializeProjectRow(project),
+      autoImport: { imported: autoImport.imported, skipped: autoImport.skipped, warnings: autoImport.warnings },
+    });
+  } catch (error) {
+    console.error('[project/add] Failed:', error);
+    return res.status(500).json({ ok: false, error: error instanceof Error ? error.message : 'Add failed' });
+  }
+});
+
 app.post('/api/scan', (req, res) => {
   try {
     const roots = Array.isArray(req.body?.roots) && req.body.roots.length > 0

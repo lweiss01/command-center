@@ -263,6 +263,10 @@ function App() {
   const [projectsLoading, setProjectsLoading] = useState(true)
   const [projectsError, setProjectsError] = useState<string | null>(null)
   const [scanInFlight, setScanInFlight] = useState(false)
+  const [showAddProject, setShowAddProject] = useState(false)
+  const [addProjectPath, setAddProjectPath] = useState('')
+  const [addProjectError, setAddProjectError] = useState<string | null>(null)
+  const [addProjectInFlight, setAddProjectInFlight] = useState(false)
   const [milestonesImportInFlight, setMilestonesImportInFlight] = useState(false)
   const [requirementsImportInFlight, setRequirementsImportInFlight] = useState(false)
   const [decisionsImportInFlight, setDecisionsImportInFlight] = useState(false)
@@ -500,6 +504,31 @@ function App() {
     finally { setScanInFlight(false) }
   }
 
+  const handleAddProject = async () => {
+    if (!addProjectPath.trim()) return
+    setAddProjectInFlight(true); setAddProjectError(null)
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/projects/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: addProjectPath.trim() }),
+      })
+      const data: { ok: boolean; project?: Project; error?: string } = await res.json()
+      if (res.ok && data.ok && data.project) {
+        const listRes = await fetch(`${API_BASE_URL}/api/projects`)
+        if (listRes.ok) { const d: Project[] = await listRes.json(); setProjects(d) }
+        setSelectedProject(data.project)
+        setShowAddProject(false); setAddProjectPath(''); setAddProjectError(null)
+      } else {
+        setAddProjectError(data.error ?? 'Add failed')
+      }
+    } catch (e) {
+      setAddProjectError(e instanceof Error ? e.message : 'Network error')
+    } finally {
+      setAddProjectInFlight(false)
+    }
+  }
+
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault(); if (!newTask.trim()) return
     console.log(`Adding "${newTask}" to ${selectedProject?.name}`); setNewTask('')
@@ -716,12 +745,43 @@ function App() {
             >
               <BookOpen size={11} /> Guide
             </a>
-            <button disabled title="Coming soon"
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px', border: '1px solid var(--border)', borderRadius: '5px', fontSize: '11px', color: 'var(--text-muted)', background: 'transparent', cursor: 'not-allowed', opacity: 0.35, fontFamily: 'var(--font)' }}
+            <button
+              onClick={() => { setShowAddProject(v => !v); setAddProjectError(null); setAddProjectPath('') }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px', border: `1px solid ${showAddProject ? C.info : 'var(--border)'}`, borderRadius: '5px', fontSize: '11px', color: showAddProject ? C.info : 'var(--text-muted)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font)' }}
             >
               <Plus size={11} /> New
             </button>
           </div>
+          {/* Inline add-project form */}
+          {showAddProject && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Directory path…"
+                value={addProjectPath}
+                onChange={e => { setAddProjectPath(e.target.value); setAddProjectError(null) }}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddProject(); if (e.key === 'Escape') { setShowAddProject(false); setAddProjectPath(''); setAddProjectError(null) } }}
+                style={{ padding: '6px 8px', fontSize: '11px', fontFamily: 'var(--font-mono)', background: 'var(--bg-elevated)', border: `1px solid ${addProjectError ? C.danger : 'var(--border)'}`, borderRadius: '4px', color: 'var(--text-primary)', outline: 'none', width: '100%' }}
+              />
+              {addProjectError && <div style={{ fontSize: '10px', color: C.danger, ...S.mono, lineHeight: 1.4 }}>{addProjectError}</div>}
+              <div style={{ display: 'flex', gap: '5px' }}>
+                <button
+                  disabled={addProjectInFlight || !addProjectPath.trim()}
+                  onClick={handleAddProject}
+                  style={{ flex: 1, padding: '5px', fontSize: '11px', background: addProjectInFlight || !addProjectPath.trim() ? 'var(--bg-elevated)' : C.info, color: addProjectInFlight || !addProjectPath.trim() ? 'var(--text-muted)' : '#000', border: 'none', borderRadius: '4px', cursor: addProjectInFlight || !addProjectPath.trim() ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-mono)' }}
+                >
+                  {addProjectInFlight ? 'Adding…' : 'Add'}
+                </button>
+                <button
+                  onClick={() => { setShowAddProject(false); setAddProjectPath(''); setAddProjectError(null) }}
+                  style={{ padding: '5px 10px', fontSize: '11px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
