@@ -1,8 +1,8 @@
 # GSD State
 
 **Active Milestone:** M006: Sharp ecosystem expansion — Context Draft
-**Active Slice:** None
-**Phase:** pre-planning
+**Active Slice:** S01: Auto-import on scan
+**Phase:** planning
 **Requirements Status:** 13 active · 1 validated · 3 deferred · 3 out of scope
 
 ## Milestone Registry
@@ -22,4 +22,4 @@
 - None
 
 ## Next Action
-Milestone M006 has a roadmap but no slices defined. Add slices to the roadmap.
+Slice S01 has a plan file but no tasks. Add tasks to the plan.
