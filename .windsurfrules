@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs(holistic): update continuity state after M003-M004 + docs refresh
+Committed: plan: M005 drift repair and portfolio prioritization
 
 ## Before ending this session
 
