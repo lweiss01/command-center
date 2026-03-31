@@ -3272,6 +3272,30 @@ app.get('/api/projects/:id/bootstrap/audit', (req, res) => {
   }
 });
 
+// ── Proof traceability endpoint ───────────────────────────────────────────────
+app.get('/api/projects/:id/proof', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const rows = db.prepare(`
+      SELECT r.external_key AS reqKey, el.excerpt AS proofText, sa.title AS sourceTitle, el.created_at AS appliedAt
+      FROM evidence_links el
+      JOIN requirements r ON r.id = el.entity_id
+      JOIN source_artifacts sa ON sa.id = el.source_artifact_id
+      WHERE el.reason = 'requirements_validated'
+        AND el.entity_type = 'requirement'
+        AND r.project_id = ?
+      ORDER BY r.external_key ASC, el.created_at DESC
+    `).all(validation.project.id);
+
+    return res.json({ entries: rows });
+  } catch (error) {
+    console.error('[proof] Failed:', error);
+    return res.status(500).json({ ok: false, error: error instanceof Error ? error.message : 'Proof query failed' });
+  }
+});
+
 app.get('/api/projects/:id/plan', (req, res) => {
   try {
     const validation = getValidatedProjectOrSend(req.params.id, res);

@@ -240,6 +240,9 @@ function App() {
   const [projectPlanError, setProjectPlanError] = useState<string | null>(null)
   const [bootstrapAudit, setBootstrapAudit] = useState<BootstrapAudit | null>(null)
   const [auditHistoryOpen, setAuditHistoryOpen] = useState(false)
+  const [proofLinks, setProofLinks] = useState<Array<{reqKey:string;proofText:string;sourceTitle:string;appliedAt:string}>>([])
+  const [proofReqOpen, setProofReqOpen] = useState(false)
+  const [importSummariesInFlight, setImportSummariesInFlight] = useState(false)
   const [newTask, setNewTask] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [projectsLoading, setProjectsLoading] = useState(true)
@@ -270,6 +273,8 @@ function App() {
     setCopiedStepId(null)
     setBootstrapAudit(null)
     setAuditHistoryOpen(false)
+    setProofLinks([])
+    setProofReqOpen(false)
   }, [selectedProject?.id])
 
   useEffect(() => {
@@ -300,9 +305,10 @@ function App() {
     const planUrl = `${API_BASE_URL}/api/projects/${id}/plan?templateId=${templateId}`
 
     try {
-      const [planRes, auditRes] = await Promise.all([
+      const [planRes, auditRes, proofRes] = await Promise.all([
         fetch(planUrl),
         fetch(`${API_BASE_URL}/api/projects/${id}/bootstrap/audit`).catch(() => null),
+        fetch(`${API_BASE_URL}/api/projects/${id}/proof`).catch(() => null),
       ])
 
       if (!planRes.ok) {
@@ -322,6 +328,9 @@ function App() {
 
       if (auditRes?.ok) {
         try { setBootstrapAudit(await auditRes.json()) } catch { /* non-fatal */ }
+      }
+      if (proofRes?.ok) {
+        try { const d = await proofRes.json(); setProofLinks(d.entries ?? []) } catch { /* non-fatal */ }
       }
     } catch (error) {
       // fetch() threw — server is genuinely unreachable.
@@ -454,6 +463,16 @@ function App() {
       setStepStatus(step.id, 'instructions')
       setStepError(step.id, e instanceof Error ? e.message : 'Network error during verify')
     }
+  }
+
+  const handleImportSummaries = async () => {
+    if (!selectedProject) return
+    setImportSummariesInFlight(true)
+    try {
+      await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/import/summaries`, { method: 'POST' })
+      await loadProjectPlan(selectedProject.id, bootstrapTemplateId)
+    } catch { /* non-fatal */ }
+    finally { setImportSummariesInFlight(false) }
   }
 
   const handleScanWorkspace = async () => {
@@ -757,6 +776,72 @@ function App() {
               {confidenceDowngraded && <Note variant="warn">Confidence reduced — continuity is stale.</Note>}
               {confidenceSupported && <Note variant="ok">Confidence supported by fresh continuity.</Note>}
             </Section>
+
+            {/* Proof */}
+            {projectPlan && (
+              <Section title="Proof" sub="Claimed vs verified completion">
+                {/* Summary + import button */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' }}>
+                  {projectPlan.proofSummary ? (
+                    <>
+                      <Pill label={`${projectPlan.proofSummary.proven} proven`} color={C.ok} />
+                      {projectPlan.proofSummary.claimed > 0 && <Pill label={`${projectPlan.proofSummary.claimed} claimed-only`} color={C.muted} dim />}
+                      <Pill label={`${projectPlan.proofSummary.total} total`} color={C.muted} dim />
+                    </>
+                  ) : (
+                    <Pill label="no milestones" color={C.muted} dim />
+                  )}
+                  <button
+                    disabled={importSummariesInFlight}
+                    onClick={handleImportSummaries}
+                    style={{ marginLeft: 'auto', fontSize: '11px', padding: '3px 10px', fontFamily: 'var(--font-mono)', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '4px', cursor: importSummariesInFlight ? 'not-allowed' : 'pointer', opacity: importSummariesInFlight ? 0.6 : 1 }}
+                  >
+                    {importSummariesInFlight ? 'Importing…' : 'Import Summaries'}
+                  </button>
+                </div>
+
+                {/* Per-milestone proof status */}
+                {projectPlan.milestones.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
+                    {projectPlan.milestones.map(m => (
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', ...S.mono }}>
+                        <span style={{ color: m.proofLevel === 'proven' ? C.ok : 'var(--text-muted)', flexShrink: 0 }}>{m.proofLevel === 'proven' ? '✓' : '○'}</span>
+                        <span style={{ color: 'var(--text-secondary)', minWidth: '50px' }}>{m.externalKey}</span>
+                        <span style={{ color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
+                        <Pill label={m.proofLevel} color={m.proofLevel === 'proven' ? C.ok : C.muted} dim={m.proofLevel !== 'proven'} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Requirement proof links (collapsible) */}
+                {proofLinks.length > 0 && (
+                  <div>
+                    <button
+                      onClick={() => setProofReqOpen(v => !v)}
+                      style={{ fontSize: '11px', ...S.mono, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      <span style={{ fontSize: '10px' }}>{proofReqOpen ? '▾' : '▸'}</span>
+                      Requirement proof · {proofLinks.length} link{proofLinks.length !== 1 ? 's' : ''}
+                    </button>
+                    {proofReqOpen && (
+                      <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {proofLinks.map((entry, i) => (
+                          <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '11px', ...S.mono, padding: '5px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '4px' }}>
+                            <Pill label={entry.reqKey} color={C.ok} />
+                            <span style={{ flex: 1, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={entry.proofText}>{entry.proofText}</span>
+                            <span style={{ color: 'var(--text-muted)', flexShrink: 0, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={entry.sourceTitle}>{entry.sourceTitle}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {proofLinks.length === 0 && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', ...S.mono }}>No requirement proof links yet — run Import Summaries to populate.</div>
+                )}
+              </Section>
+            )}
 
             {/* Bootstrap Plan */}
             {projectPlan?.bootstrapPlan && (
