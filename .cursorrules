@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: implement safe apply engine with preflight checks and conflict warnings (M003-S03)
+Committed: docs: update README and USER-GUIDE to reflect M001-M004 as-built state
 
 ## Before ending this session
 

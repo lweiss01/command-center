@@ -28,13 +28,13 @@ That is the intended end state for this project. Prefer changes that reduce cere
 
 ## Current Objective
 
-**Resume from last handoff**
+**Capture work and prepare a clean handoff.**
 
-Proceed with M003-S04: Machine-level setup assistant
+Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portability. All changes pushed to GitHub.
+Committed: docs: update README and USER-GUIDE to reflect M001-M004 as-built state
 
 ## What Was Tried
 
@@ -42,11 +42,12 @@ Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portabil
 
 ## What To Try Next
 
-- Proceed with M003-S04: Machine-level setup assistant
+- Ask the user what they'd like to work on.
 
 ## Active Plan
 
-- None yet - will be set once work begins.
+- Read HOLISTIC.md
+- Confirm next step with the user
 
 ## Overall Impact So Far
 
@@ -66,7 +67,9 @@ Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portabil
 
 ## Changed Files In Current Session
 
-- No repo changes detected for the active session.
+- .bg-shell/manifest.json
+- README.md
+- docs/USER-GUIDE.md
 
 ## Pending Work Queue
 
@@ -99,6 +102,6 @@ Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portabil
 
 ## Historical Memory
 
-- Last updated: 2026-03-30T04:57:18.405Z
+- Last updated: 2026-03-31T04:15:01.418Z
 - Last handoff: Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portability. All changes pushed to GitHub.
 - Pending sessions remembered: 2

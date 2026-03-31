@@ -2,15 +2,16 @@
 
 ## Goal
 
-Proceed with M003-S04: Machine-level setup assistant
+Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portability. All changes pushed to GitHub.
+Committed: docs: update README and USER-GUIDE to reflect M001-M004 as-built state
 
 ## Planned Next Steps
 
-- Proceed with M003-S04: Machine-level setup assistant
+- Read HOLISTIC.md
+- Confirm next step with the user
 
 ## Project Impact
 
