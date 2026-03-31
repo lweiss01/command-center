@@ -261,6 +261,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_evidence_links_entity ON evidence_links(entity_type, entity_id);
 `);
 
+// ── Additive schema migrations (idempotent) ──────────────────────────────────
+// proof_level on milestones: 'claimed' (status=done in ROADMAP) vs 'proven' (SUMMARY parsed + passed)
+try { db.exec(`ALTER TABLE milestones ADD COLUMN proof_level TEXT NOT NULL DEFAULT 'claimed'`); } catch (_) { /* column already exists */ }
+// source_artifact_id on proof evidence_links — already present on evidence_links, no migration needed
+
 const getLegacyProjectByName = db.prepare('SELECT id FROM projects_legacy WHERE name = ?');
 const getLegacyTasksByProjectId = db.prepare('SELECT * FROM tasks WHERE project_id = ? ORDER BY id ASC');
 const getProjectByRootPath = db.prepare('SELECT id FROM projects WHERE root_path = ?');
@@ -669,6 +674,30 @@ function detectArtifacts(projectRoot) {
       created_at: now,
       updated_at: now,
     });
+
+    // Walk .gsd/milestones for SUMMARY files and register each as a gsd_summary artifact.
+    // Pattern: M###-SUMMARY.md (milestone) and S##-SUMMARY.md (slice)
+    function walkForSummaries(dir, depth = 0) {
+      if (depth > 4) return; // milestones/M###/slices/S##/S##-SUMMARY.md = depth 3
+      for (const entry of safeReadDir(dir)) {
+        const entryPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walkForSummaries(entryPath, depth + 1);
+        } else if (entry.isFile() && /^(M\d+|S\d+)-SUMMARY\.md$/.test(entry.name)) {
+          artifacts.push({
+            artifact_type: 'gsd_summary',
+            path: entryPath,
+            title: entry.name,
+            confidence: 1.0,
+            parse_status: 'detected',
+            last_seen_at: now,
+            created_at: now,
+            updated_at: now,
+          });
+        }
+      }
+    }
+    walkForSummaries(gsdMilestonesDir);
   }
 
   return artifacts;
