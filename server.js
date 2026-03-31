@@ -234,6 +234,19 @@ db.exec(`
     FOREIGN KEY(project_id) REFERENCES projects_legacy(id)
   );
 
+  CREATE TABLE IF NOT EXISTS bootstrap_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    component_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    stage TEXT NOT NULL,
+    path TEXT,
+    template_id TEXT,
+    applied_at TEXT NOT NULL,
+    source_gap TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_bootstrap_actions_project_id ON bootstrap_actions(project_id);
   CREATE INDEX IF NOT EXISTS idx_projects_root_path ON projects(root_path);
   CREATE INDEX IF NOT EXISTS idx_artifacts_project_id ON source_artifacts(project_id);
   CREATE INDEX IF NOT EXISTS idx_scan_runs_started_at ON scan_runs(started_at DESC);
@@ -1298,7 +1311,15 @@ function computeNextAction({ milestones, requirements, decisions, workflowState,
 function computeBootstrapPlan({ workflowState, readiness, continuity, templateId = 'minimal', projectName = '' }) {
   const steps = [];
 
-  const addStep = ({ stage, componentId, sourceGap, title, rationale, risk, requiresApproval, instructions }) => {
+  // Select the most appropriate install command for the current platform.
+  function selectInstallCommand(meta, platform) {
+    const cmds = meta.installCommands ?? {};
+    if (platform === 'win32')  return cmds.winget ?? cmds.npm ?? null;
+    if (platform === 'darwin') return cmds.brew   ?? cmds.npm ?? null;
+    return cmds.npm ?? null;
+  }
+
+  const addStep = ({ stage, componentId, sourceGap, title, rationale, risk, requiresApproval, instructions, installCommands }) => {
     steps.push({
       id: `bp-${steps.length + 1}`,
       stage,
@@ -1309,6 +1330,7 @@ function computeBootstrapPlan({ workflowState, readiness, continuity, templateId
       risk,
       requiresApproval,
       instructions: instructions ?? null,
+      installCommands: installCommands ?? null,
       previewContent: getStepPreviewContent(componentId, projectName, templateId),
       templateId,
     });
@@ -1322,8 +1344,26 @@ function computeBootstrapPlan({ workflowState, readiness, continuity, templateId
     'gsd-doc-decisions':    { title: 'Create DECISIONS.md stub',         rationale: 'DECISIONS.md is an append-only register of architectural decisions. It prevents repeated debates about resolved choices.',                       risk: 'low' },
     'gsd-doc-knowledge':    { title: 'Create KNOWLEDGE.md stub',         rationale: 'KNOWLEDGE.md captures project-specific rules and lessons learned. It is the primary defence against agents repeating past mistakes.',            risk: 'low' },
     'gsd-doc-preferences':  { title: 'Create GSD preferences stub',      rationale: 'preferences.md signals a fully initialized GSD v2 setup and stores workflow preferences for this repo.',                                        risk: 'low' },
-    'holistic-tool':        { title: 'Install Holistic CLI',             rationale: 'The holistic CLI is required for checkpoint, handoff, and passive capture commands. Without it, session continuity is unavailable.',             risk: 'medium', instructions: 'npm install -g @holistic-ai/holistic' },
-    'gsd-tool':             { title: 'Install GSD CLI',                  rationale: 'The gsd CLI is required for planning, auto-mode, and milestone execution. Without it, the full workflow stack is unavailable.',                  risk: 'medium', instructions: 'npm install -g @anthropic/gsd' },
+    'holistic-tool':        {
+      title: 'Install Holistic CLI',
+      rationale: 'The holistic CLI is required for checkpoint, handoff, and passive capture commands. Without it, session continuity is unavailable.',
+      risk: 'medium',
+      installCommands: {
+        npm:    'npm install -g @holistic-ai/holistic',
+        brew:   null,
+        winget: null,
+      },
+    },
+    'gsd-tool':             {
+      title: 'Install GSD CLI',
+      rationale: 'The gsd CLI is required for planning, auto-mode, and milestone execution. Without it, the full workflow stack is unavailable.',
+      risk: 'medium',
+      installCommands: {
+        npm:    'npm install -g @anthropic/gsd',
+        brew:   null,
+        winget: null,
+      },
+    },
     'beads-dir':            { title: 'Initialize Beads',                 rationale: 'The .beads/ directory stores bead-based context for supported agents.',                                                                         risk: 'low' },
   };
 
@@ -1349,6 +1389,9 @@ function computeBootstrapPlan({ workflowState, readiness, continuity, templateId
 
   for (const c of machineMissing) {
     const meta = COMPONENT_META[c.id] ?? {};
+    const resolvedInstructions = meta.installCommands
+      ? selectInstallCommand(meta, process.platform)
+      : (meta.instructions ?? null);
     addStep({
       stage: 'machine-level',
       componentId: c.id,
@@ -1357,7 +1400,8 @@ function computeBootstrapPlan({ workflowState, readiness, continuity, templateId
       rationale: meta.rationale ?? `${c.label} is required for full workflow readiness and cannot be fixed from repo docs alone.`,
       risk: meta.risk ?? 'medium',
       requiresApproval: true,
-      instructions: meta.instructions ?? null,
+      instructions: resolvedInstructions,
+      installCommands: meta.installCommands ?? null,
     });
   }
 
@@ -2842,6 +2886,43 @@ app.get('/api/projects/:id/bootstrap/preflight', (req, res) => {
   }
 });
 
+// ── Bootstrap verify-tool: re-probe a machine-tool component after user installs it ──
+
+app.get('/api/projects/:id/bootstrap/verify-tool', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const componentId = req.query.componentId;
+    if (!componentId || typeof componentId !== 'string') {
+      return res.status(400).json({ ok: false, error: 'componentId query param is required' });
+    }
+
+    const readiness = computeReadiness(validation.project);
+    const component = readiness.components.find((c) => c.id === componentId);
+
+    if (!component) {
+      return res.status(404).json({ ok: false, error: `Unknown component: ${componentId}` });
+    }
+
+    if (component.kind !== 'machine-tool') {
+      return res.status(400).json({ ok: false, error: 'verify-tool is only available for machine-tool components' });
+    }
+
+    // Re-probe: computeReadiness already ran the probe; re-run fresh without override cache.
+    const freshReadiness = computeReadiness(validation.project);
+    const freshComponent = freshReadiness.components.find((c) => c.id === componentId);
+    const status = freshComponent?.status ?? 'missing';
+
+    console.log(`[bootstrap/verify-tool] project=${validation.project.name} component=${componentId} result=${status}`);
+
+    return res.json({ ok: true, componentId, status });
+  } catch (error) {
+    console.error('[bootstrap/verify-tool] Failed:', error);
+    return res.status(500).json({ ok: false, error: error instanceof Error ? error.message : 'Verify failed' });
+  }
+});
+
 app.post('/api/projects/:id/bootstrap/apply', (req, res) => {
   try {
     const validation = getValidatedProjectOrSend(req.params.id, res);
@@ -2927,6 +3008,14 @@ app.post('/api/projects/:id/bootstrap/apply', (req, res) => {
     }
 
     console.log(`[bootstrap/apply] project=${name} component=${componentId} action=${action} path=${resultPath}`);
+
+    // Record audit entry
+    db.prepare(`
+      INSERT INTO bootstrap_actions (project_id, component_id, action, stage, path, template_id, applied_at, source_gap)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(validation.project.id, componentId, action, 'repo-local', resultPath ?? null, templateId ?? null, new Date().toISOString(), component.label ?? null);
+    console.log(`[bootstrap/audit] recorded project=${name} component=${componentId} action=${action}`);
+
     return res.json({ ok: true, componentId, action, path: resultPath });
 
   } catch (error) {
@@ -2935,6 +3024,49 @@ app.post('/api/projects/:id/bootstrap/apply', (req, res) => {
       ok: false,
       error: error instanceof Error ? error.message : 'Apply failed',
     });
+  }
+});
+
+// ── Bootstrap audit trail + drift detection ──────────────────────────────────
+app.get('/api/projects/:id/bootstrap/audit', (req, res) => {
+  try {
+    const validation = getValidatedProjectOrSend(req.params.id, res);
+    if (!validation) return;
+
+    const rows = db.prepare(`
+      SELECT id, component_id, action, stage, path, template_id, applied_at, source_gap
+      FROM bootstrap_actions
+      WHERE project_id = ?
+      ORDER BY applied_at DESC
+    `).all(validation.project.id);
+
+    // Re-probe current readiness to detect drift
+    const freshReadiness = computeReadiness(validation.project);
+    const componentStatusMap = new Map(freshReadiness.components.map(c => [c.id, c.status]));
+
+    const entries = rows.map(row => {
+      const currentStatus = componentStatusMap.get(row.component_id) ?? 'unknown';
+      const drift = currentStatus === 'missing';
+      return {
+        id: row.id,
+        componentId: row.component_id,
+        action: row.action,
+        stage: row.stage,
+        path: row.path,
+        templateId: row.template_id,
+        appliedAt: row.applied_at,
+        sourceGap: row.source_gap,
+        currentStatus,
+        drift,
+      };
+    });
+
+    const driftCount = entries.filter(e => e.drift).length;
+    console.log(`[bootstrap/audit] project=${validation.project.name} entries=${entries.length} drift=${driftCount}`);
+    return res.json({ entries, driftCount });
+  } catch (error) {
+    console.error('[bootstrap/audit] Failed:', error);
+    return res.status(500).json({ ok: false, error: error instanceof Error ? error.message : 'Audit failed' });
   }
 });
 
@@ -2977,6 +3109,12 @@ app.get('/api/projects/:id/plan', (req, res) => {
     const bootstrapPlan = computeBootstrapPlan({ workflowState, readiness, continuity, templateId: bootstrapTemplateId, projectName: validation.project.name });
     const openLoops = computeOpenLoops({ milestones, requirements, decisions });
 
+    // Lightweight drift count from audit log (no re-probe — just count missing components from last apply)
+    const auditRows = db.prepare(`SELECT component_id FROM bootstrap_actions WHERE project_id = ? ORDER BY applied_at DESC`).all(validation.project.id);
+    const appliedComponentIds = [...new Set(auditRows.map(r => r.component_id))];
+    const componentStatusMap = new Map(readiness.components.map(c => [c.id, c.status]));
+    const bootstrapDriftCount = appliedComponentIds.filter(id => componentStatusMap.get(id) === 'missing').length;
+
     return res.json({
       project: serializeProjectRow(validation.project),
       milestones,
@@ -2991,8 +3129,9 @@ app.get('/api/projects/:id/plan', (req, res) => {
       continuity,
       readiness,
       nextAction,
-      bootstrapPlan,
+      bootstrapPlan: { ...bootstrapPlan, driftCount: bootstrapDriftCount },
       openLoops,
+      platform: process.platform,
     });
   } catch (error) {
     console.error('Failed to build project plan snapshot:', error);

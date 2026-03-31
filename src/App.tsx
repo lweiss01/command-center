@@ -72,7 +72,14 @@ interface BootstrapPlan {
     machineLevelSteps: number
     hasBlockers: boolean
   }
+  driftCount?: number
 }
+interface BootstrapAuditEntry {
+  id: number; componentId: string; action: string; stage: string
+  path: string | null; templateId: string | null; appliedAt: string
+  sourceGap: string | null; currentStatus: string; drift: boolean
+}
+interface BootstrapAudit { entries: BootstrapAuditEntry[]; driftCount: number }
 interface StackComponent {
   id: string; label: string; kind: 'repo-doc' | 'machine-tool' | 'repo-dir'
   status: 'present' | 'missing'; note: string | null; required: boolean
@@ -228,6 +235,8 @@ function App() {
   const [projectPlan, setProjectPlan] = useState<ProjectPlan | null>(null)
   const [projectPlanLoading, setProjectPlanLoading] = useState(false)
   const [projectPlanError, setProjectPlanError] = useState<string | null>(null)
+  const [bootstrapAudit, setBootstrapAudit] = useState<BootstrapAudit | null>(null)
+  const [auditHistoryOpen, setAuditHistoryOpen] = useState(false)
   const [newTask, setNewTask] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [projectsLoading, setProjectsLoading] = useState(true)
@@ -256,6 +265,8 @@ function App() {
     setLastApplyUndo(null)
     setActiveInstallTab(new Map())
     setCopiedStepId(null)
+    setBootstrapAudit(null)
+    setAuditHistoryOpen(false)
   }, [selectedProject?.id])
 
   useEffect(() => {
@@ -286,20 +297,28 @@ function App() {
     const planUrl = `${API_BASE_URL}/api/projects/${id}/plan?templateId=${templateId}`
 
     try {
-      const res = await fetch(planUrl)
-      if (!res.ok) {
+      const [planRes, auditRes] = await Promise.all([
+        fetch(planUrl),
+        fetch(`${API_BASE_URL}/api/projects/${id}/bootstrap/audit`).catch(() => null),
+      ])
+
+      if (!planRes.ok) {
         // Server responded — bridge is up. Only show a project-level error.
         setProjectPlan(null)
-        setProjectPlanError(`Project data unavailable (server ${res.status}) from ${planUrl}.`)
+        setProjectPlanError(`Project data unavailable (server ${planRes.status}) from ${planUrl}.`)
         return
       }
 
       try {
-        setProjectPlan(await res.json())
+        setProjectPlan(await planRes.json())
       } catch {
         // Server responded with unparseable body — still up, project-level error only.
         setProjectPlan(null)
         setProjectPlanError(`Project data unavailable (invalid response) from ${planUrl}.`)
+      }
+
+      if (auditRes?.ok) {
+        try { setBootstrapAudit(await auditRes.json()) } catch { /* non-fatal */ }
       }
     } catch (error) {
       // fetch() threw — server is genuinely unreachable.
@@ -744,6 +763,9 @@ function App() {
                   <Pill label={`${projectPlan.bootstrapPlan.summary.totalSteps} step${projectPlan.bootstrapPlan.summary.totalSteps !== 1 ? 's' : ''}`} color={C.muted} dim />
                   <Pill label={`${projectPlan.bootstrapPlan.summary.repoLocalSteps} repo-local`} color={C.info} dim />
                   <Pill label={`${projectPlan.bootstrapPlan.summary.machineLevelSteps} machine-level`} color={C.warn} dim />
+                  {(projectPlan.bootstrapPlan.driftCount ?? 0) > 0 && (
+                    <Pill label={`${projectPlan.bootstrapPlan.driftCount} drift`} color={C.danger} />
+                  )}
                   {/* Template selector */}
                   <span style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
                     <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>template:</span>
@@ -796,6 +818,7 @@ function App() {
                               const accentColor = isMachine ? C.warn : C.info
                               const isDone = status === 'done'
                               const isGated = isMachine && stageGateActive
+                              const hasDrift = bootstrapAudit?.entries.some(e => e.componentId === step.componentId && e.drift) ?? false
 
                               // Determine which install command variants are available
                               const cmds = step.installCommands ?? null
@@ -808,18 +831,22 @@ function App() {
                               const activeCmd = cmds ? (cmds[activeTab] ?? step.instructions ?? '') : (step.instructions ?? '')
 
                               return (
-                                <div key={step.id} style={{ borderLeft: `2px solid ${isDone ? C.ok : accentColor}`, paddingLeft: '10px' }}>
+                                <div key={step.id} style={{ borderLeft: `2px solid ${isDone ? C.ok : hasDrift ? C.danger : accentColor}`, paddingLeft: '10px' }}>
                                   {/* Step header */}
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
                                     {isDone && <span style={{ color: C.ok, fontSize: '13px' }}>✓</span>}
                                     <span style={{ fontSize: '12px', color: isDone ? 'var(--text-muted)' : 'var(--text-primary)', fontWeight: 500, textDecoration: isDone ? 'line-through' : 'none' }}>{step.title}</span>
                                     <Pill label={step.risk} color={step.risk === 'high' ? C.danger : step.risk === 'medium' ? C.warn : C.ok} dim />
+                                    {hasDrift && <Pill label="drift" color={C.danger} />}
                                     {step.requiresApproval && status === 'pending' && <Pill label="approval required" color={C.danger} dim />}
                                     {status === 'applying' && <Pill label="applying…" color={C.warn} />}
                                     {status === 'verifying' && <Pill label="verifying…" color={C.warn} />}
                                     {status === 'done' && <Pill label="done" color={C.ok} />}
                                     {status === 'failed' && <Pill label="failed" color={C.danger} />}
                                   </div>
+                                  {hasDrift && (
+                                    <div style={{ fontSize: '11px', color: C.danger, ...S.mono, marginBottom: '4px' }}>⚠ Previously applied — now missing again.</div>
+                                  )}
 
                                   {/* Rationale + source */}
                                   {!isDone && (
@@ -981,6 +1008,34 @@ function App() {
                       )
                     })
                   })()}
+                  </div>
+                )}
+
+                {/* Audit trail */}
+                {bootstrapAudit && bootstrapAudit.entries.length > 0 && (
+                  <div style={{ marginTop: '14px' }}>
+                    <button
+                      onClick={() => setAuditHistoryOpen(v => !v)}
+                      style={{ fontSize: '11px', ...S.mono, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0', display: 'flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      <span style={{ fontSize: '10px' }}>{auditHistoryOpen ? '▾' : '▸'}</span>
+                      Action history · {bootstrapAudit.entries.length} entr{bootstrapAudit.entries.length !== 1 ? 'ies' : 'y'}
+                      {bootstrapAudit.driftCount > 0 && <Pill label={`${bootstrapAudit.driftCount} drift`} color={C.danger} dim />}
+                    </button>
+                    {auditHistoryOpen && (
+                      <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {bootstrapAudit.entries.map(entry => (
+                          <div key={entry.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '11px', ...S.mono, padding: '5px 8px', background: entry.drift ? `color-mix(in srgb, ${C.danger} 8%, transparent)` : 'var(--bg-elevated)', border: `1px solid ${entry.drift ? C.danger : 'var(--border)'}`, borderRadius: '4px' }}>
+                            <span style={{ color: 'var(--text-muted)', flexShrink: 0, minWidth: '140px' }}>{new Date(entry.appliedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                            <span style={{ color: 'var(--text-secondary)', flex: 1 }}>{entry.componentId}</span>
+                            <Pill label={entry.action} color={C.muted} dim />
+                            <Pill label={entry.stage} color={entry.stage === 'machine-level' ? C.warn : C.info} dim />
+                            {entry.drift && <Pill label="drift" color={C.danger} />}
+                            {entry.path && <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px', whiteSpace: 'nowrap' }} title={entry.path}>{entry.path.split(/[\\/]/).slice(-2).join('/')}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </Section>
