@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-30T04-59-33-427Z
 - Agent: unknown
 - Status: active
-- When: 2026-03-31T15:55:50.688Z
+- When: 2026-03-31T16:15:33.429Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: plan: M005 drift repair and portfolio prioritization
+- Summary: Committed: docs(gsd): close M005 - drift repair and portfolio prioritization complete
 - Work done:
 - No completed work recorded.
 - Why it mattered:

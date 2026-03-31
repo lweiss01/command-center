@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: plan: M005 drift repair and portfolio prioritization
+Committed: docs(gsd): close M005 - drift repair and portfolio prioritization complete
 
 ## Planned Next Steps
 
