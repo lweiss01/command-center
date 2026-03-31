@@ -128,6 +128,9 @@ interface PortfolioEntry {
   checkpointHygiene: 'ok' | 'stale' | 'missing'; overallReadiness: 'ready' | 'partial' | 'missing'
   readinessGaps: string[]; unresolvedCount: number; pendingMilestoneCount: number
   blockedCount: number; nextActionLabel: string; urgencyScore: number
+  healthScore: number; healthGrade: 'A' | 'B' | 'C' | 'D'
+  proofCoverage: { proven: number; total: number } | null
+  importAgeDays: number | null
 }
 
 const API_BASE_URL = 'http://localhost:3001'
@@ -151,6 +154,7 @@ function contColor(s: string)  { return s === 'fresh' ? C.ok : s === 'stale' ? C
 function hygColor(s: string)   { return s === 'ok' ? C.ok : s === 'stale' ? C.warn : C.muted }
 function readyColor(s: string) { return s === 'ready' ? C.ok : s === 'partial' ? C.warn : C.muted }
 function bootstrapColor(s: string) { return s === 'ready' ? C.ok : s === 'blocked' ? C.danger : C.warn }
+function healthGradeColor(g: string) { return g === 'A' ? C.ok : g === 'B' ? C.info : g === 'C' ? C.warn : C.danger }
 function msColor(s: string)    { return s === 'done' ? C.ok : s === 'active' ? C.warn : s === 'blocked' ? C.danger : s === 'draft' ? C.muted : C.info }
 function rqColor(s: string)    { return s === 'validated' ? C.ok : (s === 'deferred' || s === 'out-of-scope') ? C.warn : C.info }
 function runColor(s: string)   { return s === 'success' ? C.ok : s === 'partial' ? C.warn : s === 'failed' ? C.danger : C.muted }
@@ -631,6 +635,8 @@ function App() {
                 ? `Fresh (${Math.round(entry.continuityAgeHours)}h)`
                 : entry.continuityStatus === 'stale' ? 'Stale' : entry.continuityStatus === 'missing' ? 'Missing' : 'Fresh')
               : 'Unknown'
+            const healthGrade = entry?.healthGrade ?? null
+            const proofCoverage = entry?.proofCoverage ?? null
 
             return (
               <button key={project.id} type="button" onClick={() => setSelectedProject(project)}
@@ -657,6 +663,25 @@ function App() {
                   <span style={{ color: 'var(--text-faint)' }}>Continuity</span>
                   <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{continuityLabel}</span>
                 </div>
+                {(healthGrade || (proofCoverage && proofCoverage.total > 0)) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', ...S.mono, marginTop: '2px', overflow: 'hidden' }}>
+                    {healthGrade && (
+                      <>
+                        <span style={{ color: 'var(--text-faint)' }}>Health</span>
+                        <span style={{ color: healthGradeColor(healthGrade), fontWeight: 600 }}>{healthGrade}</span>
+                      </>
+                    )}
+                    {healthGrade && proofCoverage && proofCoverage.total > 0 && <span style={{ color: 'var(--text-faint)' }}>·</span>}
+                    {proofCoverage && proofCoverage.total > 0 && (
+                      <>
+                        <span style={{ color: 'var(--text-faint)' }}>Proof</span>
+                        <span style={{ color: proofCoverage.proven === proofCoverage.total ? C.ok : proofCoverage.proven > 0 ? C.warn : 'var(--text-muted)' }}>
+                          {proofCoverage.proven}/{proofCoverage.total}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
               </button>
             )
           })}

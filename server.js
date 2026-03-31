@@ -1527,7 +1527,7 @@ function computeOpenLoops({ milestones, requirements, decisions }) {
   };
 }
 
-function computeUrgencyScore({ continuity, readiness, openLoops, workflowState }) {
+function computeUrgencyScore({ continuity, readiness, openLoops, workflowState, repoHealth }) {
   let score = 0;
 
   // +0.40 if actively worked (fresh continuity)
@@ -1544,10 +1544,18 @@ function computeUrgencyScore({ continuity, readiness, openLoops, workflowState }
     score += 0.20;
   }
 
-  // +0.15 if the workflow stack has gaps
-  if (readiness.gaps.length > 0) score += 0.15;
+  // Health-aware adjustment (replaces simple readiness-gap check):
+  // Degraded repos need more attention; healthy repos less urgently compete for it.
+  if (repoHealth) {
+    if (repoHealth.grade === 'D') score += 0.20;
+    else if (repoHealth.grade === 'C') score += 0.10;
+    else if (repoHealth.grade === 'A') score -= 0.10;
+  } else {
+    // Fallback: original readiness-gap signal
+    if (readiness.gaps.length > 0) score += 0.15;
+  }
 
-  return Math.min(1.0, Math.round(score * 100) / 100);
+  return Math.min(1.0, Math.max(0, Math.round(score * 100) / 100));
 }
 
 // ── Repo Health Score ─────────────────────────────────────────────────────────
@@ -3634,7 +3642,21 @@ app.get('/api/portfolio', (_req, res) => {
       const workflowState = computeWorkflowState({ milestones, requirements, decisions, continuity, readiness, latestImportRunsByArtifact });
       const nextAction = computeNextAction({ milestones, requirements, decisions, workflowState, continuity, readiness });
       const openLoops = computeOpenLoops({ milestones, requirements, decisions });
-      const urgencyScore = computeUrgencyScore({ continuity, readiness, openLoops, workflowState });
+
+      // Compute proof summary from raw milestone rows (proof_level field)
+      const proofSummary = milestones.length > 0 ? {
+        proven: milestones.filter(m => m.proof_level === 'proven').length,
+        total: milestones.length,
+      } : null;
+
+      const repoHealth = computeRepoHealth({ continuity, readiness, proofSummary, latestImportRunsByArtifact });
+      const urgencyScore = computeUrgencyScore({ continuity, readiness, openLoops, workflowState, repoHealth });
+
+      // Import age in days (derive from latestImportRunsByArtifact)
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const importRun = latestImportRunsByArtifact.milestones ?? latestImportRunsByArtifact.requirements ?? latestImportRunsByArtifact.decisions ?? null;
+      const importAgeDays = importRun?.completedAt ? Math.round((now - Date.parse(importRun.completedAt)) / msPerDay) : null;
 
       // First non-empty line of nextAction.action
       const nextActionLabel = (nextAction.action ?? '').split(/\r?\n/).find((line) => line.trim().length > 0) ?? '';
@@ -3653,6 +3675,10 @@ app.get('/api/portfolio', (_req, res) => {
         blockedCount: openLoops.summary.blockedCount,
         nextActionLabel,
         urgencyScore,
+        healthScore: repoHealth.score,
+        healthGrade: repoHealth.grade,
+        proofCoverage: proofSummary,
+        importAgeDays,
       };
     });
 
