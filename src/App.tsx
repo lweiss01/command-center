@@ -917,6 +917,34 @@ function App() {
                     )
                   })}
                 </div>
+
+                {/* Repair queue */}
+                <div style={{ marginTop: '14px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                  {!projectPlan.repairQueue || projectPlan.repairQueue.length === 0 ? (
+                    <div style={{ fontSize: '11px', color: C.ok, ...S.mono }}>✓ No repairs needed</div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: '10px', ...S.mono, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                        Repair queue · {projectPlan.repairQueue.length} item{projectPlan.repairQueue.length !== 1 ? 's' : ''}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {projectPlan.repairQueue.map(item => {
+                          const sevColor = item.severity === 'critical' ? C.danger : item.severity === 'high' ? C.warn : item.severity === 'medium' ? C.info : C.muted
+                          return (
+                            <div key={item.priority} style={{ padding: '7px 10px', background: 'var(--bg-elevated)', border: `1px solid ${item.severity === 'critical' ? C.danger : 'var(--border)'}`, borderRadius: '5px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '3px' }}>
+                                <Pill label={item.severity} color={sevColor} dim={item.severity !== 'critical'} />
+                                <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500, flex: 1 }}>{item.action}</span>
+                                <span style={{ fontSize: '10px', color: 'var(--text-faint)', ...S.mono, flexShrink: 0 }}>→ {item.targetPanel}</span>
+                              </div>
+                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4, paddingLeft: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.rationale}>{item.rationale}</div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
               </Section>
             )}
 
