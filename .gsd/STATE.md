@@ -1,8 +1,8 @@
 # GSD State
 
 **Active Milestone:** M003: Workflow bootstrap and authoring — Context Draft
-**Active Slice:** S05: Bootstrap audit trail + drift signals
-**Phase:** planning
+**Active Slice:** None
+**Phase:** validating-milestone
 **Requirements Status:** 13 active · 1 validated · 3 deferred · 3 out of scope
 
 ## Milestone Registry
@@ -22,4 +22,4 @@
 - None
 
 ## Next Action
-Slice S05 has a plan file but no tasks. Add tasks to the plan.
+Validate milestone M003 before completion.

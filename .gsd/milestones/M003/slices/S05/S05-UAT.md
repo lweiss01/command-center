@@ -1,0 +1,6 @@
+# S05: Bootstrap audit trail + drift signals — UAT
+
+**Milestone:** M003
+**Written:** 2026-03-31T00:53:25.439Z
+
+## S05 UAT: Bootstrap audit trail + drift signals\n\n### Setup\n- paydirt-backend project (or any project with bootstrap gaps)\n- Command Center backend + frontend running\n\n### Test cases\n\n1. **Audit entry created on apply**\n   - Apply a bootstrap step (e.g. Initialize GSD directory)\n   - After plan reload, 'Action history' toggle appears with '1 entry'\n   - Expected: \u2705\n\n2. **Audit trail content**\n   - Expand Action history\n   - Entry shows: timestamp, componentId (gsd-dir), action (created-directory), stage (repo-local), path\n   - Expected: \u2705\n\n3. **Drift detection after manual removal**\n   - Remove the created directory (rm -rf paydirt-backend/.gsd)\n   - Reload project in UI\n   - Drift badge '1 drift' appears in Bootstrap Plan header\n   - Step shows 'drift' pill and '\u26a0 Previously applied \u2014 now missing again.'\n   - Action history toggle shows '1 drift'\n   - Expected: \u2705\n\n4. **Drift clears on re-apply**\n   - Re-apply the same step\n   - Reload \u2014 drift badge gone, step shows no drift warning\n   - Audit trail now shows 2 entries for gsd-dir\n   - Expected: \u2705\n\n5. **No console errors throughout**\n   - Expected: \u2705
