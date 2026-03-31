@@ -1,7 +1,7 @@
 # GSD State
 
 **Active Milestone:** M003: Workflow bootstrap and authoring — Context Draft
-**Active Slice:** S04: Machine-level setup assistant (secondary stage)
+**Active Slice:** S05: Bootstrap audit trail + drift signals
 **Phase:** planning
 **Requirements Status:** 13 active · 1 validated · 3 deferred · 3 out of scope
 
@@ -22,4 +22,4 @@
 - None
 
 ## Next Action
-Slice S04 has a plan file but no tasks. Add tasks to the plan.
+Slice S05 has a plan file but no tasks. Add tasks to the plan.
