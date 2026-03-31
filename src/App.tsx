@@ -52,10 +52,11 @@ interface BootstrapPlanStep {
   risk: 'low' | 'medium' | 'high'
   requiresApproval: boolean
   instructions: string | null
+  installCommands: { npm?: string | null; brew?: string | null; winget?: string | null } | null
   previewContent: string | null
   templateId: string
 }
-type StepStatus = 'pending' | 'confirming' | 'applying' | 'done' | 'failed' | 'instructions'
+type StepStatus = 'pending' | 'confirming' | 'applying' | 'done' | 'failed' | 'instructions' | 'verifying'
 interface BootstrapPlanStage {
   id: 'repo-local' | 'machine-level'
   title: string
@@ -109,6 +110,7 @@ interface ProjectPlan {
   latestImportRunsByArtifact: { milestones: ImportRun | null; requirements: ImportRun | null; decisions: ImportRun | null }
   workflowState: WorkflowState; continuity: ContinuityState
   nextAction: NextAction; bootstrapPlan: BootstrapPlan; readiness: ReadinessReport; openLoops: OpenLoops
+  platform: string
 }
 interface PortfolioEntry {
   project: Project; workflowPhase: string; workflowConfidence: number
@@ -243,6 +245,8 @@ function App() {
   const [bootstrapPreflightResult, setBootstrapPreflightResult] = useState<Map<string, PreflightResult | null>>(new Map())
   const [lastApplyUndo, setLastApplyUndo] = useState<string | null>(null)
   const [bootstrapTemplateId, setBootstrapTemplateId] = useState<'minimal' | 'starter'>('minimal')
+  const [activeInstallTab, setActiveInstallTab] = useState<Map<string, 'npm' | 'brew' | 'winget'>>(new Map())
+  const [copiedStepId, setCopiedStepId] = useState<string | null>(null)
 
   // Clear bootstrap step state when the selected project changes
   useEffect(() => {
@@ -250,6 +254,8 @@ function App() {
     setBootstrapStepError(new Map())
     setBootstrapPreflightResult(new Map())
     setLastApplyUndo(null)
+    setActiveInstallTab(new Map())
+    setCopiedStepId(null)
   }, [selectedProject?.id])
 
   useEffect(() => {
@@ -406,6 +412,25 @@ function App() {
     } catch (e) {
       setStepStatus(step.id, 'failed')
       setStepError(step.id, e instanceof Error ? e.message : 'Network error')
+    }
+  }
+
+  const handleVerifyTool = async (step: BootstrapPlanStep) => {
+    if (!selectedProject) return
+    setStepStatus(step.id, 'verifying')
+    setBootstrapStepError(prev => { const m = new Map(prev); m.delete(step.id); return m })
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/bootstrap/verify-tool?componentId=${encodeURIComponent(step.componentId)}`)
+      const data: { ok: boolean; status?: string; error?: string } = await res.json()
+      if (data.ok && data.status === 'present') {
+        setStepStatus(step.id, 'done')
+      } else {
+        setStepStatus(step.id, 'instructions')
+        setStepError(step.id, 'Tool not detected yet — try running the install command, then verify again.')
+      }
+    } catch (e) {
+      setStepStatus(step.id, 'instructions')
+      setStepError(step.id, e instanceof Error ? e.message : 'Network error during verify')
     }
   }
 
@@ -745,7 +770,11 @@ function App() {
                   <Note variant="ok">No bootstrap actions required for this repo.</Note>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {projectPlan.bootstrapPlan.stages.map(stage => {
+                    {(() => {
+                      const repoLocalSteps = projectPlan.bootstrapPlan.steps.filter(s => s.stage === 'repo-local')
+                      const repoLocalAllDone = repoLocalSteps.length > 0 && repoLocalSteps.every(s => (bootstrapStepStatus.get(s.id) ?? 'pending') === 'done')
+                      const stageGateActive = repoLocalSteps.length > 0 && !repoLocalAllDone
+                      return projectPlan.bootstrapPlan.stages.map(stage => {
                       const stageSteps = projectPlan.bootstrapPlan.steps.filter(step => step.stage === stage.id)
                       if (stageSteps.length === 0) return null
                       return (
@@ -753,6 +782,12 @@ function App() {
                           <div style={{ fontSize: '10px', ...S.mono, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>
                             {stage.title} · {stage.stepCount} step{stage.stepCount !== 1 ? 's' : ''}
                           </div>
+                          {/* Stage gate banner: shown on machine-level card when repo-local steps are pending */}
+                          {stage.id === 'machine-level' && stageGateActive && (
+                            <div style={{ marginBottom: '10px', padding: '6px 10px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', color: 'var(--text-muted)', ...S.mono }}>
+                              ⚠ Complete repo-local steps above before running machine-level setup.
+                            </div>
+                          )}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {stageSteps.map(step => {
                               const status = bootstrapStepStatus.get(step.id) ?? 'pending'
@@ -760,6 +795,17 @@ function App() {
                               const isMachine = step.stage === 'machine-level'
                               const accentColor = isMachine ? C.warn : C.info
                               const isDone = status === 'done'
+                              const isGated = isMachine && stageGateActive
+
+                              // Determine which install command variants are available
+                              const cmds = step.installCommands ?? null
+                              const availableTabs = cmds ? (Object.entries(cmds).filter(([, v]) => v != null).map(([k]) => k) as Array<'npm' | 'brew' | 'winget'>) : []
+                              const platform = projectPlan.platform
+                              const platformDefault: 'npm' | 'brew' | 'winget' =
+                                platform === 'win32' ? (cmds?.winget ? 'winget' : 'npm') :
+                                platform === 'darwin' ? (cmds?.brew ? 'brew' : 'npm') : 'npm'
+                              const activeTab = (availableTabs.includes(activeInstallTab.get(step.id) as 'npm' | 'brew' | 'winget') ? activeInstallTab.get(step.id) : platformDefault) as 'npm' | 'brew' | 'winget'
+                              const activeCmd = cmds ? (cmds[activeTab] ?? step.instructions ?? '') : (step.instructions ?? '')
 
                               return (
                                 <div key={step.id} style={{ borderLeft: `2px solid ${isDone ? C.ok : accentColor}`, paddingLeft: '10px' }}>
@@ -770,6 +816,7 @@ function App() {
                                     <Pill label={step.risk} color={step.risk === 'high' ? C.danger : step.risk === 'medium' ? C.warn : C.ok} dim />
                                     {step.requiresApproval && status === 'pending' && <Pill label="approval required" color={C.danger} dim />}
                                     {status === 'applying' && <Pill label="applying…" color={C.warn} />}
+                                    {status === 'verifying' && <Pill label="verifying…" color={C.warn} />}
                                     {status === 'done' && <Pill label="done" color={C.ok} />}
                                     {status === 'failed' && <Pill label="failed" color={C.danger} />}
                                   </div>
@@ -782,8 +829,8 @@ function App() {
                                     </>
                                   )}
 
-                                  {/* Error message */}
-                                  {status === 'failed' && errMsg && (
+                                  {/* Error message (instructions-state inline error) */}
+                                  {(status === 'failed' || status === 'instructions') && errMsg && (
                                     <div style={{ fontSize: '11px', color: C.danger, ...S.mono, marginTop: '6px' }}>{errMsg}</div>
                                   )}
 
@@ -798,8 +845,9 @@ function App() {
                                   )}
                                   {status === 'pending' && isMachine && (
                                     <button
-                                      onClick={() => setStepStatus(step.id, 'instructions')}
-                                      style={{ marginTop: '8px', fontSize: '11px', padding: '3px 10px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                                      disabled={isGated}
+                                      onClick={() => !isGated && setStepStatus(step.id, 'instructions')}
+                                      style={{ marginTop: '8px', fontSize: '11px', padding: '3px 10px', background: 'var(--bg-elevated)', color: isGated ? 'var(--text-muted)' : 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '4px', cursor: isGated ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-mono)', opacity: isGated ? 0.5 : 1 }}
                                     >
                                       View Instructions
                                     </button>
@@ -870,19 +918,59 @@ function App() {
                                   )}
 
                                   {/* Instructions panel (machine-level) */}
-                                  {status === 'instructions' && step.instructions && (
+                                  {(status === 'instructions' || status === 'verifying') && (step.instructions || availableTabs.length > 0) && (
                                     <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg-base)', border: `1px solid ${C.warn}`, borderRadius: '6px' }}>
                                       <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 600, marginBottom: '6px' }}>Install instructions</div>
                                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '8px' }}>Run this command in your terminal to install the required tool. This cannot be applied automatically.</div>
-                                      <div style={{ fontSize: '12px', ...S.mono, padding: '6px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '4px', color: C.ok, userSelect: 'all' }}>
-                                        {step.instructions}
+
+                                      {/* Multi-variant tabs */}
+                                      {availableTabs.length > 1 && (
+                                        <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                                          {availableTabs.map(tab => (
+                                            <button
+                                              key={tab}
+                                              onClick={() => setActiveInstallTab(prev => new Map(prev).set(step.id, tab))}
+                                              style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '3px', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'var(--font-mono)', background: activeTab === tab ? C.warn : 'var(--bg-elevated)', color: activeTab === tab ? '#000' : 'var(--text-muted)', fontWeight: activeTab === tab ? 600 : 400 }}
+                                            >
+                                              {tab}
+                                              {tab === platformDefault && activeTab !== tab && <span style={{ marginLeft: '3px', opacity: 0.6 }}>←</span>}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {/* Command block + copy */}
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                                        <div style={{ flex: 1, fontSize: '12px', ...S.mono, padding: '6px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '4px', color: C.ok, userSelect: 'all' }}>
+                                          {activeCmd}
+                                        </div>
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(activeCmd).catch(() => {})
+                                            setCopiedStepId(step.id)
+                                            setTimeout(() => setCopiedStepId(prev => prev === step.id ? null : prev), 2000)
+                                          }}
+                                          style={{ fontSize: '10px', padding: '4px 8px', background: 'var(--bg-elevated)', color: copiedStepId === step.id ? C.ok : 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)', flexShrink: 0, whiteSpace: 'nowrap' }}
+                                        >
+                                          {copiedStepId === step.id ? 'Copied!' : 'Copy'}
+                                        </button>
                                       </div>
-                                      <button
-                                        onClick={() => setStepStatus(step.id, 'pending')}
-                                        style={{ marginTop: '8px', fontSize: '11px', padding: '3px 10px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
-                                      >
-                                        Dismiss
-                                      </button>
+
+                                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        <button
+                                          disabled={status === 'verifying'}
+                                          onClick={() => handleVerifyTool(step)}
+                                          style={{ fontSize: '11px', padding: '3px 10px', background: status === 'verifying' ? 'var(--bg-elevated)' : C.warn, color: status === 'verifying' ? 'var(--text-muted)' : '#000', border: 'none', borderRadius: '4px', cursor: status === 'verifying' ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-mono)', opacity: status === 'verifying' ? 0.7 : 1 }}
+                                        >
+                                          {status === 'verifying' ? 'Verifying…' : 'I installed this — verify'}
+                                        </button>
+                                        <button
+                                          onClick={() => { setStepStatus(step.id, 'pending'); setBootstrapStepError(prev => { const m = new Map(prev); m.delete(step.id); return m }) }}
+                                          style={{ fontSize: '11px', padding: '3px 10px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                                        >
+                                          Dismiss
+                                        </button>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -891,7 +979,8 @@ function App() {
                           </div>
                         </div>
                       )
-                    })}
+                    })
+                  })()}
                   </div>
                 )}
               </Section>
