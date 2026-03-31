@@ -2835,6 +2835,76 @@ function importGsdSummaries(projectId) {
   }
 }
 
+function autoImportForProject(projectId) {
+  const imported = [];
+  const skipped = [];
+  const warnings = [];
+  const now = Date.now();
+  const msPerDay = 24 * 60 * 60 * 1000;
+
+  // Get latest import runs per strategy to determine staleness
+  const allRuns = listImportRunsByProjectId.all(projectId).map(serializeImportRunRow);
+  const latestByStrategy = new Map();
+  for (const run of allRuns) {
+    if (!latestByStrategy.has(run.strategy)) latestByStrategy.set(run.strategy, run);
+  }
+
+  const isStale = (strategy) => {
+    const run = latestByStrategy.get(strategy);
+    if (!run || !run.completedAt) return true;
+    const age = now - Date.parse(run.completedAt);
+    return age > msPerDay; // stale if older than 24h
+  };
+
+  // Get artifacts for this project
+  const artifacts = listArtifactsByProjectId.all(projectId);
+  const hasType = (type) => artifacts.some(a => a.artifact_type === type);
+
+  // gsd_project → milestones
+  if (hasType('gsd_project')) {
+    if (isStale('gsd_project')) {
+      try {
+        importGsdProjectMilestones(projectId);
+        imported.push('milestones');
+      } catch (e) {
+        warnings.push(`milestones: ${e instanceof Error ? e.message : 'import failed'}`);
+      }
+    } else {
+      skipped.push('milestones');
+    }
+  }
+
+  // gsd_requirements → requirements
+  if (hasType('gsd_requirements')) {
+    if (isStale('gsd_requirements')) {
+      try {
+        importGsdRequirements(projectId);
+        imported.push('requirements');
+      } catch (e) {
+        warnings.push(`requirements: ${e instanceof Error ? e.message : 'import failed'}`);
+      }
+    } else {
+      skipped.push('requirements');
+    }
+  }
+
+  // gsd_decisions → decisions
+  if (hasType('gsd_decisions')) {
+    if (isStale('gsd_decisions')) {
+      try {
+        importGsdDecisions(projectId);
+        imported.push('decisions');
+      } catch (e) {
+        warnings.push(`decisions: ${e instanceof Error ? e.message : 'import failed'}`);
+      }
+    } else {
+      skipped.push('decisions');
+    }
+  }
+
+  return { imported, skipped, warnings };
+}
+
 function upsertProjectWithArtifacts(projectRoot) {
   const now = new Date().toISOString();
   const name = path.basename(projectRoot);
@@ -2895,6 +2965,8 @@ function scanWorkspaceRoot(rootPath) {
 
   let projectsFound = 0;
   let artifactsFound = 0;
+  let autoImported = 0;
+  let autoSkipped = 0;
 
   try {
     const entries = safeReadDir(normalizedRoot);
@@ -2910,6 +2982,18 @@ function scanWorkspaceRoot(rootPath) {
       const result = upsertProjectWithArtifacts(projectRoot);
       projectsFound += 1;
       artifactsFound += result.artifactCount;
+
+      // Auto-import: populate planning data for projects that have GSD docs
+      try {
+        const autoImport = autoImportForProject(result.projectId);
+        if (autoImport.imported.length > 0 || autoImport.warnings.length > 0) {
+          console.log(`[scan/auto-import] project=${path.basename(projectRoot)} imported=[${autoImport.imported.join(',')}] skipped=[${autoImport.skipped.join(',')}] warnings=${autoImport.warnings.length}`);
+        }
+        autoImported += autoImport.imported.length;
+        autoSkipped += autoImport.skipped.length;
+      } catch (e) {
+        console.warn(`[scan/auto-import] project=${path.basename(projectRoot)} error:`, e instanceof Error ? e.message : e);
+      }
     }
 
     updateScanRun.run({
@@ -2917,7 +3001,7 @@ function scanWorkspaceRoot(rootPath) {
       status: 'success',
       projects_found: projectsFound,
       artifacts_found: artifactsFound,
-      summary: `Scanned ${normalizedRoot}: found ${projectsFound} projects and ${artifactsFound} artifacts.`,
+      summary: `Scanned ${normalizedRoot}: found ${projectsFound} projects, ${artifactsFound} artifacts. Auto-imported ${autoImported} artifact class(es).`,
       completed_at: new Date().toISOString(),
     });
 
@@ -2927,6 +3011,7 @@ function scanWorkspaceRoot(rootPath) {
       status: 'success',
       projectsFound,
       artifactsFound,
+      autoImportSummary: { totalImported: autoImported, totalSkipped: autoSkipped },
     };
   } catch (error) {
     updateScanRun.run({
