@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: docs: update README and USER-GUIDE to reflect M001-M004 as-built state
+Committed: feat: repo tagging UI and interactions in portfolio and project details (M006-S04)
 
 ## What Was Tried
 
@@ -68,8 +68,9 @@ Committed: docs: update README and USER-GUIDE to reflect M001-M004 as-built stat
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- README.md
-- docs/USER-GUIDE.md
+- mission_control.db-shm
+- mission_control.db-wal
+- server.js
 
 ## Pending Work Queue
 
@@ -102,6 +103,6 @@ Committed: docs: update README and USER-GUIDE to reflect M001-M004 as-built stat
 
 ## Historical Memory
 
-- Last updated: 2026-03-31T04:15:01.418Z
+- Last updated: 2026-04-01T00:21:53.363Z
 - Last handoff: Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portability. All changes pushed to GitHub.
 - Pending sessions remembered: 2

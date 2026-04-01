@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: update README and USER-GUIDE to reflect M001-M004 as-built state
+Committed: feat: repo tagging UI and interactions in portfolio and project details (M006-S04)
 
 ## Planned Next Steps
 

@@ -1,8 +1,8 @@
 # GSD State
 
 **Active Milestone:** M006: Sharp ecosystem expansion — Context Draft
-**Active Slice:** S01: Auto-import on scan
-**Phase:** planning
+**Active Slice:** S05: Beads context in health breakdown
+**Phase:** evaluating-gates
 **Requirements Status:** 13 active · 1 validated · 3 deferred · 3 out of scope
 
 ## Milestone Registry
@@ -22,4 +22,4 @@
 - None
 
 ## Next Action
-Slice S01 has a plan file but no tasks. Add tasks to the plan.
+Evaluate 3 quality gate(s) for S05 before execution.
