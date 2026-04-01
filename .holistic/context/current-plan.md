@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs(holistic): final checkpoint after push
+Committed: docs(holistic): sync final state
 
 ## Planned Next Steps
 
