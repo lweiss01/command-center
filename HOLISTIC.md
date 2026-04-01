@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: feat: repo tagging UI and interactions in portfolio and project details (M006-S04)
+Committed: docs(gsd): add M006 slice summaries, assessments, and task artifacts
 
 ## What Was Tried
 
@@ -68,9 +68,6 @@ Committed: feat: repo tagging UI and interactions in portfolio and project detai
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
-- mission_control.db-shm
-- mission_control.db-wal
-- server.js
 
 ## Pending Work Queue
 
@@ -103,6 +100,6 @@ Committed: feat: repo tagging UI and interactions in portfolio and project detai
 
 ## Historical Memory
 
-- Last updated: 2026-04-01T00:21:53.363Z
+- Last updated: 2026-04-01T00:59:53.085Z
 - Last handoff: Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portability. All changes pushed to GitHub.
 - Pending sessions remembered: 2

@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: feat: repo tagging UI and interactions in portfolio and project details (M006-S04)
+Committed: docs(gsd): add M006 slice summaries, assessments, and task artifacts
 
 ## Before ending this session
 
