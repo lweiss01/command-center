@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: chore: holistic timestamp sync
+Committed: docs: comprehensive README and USER-GUIDE audit for M005-M006
 
 ## Before ending this session
 
