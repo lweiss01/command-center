@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: comprehensive README and USER-GUIDE audit for M005-M006
+Committed: docs(holistic): checkpoint after README/USER-GUIDE audit
 
 ## Planned Next Steps
 
