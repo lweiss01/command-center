@@ -20,7 +20,9 @@ It pulls planning state you already maintain (GSD docs, Holistic continuity arti
 | M003 | ✅ complete | Bootstrap assistant: gap detection → staged plan → template preview → safe apply → machine-level install guidance → audit trail with drift signals |
 | M004 | ✅ complete | Validation and proof model: SUMMARY import, claimed-vs-proven milestone tracking, requirement traceability, Proof panel |
 | M005 | ✅ complete | Health score + repair queue: unified repo health grade, contributor breakdown, portfolio health badges, prioritized repair queue in cockpit |
-| M006 | ✅ complete | Sharp ecosystem expansion: auto-import on scan, add project by path, first-run onboarding card, repo tagging (active/minimal/archive) |
+| M006 | ✅ complete | Sharp ecosystem expansion: auto-import on scan, add project by path, first-run onboarding card, repo tagging (active/minimal/archive), configurable workspace scan paths |
+
+**Current version:** 1.1.0
 
 For full planning detail, see [.gsd/milestones/](.gsd/milestones/) or the [GSD roadmap](.gsd/milestones/M004/M004-ROADMAP.md).
 
@@ -30,7 +32,8 @@ For full planning detail, see [.gsd/milestones/](.gsd/milestones/) or the [GSD r
 
 ### Planning ingestion + normalization
 
-- Workspace project discovery (scans a configured root path)
+- Configurable workspace scan paths (Settings UI for managing multiple directories)
+- Workspace project discovery (scans all enabled paths configured in Settings)
 - Source artifact detection for GSD and Holistic files
 - Canonical SQLite planning model (`mission_control.db`)
 - Plan snapshot API (`GET /api/projects/:id/plan`)
@@ -90,7 +93,8 @@ For full planning detail, see [.gsd/milestones/](.gsd/milestones/) or the [GSD r
 
 ### Auto-import and repo tagging (M006)
 
-- **Auto-import on scan**: running a workspace scan automatically imports planning data for any newly discovered project with GSD docs — no manual import button required
+- **Configurable workspace scan paths**: Settings UI to manage multiple workspace directories — add, enable/disable, and remove scan paths without editing config files
+- **Auto-import on scan**: running a workspace scan automatically imports planning data for any newly discovered project with GSD docs — scans all enabled paths configured in Settings
 - **Add project by path**: type a directory path into the "New" input and add a project without running a full workspace scan
 - **First-run onboarding**: projects with planning docs but zero imports show a prominent "Import All" card — one click to populate milestones, requirements, and decisions
 - **Repo tagging**: tag repos as `active`, `minimal`, or `archive`
@@ -226,7 +230,7 @@ npm run cc:stop
 | Endpoint | What it does |
 |---|---|
 | `GET /api/projects` | List all discovered projects |
-| `POST /api/scan` | Trigger workspace scan (auto-imports GSD docs for newly discovered projects) |
+| `POST /api/scan` | Trigger workspace scan on all enabled paths (auto-imports GSD docs for newly discovered projects) |
 | `POST /api/projects/add` | Add project by path without full workspace scan |
 | `GET /api/projects/:id/plan` | Full plan snapshot (workflow state, proof, bootstrap, open loops, health, repair queue, etc.) |
 | `GET /api/portfolio` | Cross-repo urgency-scored portfolio with health grades |
@@ -240,6 +244,10 @@ npm run cc:stop
 | `GET /api/projects/:id/bootstrap/verify-tool` | Re-probe a machine tool after install |
 | `GET /api/projects/:id/bootstrap/audit` | Bootstrap action history + drift detection |
 | `GET /api/projects/:id/proof` | Requirement proof traceability |
+| `GET /api/scan-paths` | List all configured workspace scan paths |
+| `POST /api/scan-paths` | Add new workspace scan path |
+| `PUT /api/scan-paths/:id` | Update scan path (enable/disable, change settings) |
+| `DELETE /api/scan-paths/:id` | Remove workspace scan path |
 
 ---
 

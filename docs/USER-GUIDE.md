@@ -34,7 +34,11 @@ When any panel is not in that state, Command Center is telling you where risk is
 
 ## 2) Fast daily workflow (10 minutes)
 
-For each repo you plan to touch today:
+**First time setup:**
+- Click **Settings** (sidebar, bottom-left) and configure all workspace directories where you keep projects
+- Run **Scan Workspace** to discover all repos
+
+**For each repo you plan to touch today:**
 
 1. Open Command Center and select the repo card from the portfolio.
 2. Check panels in this order:
@@ -515,7 +519,70 @@ Also: **Import Summaries** (in the Proof panel) for proof signal refresh.
 
 ---
 
-## 13) Cross-repo portfolio view
+## 13) Settings (workspace scan paths)
+
+### What you can see
+
+The **Settings** button in the sidebar (bottom-left, next to Guide and New) opens a modal where you can configure which directories Command Center scans for projects.
+
+The Settings modal shows:
+- **Scan Paths** section with explanation text
+- Input field to add new paths (e.g., `D:\Projects\active`)
+- List of all configured scan paths with:
+  - Checkbox to enable/disable each path
+  - Folder icon and normalized path display (Windows-style backslashes)
+  - Remove button for each path
+
+### Why this matters
+
+By default, Command Center scans a single root directory (`C:\Users\<you>\Documents` on Windows). If you organize projects across multiple drives or directories, you need to configure additional scan paths so workspace scans find all your repos.
+
+### What to do
+
+#### Adding a new scan path
+
+1. Click **Settings** in the sidebar.
+2. Type or paste a directory path into the input field (e.g., `D:\Projects\active` or `C:\Code\repos`).
+3. Click **Add** or press Enter.
+4. The path appears in the list below with a checked checkbox (enabled by default).
+5. Click **Done** to close the modal.
+6. Run **Scan Workspace** to discover projects in the newly added path.
+
+Verify: new projects from that directory appear in the portfolio.
+
+#### Disabling a scan path temporarily
+
+1. Click **Settings**.
+2. Uncheck the checkbox next to the path you want to disable.
+3. Click **Done**.
+4. Next time you scan, that directory will be skipped.
+
+Use this when you have a large archive directory you only want to scan occasionally.
+
+#### Removing a scan path permanently
+
+1. Click **Settings**.
+2. Click **Remove** next to the path you want to delete.
+3. The path is removed immediately (no confirmation).
+4. Click **Done**.
+
+Warning: if you remove a path, projects discovered from that path **will not be deleted** from Command Center — they remain in the portfolio until you manually remove them or they fail to re-scan.
+
+#### Duplicate path handling
+
+Command Center prevents adding duplicate paths. If you try to add a path that already exists (even with different slash styles, e.g., `C:/Users/...` vs `C:\Users\...`), you'll see an error: "Path already exists".
+
+### Default scan path
+
+On first run, Command Center initializes with one scan path:
+- Windows: `C:\Users\<you>\Documents`
+- macOS/Linux: `/Users/<you>/Documents` or `$HOME/Documents`
+
+You can disable or remove this default path if you organize projects elsewhere.
+
+---
+
+## 14) Cross-repo portfolio view
 
 ### What you can see
 
@@ -589,11 +656,13 @@ Higher urgency = repo deserves attention sooner.
 
 ### Scenario D — "I have several repos; what should I touch today?"
 
-1. Open the portfolio list (left column).
-2. Sort by urgency (default).
-3. Prioritize: health grade A or B + non-missing continuity + clear Next Action.
-4. Use blocked repos only if your goal is unblocking.
-5. Tag repos as `minimal` (experimental) or `archive` (inactive) to remove noise from the portfolio.
+1. Ensure all workspace directories are configured in **Settings** — add any missing paths.
+2. Run **Scan Workspace** if you haven't scanned recently or added new paths.
+3. Open the portfolio list (left column).
+4. Sort by urgency (default).
+5. Prioritize: health grade A or B + non-missing continuity + clear Next Action.
+6. Use blocked repos only if your goal is unblocking.
+7. Tag repos as `minimal` (experimental) or `archive` (inactive) to remove noise from the portfolio.
 
 ### Scenario E — "I just completed a milestone/slice"
 
@@ -665,9 +734,26 @@ Five signals contribute to the score:
 
 Grade thresholds: A=90+, B=70-89, C=50-69, D=30-49, F=0-29, –=archived
 
+### How do I scan projects in multiple directories?
+
+1. Click **Settings** in the sidebar (bottom-left).
+2. Add each directory path where you keep projects (e.g., `D:\Work\repos`, `C:\Personal\projects`).
+3. Click **Done** and run **Scan Workspace**.
+4. All enabled paths are scanned and projects are discovered automatically.
+
+You can enable/disable paths without removing them — useful for large archive directories you only want to scan occasionally.
+
+### What happens if I remove a scan path?
+
+Projects discovered from that path remain in Command Center's portfolio until you manually remove them or they fail a rescan. Removing a scan path only prevents future scans from searching that directory.
+
+### Why does my scan path show with backslashes when I typed forward slashes?
+
+Command Center normalizes all paths to Windows-style backslashes (`\`) for consistent display. Both `C:/Users/...` and `C:\Users\...` are treated as the same path internally.
+
 ---
 
-## 16) Appendix — command quick reference
+## 17) Appendix — command quick reference
 
 ```bash
 npm run cc:shortcut       # Create/update desktop shortcuts
