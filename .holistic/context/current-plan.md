@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: plan: M006 sharp ecosystem expansion
+Committed: feat: repo tagging UI and interactions in portfolio and project details (M006-S04)
 
 ## Planned Next Steps
 
