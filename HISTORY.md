@@ -36,13 +36,14 @@ _Append-only log of every Holistic session. Newest entries at the bottom._
 
 ---
 
-## Session `session-2026-03-30T04-59-33-427Z` | 2026-04-01T01:19:05.181Z | unknown
+## Session `session-2026-03-30T04-59-33-427Z` | 2026-04-01T21:13:52.816Z | unknown
 
-**Branch:** `main`  
+**Branch:** `codex/remove-browser-profile-snapshot`  
 **Status:** active  
 **Goal:** Capture work and prepare a clean handoff.  
-**Checkpoints:** 49
+**Checkpoints:** 55
 
 **Files changed:**
 - `.bg-shell/manifest.json`
+- `.logs/command-center-frontend.log`
 

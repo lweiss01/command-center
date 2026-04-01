@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs(holistic): checkpoint after README/USER-GUIDE audit
+Committed: docs: update README and USER-GUIDE for v1.1.0 with scan paths
 
 ## Before ending this session
 

@@ -7,9 +7,9 @@ This archive is the durable memory of what agents changed, why they changed it, 
 - Session: session-2026-03-30T04-59-33-427Z
 - Agent: unknown
 - Status: active
-- When: 2026-04-01T01:19:05.181Z
+- When: 2026-04-01T21:13:52.816Z
 - Goal: Capture work and prepare a clean handoff.
-- Summary: Committed: docs(holistic): checkpoint after README/USER-GUIDE audit
+- Summary: Committed: docs: update README and USER-GUIDE for v1.1.0 with scan paths
 - Work done:
 - No completed work recorded.
 - Why it mattered:

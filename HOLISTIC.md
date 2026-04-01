@@ -34,7 +34,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Work Status
 
-Committed: docs(holistic): checkpoint after README/USER-GUIDE audit
+Committed: docs: update README and USER-GUIDE for v1.1.0 with scan paths
 
 ## What Was Tried
 
@@ -68,6 +68,7 @@ Committed: docs(holistic): checkpoint after README/USER-GUIDE audit
 ## Changed Files In Current Session
 
 - .bg-shell/manifest.json
+- .logs/command-center-frontend.log
 
 ## Pending Work Queue
 
@@ -100,6 +101,6 @@ Committed: docs(holistic): checkpoint after README/USER-GUIDE audit
 
 ## Historical Memory
 
-- Last updated: 2026-04-01T01:19:03.678Z
+- Last updated: 2026-04-01T21:12:25.167Z
 - Last handoff: Implemented M003-S03 (Safe Apply Engine) and updated .gitignore for GSD portability. All changes pushed to GitHub.
 - Pending sessions remembered: 2
