@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs: update README and USER-GUIDE to reflect M001-M004 as-built state
+Committed: docs(holistic): post-push checkpoint update
 
 ## Before ending this session
 
