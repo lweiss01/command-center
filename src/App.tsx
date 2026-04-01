@@ -601,6 +601,11 @@ function App() {
     } catch { /* non-fatal */ }
   }
 
+  // Normalize path for display (always show Windows-style backslashes on Windows)
+  const normalizePathForDisplay = (path: string) => {
+    return path.replace(/\//g, '\\')
+  }
+
   const handleAddProject = async () => {
     if (!addProjectPath.trim()) return
     setAddProjectInFlight(true); setAddProjectError(null)
@@ -1725,7 +1730,7 @@ function App() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '12px', color: scanPath.enabled ? 'var(--text-secondary)' : 'var(--text-muted)', ...S.mono, wordBreak: 'break-all' }}>
                             <FolderOpen size={12} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', opacity: 0.7 }} />
-                            {scanPath.path}
+                            {normalizePathForDisplay(scanPath.path)}
                           </div>
                         </div>
                         <button
