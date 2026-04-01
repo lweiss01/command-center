@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs(holistic): update state after M006 artifact commit
+Committed: docs(holistic): post-push checkpoint update
 
 ## Before ending this session
 

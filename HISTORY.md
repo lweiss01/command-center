@@ -36,12 +36,12 @@ _Append-only log of every Holistic session. Newest entries at the bottom._
 
 ---
 
-## Session `session-2026-03-30T04-59-33-427Z` | 2026-04-01T01:02:16.562Z | unknown
+## Session `session-2026-03-30T04-59-33-427Z` | 2026-04-01T01:03:16.556Z | unknown
 
 **Branch:** `main`  
 **Status:** active  
 **Goal:** Capture work and prepare a clean handoff.  
-**Checkpoints:** 34
+**Checkpoints:** 36
 
 **Files changed:**
 - `.bg-shell/manifest.json`
