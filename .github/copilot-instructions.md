@@ -15,7 +15,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs(holistic): post-push checkpoint update
+Committed: docs: sync Holistic state and AI agent configs
 
 ## Before ending this session
 
