@@ -6,7 +6,7 @@ Capture work and prepare a clean handoff.
 
 ## Latest Status
 
-Committed: docs(gsd): add M006 slice summaries, assessments, and task artifacts
+Committed: docs(holistic): update state after M006 artifact commit
 
 ## Planned Next Steps
 
