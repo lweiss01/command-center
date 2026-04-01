@@ -1459,3 +1459,43 @@ warning: in the working copy of 'HISTORY.md', LF will be replaced by CRLF the ne
 warning: in the working copy of 'HOLISTIC.md', LF will be replaced by CRLF the next time Git touches it
 To https://github.com/lweiss01/command-center.git
    ae217bb..3eaeeb2  HEAD -> refs/holistic/state
+warning: in the working copy of '.cursorrules', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.github/copilot-instructions.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/config.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/adapters/antigravity.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/adapters/claude-cowork.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/adapters/codex.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/adapters/copilot.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/adapters/cursor.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/adapters/gemini.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/adapters/goose.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/adapters/gsd.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/adapters/gsd2.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/current-plan.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/project-history.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/regression-watch.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/session-protocol.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/context/zero-touch.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/sessions/session-2026-03-27T22-46-50-602Z.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/sessions/session-2026-03-30T04-57-13-950Z.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/state.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/auto-checkpoint.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/auto-checkpoint.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/holistic', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/restore-state.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/restore-state.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/run-daemon.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/run-daemon.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/sync-state.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/sync-state.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.holistic/system/sync.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.windsurfrules', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'CLAUDE.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'GEMINI.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'HISTORY.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'HOLISTIC.md', LF will be replaced by CRLF the next time Git touches it
+To https://github.com/lweiss01/command-center.git
+   3eaeeb2..1dd680f  HEAD -> refs/holistic/state
