@@ -259,11 +259,38 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_requirements_project_id ON requirements(project_id);
   CREATE INDEX IF NOT EXISTS idx_decisions_project_id ON decisions(project_id);
   CREATE INDEX IF NOT EXISTS idx_evidence_links_entity ON evidence_links(entity_type, entity_id);
+
+  CREATE TABLE IF NOT EXISTS scan_paths (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    path TEXT NOT NULL UNIQUE,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    recursive INTEGER NOT NULL DEFAULT 1,
+    max_depth INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_scan_paths_enabled ON scan_paths(enabled);
 `);
 
 // ── Additive schema migrations (idempotent) ──────────────────────────────────
 // proof_level on milestones: 'claimed' (status=done in ROADMAP) vs 'proven' (SUMMARY parsed + passed)
 try { db.exec(`ALTER TABLE milestones ADD COLUMN proof_level TEXT NOT NULL DEFAULT 'claimed'`); } catch (_) { /* column already exists */ }
+
+// ── Initialize default scan paths if table is empty ──────────────────────────
+const scanPathCount = db.prepare('SELECT COUNT(*) as count FROM scan_paths').get();
+if (scanPathCount.count === 0) {
+  const now = new Date().toISOString();
+  const insertDefaultPath = db.prepare(`
+    INSERT INTO scan_paths (path, enabled, recursive, max_depth, created_at, updated_at)
+    VALUES (?, 1, 1, NULL, ?, ?)
+  `);
+  DEFAULT_SCAN_ROOTS.forEach(root => {
+    try {
+      insertDefaultPath.run(root, now, now);
+    } catch (_) { /* path might already exist */ }
+  });
+}
 // source_artifact_id on proof evidence_links — already present on evidence_links, no migration needed
 
 const getLegacyProjectByName = db.prepare('SELECT id FROM projects_legacy WHERE name = ?');
@@ -565,6 +592,33 @@ const listDecisionsBySourceArtifactId = db.prepare(`
 const deleteDecisionById = db.prepare(`
   DELETE FROM decisions
   WHERE id = @id
+`);
+
+// ── Scan paths ────────────────────────────────────────────────────────────────
+const listEnabledScanPaths = db.prepare(`
+  SELECT * FROM scan_paths WHERE enabled = 1 ORDER BY path ASC
+`);
+const listAllScanPaths = db.prepare(`
+  SELECT * FROM scan_paths ORDER BY path ASC
+`);
+const getScanPathById = db.prepare(`
+  SELECT * FROM scan_paths WHERE id = ?
+`);
+const insertScanPath = db.prepare(`
+  INSERT INTO scan_paths (path, enabled, recursive, max_depth, created_at, updated_at)
+  VALUES (@path, @enabled, @recursive, @max_depth, @created_at, @updated_at)
+`);
+const updateScanPath = db.prepare(`
+  UPDATE scan_paths
+  SET path = @path,
+      enabled = @enabled,
+      recursive = @recursive,
+      max_depth = @max_depth,
+      updated_at = @updated_at
+  WHERE id = @id
+`);
+const deleteScanPath = db.prepare(`
+  DELETE FROM scan_paths WHERE id = @id
 `);
 
 function safeReadDir(dirPath) {
@@ -3876,9 +3930,16 @@ app.post('/api/projects/add', (req, res) => {
 
 app.post('/api/scan', (req, res) => {
   try {
-    const roots = Array.isArray(req.body?.roots) && req.body.roots.length > 0
-      ? req.body.roots
-      : DEFAULT_SCAN_ROOTS;
+    // Use provided roots, or fall back to enabled scan paths from DB, or DEFAULT_SCAN_ROOTS
+    let roots;
+    if (Array.isArray(req.body?.roots) && req.body.roots.length > 0) {
+      roots = req.body.roots;
+    } else {
+      const enabledPaths = listEnabledScanPaths.all();
+      roots = enabledPaths.length > 0
+        ? enabledPaths.map(p => p.path)
+        : DEFAULT_SCAN_ROOTS;
+    }
 
     const results = roots.map((root) => scanWorkspaceRoot(root));
     const totals = results.reduce((acc, result) => {
@@ -3900,6 +3961,145 @@ app.post('/api/scan', (req, res) => {
     return res.status(500).json({
       error: error instanceof Error ? error.message : 'Scan failed',
     });
+  }
+});
+
+// ── Scan paths management endpoints ──────────────────────────────────────────
+
+app.get('/api/scan-paths', (_req, res) => {
+  try {
+    const paths = listAllScanPaths.all();
+    return res.json({
+      ok: true,
+      paths: paths.map(p => ({
+        id: p.id,
+        path: p.path,
+        enabled: Boolean(p.enabled),
+        recursive: Boolean(p.recursive),
+        maxDepth: p.max_depth,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at,
+      })),
+    });
+  } catch (error) {
+    console.error('[scan-paths] List failed:', error);
+    return res.status(500).json({ ok: false, error: 'Failed to list scan paths' });
+  }
+});
+
+// Normalize path for consistent comparison (convert forward slashes to backslashes on Windows)
+function normalizePathForComparison(inputPath) {
+  const normalized = path.normalize(inputPath.trim());
+  // On Windows, convert all forward slashes to backslashes for consistent comparison
+  return process.platform === 'win32' ? normalized.replace(/\//g, '\\') : normalized;
+}
+
+app.post('/api/scan-paths', (req, res) => {
+  try {
+    const { path: scanPath, enabled = true, recursive = true, maxDepth = null } = req.body;
+
+    if (!scanPath || typeof scanPath !== 'string' || !scanPath.trim()) {
+      return res.status(400).json({ ok: false, error: 'Path is required' });
+    }
+
+    const normalizedPath = normalizePathForComparison(scanPath);
+
+    // Check if path already exists
+    const existing = listAllScanPaths.all().find(p => normalizePathForComparison(p.path) === normalizedPath);
+    if (existing) {
+      return res.status(409).json({ ok: false, error: 'Path already exists' });
+    }
+
+    const now = new Date().toISOString();
+    const result = insertScanPath.run({
+      path: normalizedPath,
+      enabled: enabled ? 1 : 0,
+      recursive: recursive ? 1 : 0,
+      max_depth: maxDepth,
+      created_at: now,
+      updated_at: now,
+    });
+
+    const created = getScanPathById.get(result.lastInsertRowid);
+    return res.json({
+      ok: true,
+      path: {
+        id: created.id,
+        path: created.path,
+        enabled: Boolean(created.enabled),
+        recursive: Boolean(created.recursive),
+        maxDepth: created.max_depth,
+        createdAt: created.created_at,
+        updatedAt: created.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error('[scan-paths] Add failed:', error);
+    return res.status(500).json({ ok: false, error: 'Failed to add scan path' });
+  }
+});
+
+app.put('/api/scan-paths/:id', (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ ok: false, error: 'Invalid ID' });
+    }
+
+    const existing = getScanPathById.get(id);
+    if (!existing) {
+      return res.status(404).json({ ok: false, error: 'Scan path not found' });
+    }
+
+    const { path: scanPath, enabled, recursive, maxDepth } = req.body;
+    const normalizedPath = scanPath ? path.normalize(scanPath.trim()) : existing.path;
+
+    const now = new Date().toISOString();
+    updateScanPath.run({
+      id,
+      path: normalizedPath,
+      enabled: enabled !== undefined ? (enabled ? 1 : 0) : existing.enabled,
+      recursive: recursive !== undefined ? (recursive ? 1 : 0) : existing.recursive,
+      max_depth: maxDepth !== undefined ? maxDepth : existing.max_depth,
+      updated_at: now,
+    });
+
+    const updated = getScanPathById.get(id);
+    return res.json({
+      ok: true,
+      path: {
+        id: updated.id,
+        path: updated.path,
+        enabled: Boolean(updated.enabled),
+        recursive: Boolean(updated.recursive),
+        maxDepth: updated.max_depth,
+        createdAt: updated.created_at,
+        updatedAt: updated.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error('[scan-paths] Update failed:', error);
+    return res.status(500).json({ ok: false, error: 'Failed to update scan path' });
+  }
+});
+
+app.delete('/api/scan-paths/:id', (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ ok: false, error: 'Invalid ID' });
+    }
+
+    const existing = getScanPathById.get(id);
+    if (!existing) {
+      return res.status(404).json({ ok: false, error: 'Scan path not found' });
+    }
+
+    deleteScanPath.run({ id });
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('[scan-paths] Delete failed:', error);
+    return res.status(500).json({ ok: false, error: 'Failed to delete scan path' });
   }
 });
 

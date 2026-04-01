@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Search, CheckCircle2, Circle, Send, RefreshCw, BookOpen } from 'lucide-react'
+import { Plus, Search, CheckCircle2, Circle, Send, RefreshCw, BookOpen, Settings, FolderOpen, X } from 'lucide-react'
 
 interface Task { id: number; title: string; category: string; status: string }
 interface Project {
@@ -122,6 +122,10 @@ interface RepairItem {
   priority: number; severity: 'critical' | 'high' | 'medium' | 'low'
   action: string; rationale: string; targetPanel: string
 }
+interface ScanPath {
+  id: number; path: string; enabled: boolean; recursive: boolean
+  maxDepth: number | null; createdAt: string; updatedAt: string
+}
 interface ProjectPlan {
   project: Project; milestones: Milestone[]; slices: unknown[]; tasks: unknown[]
   requirements: Requirement[]; decisions: Decision[]; importRuns: ImportRun[]
@@ -146,7 +150,6 @@ interface PortfolioEntry {
 }
 
 const API_BASE_URL = 'http://localhost:3001'
-const DEFAULT_SCAN_ROOT = 'C:/Users/lweis/Documents'
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0'
 const USER_GUIDE_URL = 'https://github.com/lweiss01/command-center/blob/main/docs/USER-GUIDE.md'
 
@@ -284,6 +287,13 @@ function App() {
   const [activeInstallTab, setActiveInstallTab] = useState<Map<string, 'npm' | 'brew' | 'winget'>>(new Map())
   const [copiedStepId, setCopiedStepId] = useState<string | null>(null)
 
+  // Scan paths settings
+  const [showSettings, setShowSettings] = useState(false)
+  const [scanPaths, setScanPaths] = useState<ScanPath[]>([])
+  const [newScanPath, setNewScanPath] = useState('')
+  const [scanPathError, setScanPathError] = useState<string | null>(null)
+  const [scanPathInFlight, setScanPathInFlight] = useState(false)
+
   // Clear bootstrap step state when the selected project changes
   useEffect(() => {
     setBootstrapStepStatus(new Map())
@@ -297,6 +307,14 @@ function App() {
     setProofLinks([])
     setProofReqOpen(false)
   }, [selectedProject?.id])
+
+  // Load scan paths on mount
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/scan-paths`)
+      .then(r => r.json())
+      .then(d => { if (d.ok && d.paths) setScanPaths(d.paths) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
@@ -527,11 +545,60 @@ function App() {
   const handleScanWorkspace = async () => {
     setScanInFlight(true); setProjectsError(null)
     try {
-      await fetch(`${API_BASE_URL}/api/scan`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roots: [DEFAULT_SCAN_ROOT] }) })
+      // No longer passing roots - backend will use configured scan paths from DB
+      await fetch(`${API_BASE_URL}/api/scan`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
       const res = await fetch(`${API_BASE_URL}/api/projects`)
       if (res.ok) { const d: Project[] = await res.json(); setProjects(d) }
     } catch { setProjectsError('Scan failed.') }
     finally { setScanInFlight(false) }
+  }
+
+  const handleAddScanPath = async () => {
+    if (!newScanPath.trim()) return
+    setScanPathInFlight(true); setScanPathError(null)
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/scan-paths`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: newScanPath.trim(), enabled: true, recursive: true }),
+      })
+      const data = await res.json()
+      if (res.ok && data.ok && data.path) {
+        setScanPaths(prev => [...prev, data.path])
+        setNewScanPath('')
+        setScanPathError(null)
+      } else {
+        setScanPathError(data.error ?? 'Failed to add path')
+      }
+    } catch (e) {
+      setScanPathError(e instanceof Error ? e.message : 'Network error')
+    } finally {
+      setScanPathInFlight(false)
+    }
+  }
+
+  const handleToggleScanPath = async (id: number, enabled: boolean) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/scan-paths/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      })
+      const data = await res.json()
+      if (res.ok && data.ok && data.path) {
+        setScanPaths(prev => prev.map(p => p.id === id ? data.path : p))
+      }
+    } catch { /* non-fatal */ }
+  }
+
+  const handleDeleteScanPath = async (id: number) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/scan-paths/${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        setScanPaths(prev => prev.filter(p => p.id !== id))
+      }
+    } catch { /* non-fatal */ }
   }
 
   const handleAddProject = async () => {
@@ -781,6 +848,14 @@ function App() {
             {scanInFlight ? 'Scanning…' : 'Scan Workspace'}
           </button>
           <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              onClick={() => setShowSettings(true)}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px', border: '1px solid var(--border)', borderRadius: '5px', fontSize: '11px', color: 'var(--text-muted)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font)' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+            >
+              <Settings size={11} /> Settings
+            </button>
             <a href={USER_GUIDE_URL} target="_blank" rel="noopener noreferrer"
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px', border: '1px solid var(--border)', borderRadius: '5px', fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none', fontFamily: 'var(--font)' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
@@ -1581,6 +1656,105 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowSettings(false)}>
+          <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: '8px', width: '90%', maxWidth: '700px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            
+            {/* Header */}
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-title)', margin: 0 }}>Settings</h2>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0', ...S.mono }}>Configure workspace scan paths</p>
+              </div>
+              <button onClick={() => setShowSettings(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '8px' }}>Scan Paths</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '16px' }}>
+                  Directories to scan when you click "Scan Workspace". All enabled paths will be searched for projects.
+                </div>
+
+                {/* Add new path form */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                  <input
+                    type="text"
+                    placeholder="e.g., D:\Projects\active"
+                    value={newScanPath}
+                    onChange={e => { setNewScanPath(e.target.value); setScanPathError(null) }}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddScanPath(); if (e.key === 'Escape') { setNewScanPath(''); setScanPathError(null) } }}
+                    style={{ flex: 1, padding: '8px 12px', fontSize: '12px', fontFamily: 'var(--font-mono)', background: 'var(--bg-elevated)', border: `1px solid ${scanPathError ? C.danger : 'var(--border)'}`, borderRadius: '5px', color: 'var(--text-primary)', outline: 'none' }}
+                  />
+                  <button
+                    disabled={scanPathInFlight || !newScanPath.trim()}
+                    onClick={handleAddScanPath}
+                    style={{ padding: '8px 16px', fontSize: '12px', background: scanPathInFlight || !newScanPath.trim() ? 'var(--bg-elevated)' : C.accent, color: scanPathInFlight || !newScanPath.trim() ? 'var(--text-muted)' : '#fff', border: 'none', borderRadius: '5px', cursor: scanPathInFlight || !newScanPath.trim() ? 'not-allowed' : 'pointer', fontFamily: 'var(--font)', fontWeight: 500 }}
+                  >
+                    <Plus size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '4px' }} />
+                    {scanPathInFlight ? 'Adding…' : 'Add'}
+                  </button>
+                </div>
+
+                {scanPathError && (
+                  <div style={{ fontSize: '11px', color: C.danger, ...S.mono, marginBottom: '12px', padding: '6px 10px', background: `color-mix(in srgb, ${C.danger} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${C.danger} 20%, transparent)`, borderRadius: '4px' }}>
+                    {scanPathError}
+                  </div>
+                )}
+
+                {/* Path list */}
+                {scanPaths.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', ...S.mono }}>
+                    No scan paths configured
+                  </div>
+                ) : (
+                  <div style={{ border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+                    {scanPaths.map((scanPath, idx) => (
+                      <div key={scanPath.id} style={{ padding: '12px 16px', borderBottom: idx < scanPaths.length - 1 ? '1px solid var(--border-subtle)' : 'none', display: 'flex', alignItems: 'center', gap: '12px', background: scanPath.enabled ? 'transparent' : 'var(--bg-row)' }}>
+                        <input
+                          type="checkbox"
+                          checked={scanPath.enabled}
+                          onChange={e => handleToggleScanPath(scanPath.id, e.target.checked)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '12px', color: scanPath.enabled ? 'var(--text-secondary)' : 'var(--text-muted)', ...S.mono, wordBreak: 'break-all' }}>
+                            <FolderOpen size={12} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px', opacity: 0.7 }} />
+                            {scanPath.path}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteScanPath(scanPath.id)}
+                          style={{ padding: '4px 8px', fontSize: '11px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font)' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = C.danger; e.currentTarget.style.color = C.danger }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowSettings(false)}
+                style={{ padding: '8px 20px', fontSize: '12px', background: C.accent, color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 500 }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
