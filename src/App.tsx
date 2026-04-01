@@ -7,6 +7,7 @@ interface Project {
   projectType: string; primaryLanguage: string | null; framework: string | null
   packageManager: string | null; hasGit: boolean
   planningStatus: 'none' | 'partial' | 'structured'
+  repoTag: 'active' | 'minimal' | 'archive'
   artifactCount: number; lastScannedAt: string | null; createdAt: string; updatedAt: string
 }
 interface Milestone {
@@ -505,6 +506,24 @@ function App() {
     finally { setImportAllInFlight(false) }
   }
 
+  const handleTagChange = async (tag: 'active' | 'minimal' | 'archive') => {
+    if (!selectedProject) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/projects/${selectedProject.id}/tag`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag }),
+      })
+      const data = await res.json()
+      if (res.ok && data.ok && data.project) {
+        const listRes = await fetch(`${API_BASE_URL}/api/projects`)
+        if (listRes.ok) { const d: Project[] = await listRes.json(); setProjects(d) }
+        setSelectedProject(data.project)
+        await loadProjectPlan(data.project.id, bootstrapTemplateId)
+      }
+    } catch { /* non-fatal */ }
+  }
+
   const handleScanWorkspace = async () => {
     setScanInFlight(true); setProjectsError(null)
     try {
@@ -711,8 +730,13 @@ function App() {
                 onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-row-hover)' }}
                 onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
               >
-                <div style={{ fontSize: '13px', fontWeight: isSelected ? 500 : 400, color: isSelected ? 'var(--text-title)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
-                  {project.name}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '3px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: isSelected ? 500 : 400, color: isSelected ? 'var(--text-title)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {project.name}
+                  </div>
+                  {project.repoTag !== 'active' && (
+                    <Pill label={project.repoTag} color={project.repoTag === 'minimal' ? C.info : C.muted} dim />
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', ...S.mono, overflow: 'hidden' }}>
                   <span style={{ color: 'var(--text-faint)' }}>Phase</span>
@@ -812,9 +836,20 @@ function App() {
             {/* Project heading */}
             <div style={{ marginBottom: '44px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px', marginBottom: '10px' }}>
-                <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>
-                  {selectedProject.name}
-                </h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>
+                    {selectedProject.name}
+                  </h1>
+                  <select
+                    value={selectedProject.repoTag}
+                    onChange={(e) => handleTagChange(e.target.value as any)}
+                    style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)', outline: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                  >
+                    <option value="active">Active</option>
+                    <option value="minimal">Minimal</option>
+                    <option value="archive">Archive</option>
+                  </select>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', paddingTop: '3px', flexShrink: 0, ...S.mono }}>
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: phaseColor(projectPlan?.workflowState.phase ?? 'no-data'), flexShrink: 0, display: 'inline-block' }} />
                   <span style={{ fontSize: '11px', color: phaseColor(projectPlan?.workflowState.phase ?? 'no-data') }}>
