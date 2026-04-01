@@ -19,12 +19,14 @@ Tip: the app header includes a **User Guide** button that opens this guide in a 
 
 Your target is to move a repo into a **clear execution state**:
 
+- Health = `A` or `B` (or `–` if intentionally archived)
 - Readiness = `ready`
 - Continuity Status = `fresh` (or at least not missing)
 - Checkpoint Hygiene = `ok` (or at least not missing)
 - Workflow State = `active`
 - Proof = at least one milestone `proven`
 - Next Action = `Clear`
+- Repair Queue = empty (or all low-severity items you're deferring intentionally)
 
 When any panel is not in that state, Command Center is telling you where risk is.
 
@@ -34,19 +36,20 @@ When any panel is not in that state, Command Center is telling you where risk is
 
 For each repo you plan to touch today:
 
-1. Open Command Center and select the repo card.
+1. Open Command Center and select the repo card from the portfolio.
 2. Check panels in this order:
-   1. **Readiness** — is the workflow stack present?
-   2. **Continuity** — is context safe to resume?
-   3. **Workflow State** — what phase and confidence?
-   4. **Proof** — what is actually proven vs only written down?
-   5. **Next Action** — what should happen right now?
-   6. **Open Loops** — what is still unresolved?
-3. Apply the remediation steps in this guide.
+   1. **Health** — what's the overall grade? Any critical repairs needed?
+   2. **Readiness** — is the workflow stack present?
+   3. **Continuity** — is context safe to resume?
+   4. **Workflow State** — what phase and confidence?
+   5. **Proof** — what is actually proven vs only written down?
+   6. **Next Action** — what should happen right now?
+   7. **Open Loops** — what is still unresolved?
+3. Apply the remediation steps in this guide, starting with the Repair Queue if present.
 4. Re-check each panel after each fix.
 5. Start implementation only after Next Action is clear enough.
 
-Why this order: readiness and continuity are foundational. Phase and proof are less trustworthy if either is broken.
+Why this order: Health gives you the big picture. Readiness and continuity are foundational. Phase and proof are less trustworthy if either is broken.
 
 ---
 
@@ -57,6 +60,7 @@ You'll see this phrase repeatedly below. Here is the concrete re-check loop:
 1. If you changed repo files or tooling outside the app, click **Scan Workspace**.
 2. Re-select the project card.
 3. In the project detail view:
+   - review **Health** grade and repair queue,
    - review **Readiness** badge and gaps,
    - review **Continuity** badge/hygiene note,
    - review **Workflow State** phase + reasons,
@@ -68,7 +72,72 @@ You'll see this phrase repeatedly below. Here is the concrete re-check loop:
 
 ---
 
-## 4) Readiness (first gate)
+## 4) Health (repo condition overview)
+
+### What you can see
+
+**Grade values:** `A` / `B` / `C` / `D` / `F` / `–` (for archived repos)
+
+**Score:** 0–100%
+
+**Contributor breakdown:** shows which signals contribute to the score:
+- Continuity Status (fresh/stale/missing): 0–25%
+- Checkpoint Hygiene (ok/stale/missing): 0–10%
+- Readiness (ready/partial/missing): 0–25%
+- Import Recency (≤7 days / ≤30 days / older): 0–20%
+- Proof Coverage (proven milestones / total): 0–20%
+
+Each contributor shows: signal value, contribution amount, max possible, status indicator (✓ ok / ⚠ warn / ✗ danger / — missing), and explanatory note.
+
+**Repair Queue:** if any contributor is degraded, you see a prioritized list of actionable repairs with severity badges (🔴 critical / 🟠 high / 🟡 medium / ⚫ low). Click a repair item to navigate to the relevant panel.
+
+### Why this matters
+
+Health gives you one honest number that combines all workflow hygiene signals. It tells you whether a repo is in good operating shape, not just whether it has planning docs.
+
+### Grade thresholds
+
+| Grade | Score Range | Meaning |
+|---|---|---|
+| A | 90–100% | Excellent shape — all signals healthy |
+| B | 70–89% | Good shape — minor issues only |
+| C | 50–69% | Needs attention — multiple degraded signals |
+| D | 30–49% | Poor shape — significant gaps |
+| F | 0–29% | Critical issues — most signals missing or broken |
+| – | n/a | Archived repo (health scoring skipped) |
+
+### What to do by grade
+
+#### A) Grade = `A` or `B`
+
+No health remediation needed. Move to Readiness.
+
+#### B) Grade = `C`, `D`, or `F`
+
+1. Expand the **Repair Queue** in the Health panel.
+2. Fix items in order — critical first, then high, medium, low.
+3. Each repair item links to the relevant panel (e.g., "Refresh imports" → Import panel, "Run handoff" → Continuity panel).
+4. Re-check after each fix — the score updates in real time.
+
+Verify: grade improves, repair queue shrinks.
+
+#### C) Grade = `–` (archived)
+
+This is intentional. Archive-tagged repos bypass health scoring and appear at the bottom of the portfolio. If the repo should be active again, change its tag in the project detail header (see Section 16).
+
+### Repo tagging (affects health)
+
+You can tag repos in the project detail header dropdown:
+
+- **active** (default): full health scoring
+- **minimal**: skips import recency and proof coverage penalties — useful for experimental repos or small projects that don't maintain GSD artifacts
+- **archive**: removes repo from health scoring entirely (grade becomes `–`) and sinks it to the bottom of the urgency-sorted portfolio
+
+Use `minimal` for repos you want visible but don't want penalized for missing imports/proof. Use `archive` for truly inactive repos.
+
+---
+
+## 5) Readiness (workflow stack gate)
 
 ### What you can see
 
@@ -135,7 +204,7 @@ Verify: readiness is no longer `missing`.
 
 ---
 
-## 5) Continuity (resume safety gate)
+## 6) Continuity (resume safety gate)
 
 ### What you can see
 
@@ -195,7 +264,7 @@ Verify: continuity status is no longer `missing`.
 
 ---
 
-## 6) Workflow State (phase + confidence)
+## 7) Workflow State (phase + confidence)
 
 ### What you can see
 
@@ -242,7 +311,7 @@ Read Next Action blockers line by line. Resolve readiness/continuity blockers fi
 
 ---
 
-## 7) Proof (claimed vs verified)
+## 8) Proof (claimed vs verified)
 
 ### What you can see
 
@@ -281,7 +350,7 @@ Command Center distinguishes between "a milestone is marked done in PROJECT.md" 
 
 ---
 
-## 8) Bootstrap Plan (workflow stack repair)
+## 9) Bootstrap Plan (workflow stack repair)
 
 ### What you can see
 
@@ -340,7 +409,7 @@ If you previously applied a step and the created file/directory is later deleted
 
 ---
 
-## 9) Continuity Panel (detail)
+## 10) Continuity Panel (detail)
 
 ### What you can see
 
@@ -358,7 +427,7 @@ In addition to what is described in Section 5:
 
 ---
 
-## 10) Open Loops (work risk map)
+## 11) Open Loops (work risk map)
 
 ### What you can see
 
@@ -387,7 +456,7 @@ Open Loops tells you where hidden delivery risk is accumulating.
 
 ---
 
-## 11) Import Controls (recency + parser health)
+## 12) Import Controls (recency + parser health)
 
 ### What you can see
 
@@ -446,17 +515,26 @@ Also: **Import Summaries** (in the Proof panel) for proof signal refresh.
 
 ---
 
-## 12) Cross-repo portfolio view
+## 13) Cross-repo portfolio view
 
 ### What you can see
 
 The left column shows all discovered projects as cards. Each card shows:
 
 - Phase badge (active / stalled / blocked / no-data / import-only)
+- Health grade (A–F or – for archived)
 - Continuity status and age
 - Readiness status
+- Repo tag (minimal / archive) if set — active repos show no tag badge
 
 Cards are sorted by urgency score (default) or name (toggle at top).
+
+Archive-tagged repos always sink to the bottom of the urgency sort.
+
+### Adding projects
+
+- **Scan Workspace** button: scans configured workspace root and auto-imports planning data for any newly discovered projects with GSD docs
+- **New** input at bottom of sidebar: type a directory path and press Enter to add a project without running a full workspace scan
 
 ### Urgency scoring
 
@@ -466,49 +544,72 @@ Urgency is computed from:
 - Stalled/no-data phase with non-missing continuity: +20%
 - Readiness gaps: +15%
 
+Archive-tagged repos get urgency = -1 (forced to bottom).
+
 Higher urgency = repo deserves attention sooner.
 
 ### What to do
 
 **Prioritize repos with:**
-- Readiness `ready` + Continuity not missing + Next Action clear (for active execution)
+- Health grade A or B + Continuity not missing + Next Action clear (for active execution)
 - High urgency score (for triage)
 
 **Use blocked repos** only when your goal is to unblock them.
 
+**Tag repos appropriately:**
+- Leave active repos untagged or explicitly `active`
+- Tag experimental/small repos as `minimal` if you don't want import recency or proof penalties
+- Tag truly inactive repos as `archive` to remove them from health scoring and sink them to the bottom
+
 ---
 
-## 13) Concrete operating scenarios
+## 14) Concrete operating scenarios
 
-### Scenario A — "I opened a repo and everything looks broken"
+### Scenario A — "I just scanned a new project and it has GSD docs"
 
-1. Check Readiness → if `missing`, use Bootstrap Plan (or Section 4C manual bootstrap).
-2. Check Continuity → if `missing`, run resume/handoff (Section 5F).
-3. Run all three imports (Section 11).
-4. Re-check until Next Action is no longer hard-blocked.
+1. If the project is brand new to Command Center: imports happen automatically during scan.
+2. If it shows a **First Run** onboarding card: click **Import All** to populate milestones, requirements, and decisions in one click.
+3. Re-check: panels should now show data instead of being empty.
 
-### Scenario B — "I'm active but confidence is low"
+### Scenario B — "I opened a repo and everything looks broken"
 
-1. Read Workflow State reasons.
-2. Fix whichever signal is flagged: missing artifacts, stale imports, stale/missing continuity.
-3. Run Import Summaries in the Proof panel if milestones are showing `claimed` after actual completion.
-4. Re-check confidence.
+1. Check Health → if repair queue has items, start there (click each to navigate to the right panel).
+2. Check Readiness → if `missing`, use Bootstrap Plan (or Section 5C manual bootstrap).
+3. Check Continuity → if `missing`, run resume/handoff (Section 6F).
+4. Run all three imports if needed (Section 12).
+5. Re-check until Next Action is no longer hard-blocked.
 
-### Scenario C — "I have several repos; what should I touch today?"
+### Scenario C — "I'm active but health/confidence is low"
+
+1. Check **Health panel** repair queue — apply fixes in priority order.
+2. Read Workflow State reasons.
+3. Fix whichever signal is flagged: missing artifacts, stale imports, stale/missing continuity.
+4. Run Import Summaries in the Proof panel if milestones are showing `claimed` after actual completion.
+5. Re-check health grade and confidence.
+
+### Scenario D — "I have several repos; what should I touch today?"
 
 1. Open the portfolio list (left column).
 2. Sort by urgency (default).
-3. Prioritize: `ready` readiness + non-missing continuity + clear Next Action.
+3. Prioritize: health grade A or B + non-missing continuity + clear Next Action.
 4. Use blocked repos only if your goal is unblocking.
+5. Tag repos as `minimal` (experimental) or `archive` (inactive) to remove noise from the portfolio.
 
-### Scenario D — "I just completed a milestone/slice"
+### Scenario E — "I just completed a milestone/slice"
 
 1. Run `holistic handoff` to record the session.
 2. Click **Import Summaries** in the Proof panel to upgrade proof status.
 3. Verify the milestone now shows ✓ `proven`.
-4. Check Open Loops — unresolved requirement count should decrease.
+4. Check Health grade — proof coverage should improve.
+5. Check Open Loops — unresolved requirement count should decrease.
 
-### Scenario E — "End of day"
+### Scenario F — "I want to add a specific repo without scanning my entire workspace"
+
+1. Type or paste the repo directory path into the **New** input at the bottom of the portfolio sidebar.
+2. Press Enter.
+3. The project is added and auto-imported if it has GSD docs.
+
+### Scenario G — "End of day"
 
 1. Run handoff from the Continuity panel command.
 2. Ensure imports are not mid-broken (no `failed` import runs).
@@ -516,7 +617,7 @@ Higher urgency = repo deserves attention sooner.
 
 ---
 
-## 14) FAQ
+## 15) FAQ
 
 ### Why do milestone IDs sometimes skip numbers?
 
@@ -525,6 +626,19 @@ Milestone IDs are durable identifiers. They are not always contiguous — interm
 ### Why does Proof show milestones as `claimed` when they are clearly done?
 
 Click **Import Summaries** in the Proof panel. Proof requires parsing SUMMARY.md files in `.gsd/milestones/` — it is not inferred from PROJECT.md alone. The Import Summaries button re-scans those files and upgrades proof level.
+
+### What's the difference between `minimal` and `archive` tags?
+
+- **minimal**: repo still shows up normally in the portfolio, but health scoring skips import recency and proof coverage penalties — useful for experimental repos or small projects you're actively working on but don't maintain full GSD artifacts for
+- **archive**: repo health grade becomes `–`, repo sinks to the bottom of urgency sort, and it's effectively invisible unless you scroll — use this for truly inactive repos you want to keep in the workspace but never see
+
+### When should I use auto-import vs manual import buttons?
+
+Auto-import happens during workspace scans for **newly discovered** projects with GSD docs. If you edit planning docs for an **existing** project, you need to click the manual import buttons (Milestones, Requirements, Decisions) to refresh that data.
+
+### What's the "First Run" card?
+
+If you open a project that has planning docs (`.gsd/PROJECT.md`, etc.) but has never been imported before, Command Center shows a prominent "Import All" card instead of empty panels. Click it to import milestones, requirements, and decisions in one action.
 
 ### Why does the Bootstrap Plan stage gate block my machine-level steps?
 
@@ -540,9 +654,20 @@ Usually encoding/font mismatch in the terminal, not an app failure. Launcher scr
 Get-NetTCPConnection -LocalPort 3001 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 ```
 
+### What determines my repo's health grade?
+
+Five signals contribute to the score:
+- Continuity status (fresh/stale/missing): up to 25%
+- Checkpoint hygiene (ok/stale/missing): up to 10%
+- Readiness (ready/partial/missing): up to 25%
+- Import recency (≤7 days excellent, ≤30 days ok, older degraded): up to 20%
+- Proof coverage (proven milestones / total): up to 20%
+
+Grade thresholds: A=90+, B=70-89, C=50-69, D=30-49, F=0-29, –=archived
+
 ---
 
-## 15) Appendix — command quick reference
+## 16) Appendix — command quick reference
 
 ```bash
 npm run cc:shortcut       # Create/update desktop shortcuts
