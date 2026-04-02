@@ -67,5 +67,6 @@ coverage/
 tmp/
 
 # Command Center launcher artifacts
+.artifacts/
 .browser-profile/
 .logs/
